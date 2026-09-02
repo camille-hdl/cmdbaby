@@ -4,33 +4,7 @@ import Testing
 
 @Test("Le diagnostic présente les valeurs système injectées")
 func diagnosticPresentsInjectedSystemValues() {
-  let snapshot = DiagnosticSnapshot(
-    macOSVersion: "15.7.7",
-    macOSBuild: "24G720",
-    architecture: "arm64",
-    xcodeVersion: "Xcode indisponible (Command Line Tools actifs)",
-    developerDirectory: "/Library/Developer/CommandLineTools",
-    bundleIdentifier: "fr.camille.babywork.diagnostics",
-    signingIdentity: "Apple Development: Exemple",
-    displays: [
-      DisplaySnapshot(
-        name: "Écran intégré",
-        width: 3_024,
-        height: 1_964,
-        scale: 2,
-        isMain: true
-      ),
-      DisplaySnapshot(
-        name: "Studio Display",
-        width: 2_560,
-        height: 1_440,
-        scale: 1,
-        isMain: false
-      ),
-    ],
-    inputMonitoringGranted: true,
-    accessibilityGranted: false
-  )
+  let snapshot = makeSnapshot()
 
   let report = DiagnosticReport(snapshot: snapshot)
 
@@ -85,17 +59,11 @@ func diagnosticPresentsInjectedSystemValues() {
 
 @Test("Le diagnostic signale qu’aucun écran n’a été détecté")
 func diagnosticReportsMissingDisplays() {
-  let snapshot = DiagnosticSnapshot(
-    macOSVersion: "15.7.7",
-    macOSBuild: "24G720",
-    architecture: "arm64",
+  let snapshot = makeSnapshot(
     xcodeVersion: "Indisponible",
-    developerDirectory: "/Library/Developer/CommandLineTools",
-    bundleIdentifier: "fr.camille.babywork.diagnostics",
     signingIdentity: "Signature ad hoc",
     displays: [],
-    inputMonitoringGranted: false,
-    accessibilityGranted: false
+    inputMonitoringGranted: false
   )
 
   let report = DiagnosticReport(snapshot: snapshot)
@@ -108,4 +76,39 @@ func diagnosticReportsMissingDisplays() {
         state: .attention
       )
     ])
+}
+
+private func makeSnapshot(
+  xcodeVersion: String = "Xcode indisponible (Command Line Tools actifs)",
+  signingIdentity: String = "Apple Development: Exemple",
+  displays: [DisplaySnapshot] = [
+    DisplaySnapshot(
+      name: "Écran intégré",
+      width: 3_024,
+      height: 1_964,
+      scale: 2,
+      isMain: true
+    ),
+    DisplaySnapshot(
+      name: "Studio Display",
+      width: 2_560,
+      height: 1_440,
+      scale: 1,
+      isMain: false
+    ),
+  ],
+  inputMonitoringGranted: Bool = true
+) -> DiagnosticSnapshot {
+  DiagnosticSnapshot(
+    macOSVersion: "15.7.7",
+    macOSBuild: "24G720",
+    architecture: "arm64",
+    xcodeVersion: xcodeVersion,
+    developerDirectory: "/Library/Developer/CommandLineTools",
+    bundleIdentifier: "fr.camille.babywork.diagnostics",
+    signingIdentity: signingIdentity,
+    displays: displays,
+    inputMonitoringGranted: inputMonitoringGranted,
+    accessibilityGranted: false
+  )
 }

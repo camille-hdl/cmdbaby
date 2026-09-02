@@ -61,13 +61,14 @@ private struct DiagnosticSectionView: View {
       Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 12) {
         ForEach(section.rows.indices, id: \.self) { rowIndex in
           let row = section.rows[rowIndex]
+          let presentation = row.state.presentation
           GridRow {
             Label {
               Text(row.label)
                 .fontWeight(.medium)
             } icon: {
-              Image(systemName: row.state.symbolName)
-                .foregroundStyle(row.state.color)
+              Image(systemName: presentation.symbolName)
+                .foregroundStyle(presentation.color)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -87,25 +88,14 @@ private struct DiagnosticSectionView: View {
 }
 
 extension DiagnosticRowState {
-  fileprivate var symbolName: String {
+  fileprivate var presentation: (symbolName: String, color: Color) {
     switch self {
     case .neutral:
-      "info.circle"
+      ("info.circle", .secondary)
     case .granted:
-      "checkmark.circle.fill"
+      ("checkmark.circle.fill", .green)
     case .attention:
-      "exclamationmark.triangle.fill"
-    }
-  }
-
-  fileprivate var color: Color {
-    switch self {
-    case .neutral:
-      .secondary
-    case .granted:
-      .green
-    case .attention:
-      .orange
+      ("exclamationmark.triangle.fill", .orange)
     }
   }
 }
