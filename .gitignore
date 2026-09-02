@@ -1,0 +1,33 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Xcode — données locales et produits de compilation
+DerivedData/
+build/
+*.xcarchive
+*.dSYM
+*.dSYM.zip
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+*.moved-aside
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Secrets et configuration locale
+.env
+.env.*
+!.env.example
+*.mobileprovision
+*.provisionprofile
+
+# Fichiers temporaires des éditeurs
+*~
+*.swp
+*.swo
