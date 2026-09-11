@@ -1,7 +1,9 @@
+import AppKit
 import ApplicationServices
 import BabyWorkDiagnosticsKit
 import CoreGraphics
 import Foundation
+import IOKit.hid
 
 @MainActor
 final class DiagnosticsSessionModel: ObservableObject {
@@ -29,8 +31,35 @@ final class DiagnosticsSessionModel: ObservableObject {
   }
 
   func requestInputMonitoringPrompt() {
+    // CGRequestListenEventAccess ne présente plus d’invite fiable.
+    // IOHIDRequestAccess enregistre l’app dans TCC Surveillance de l’entrée.
+    let current = IOHIDCheckAccess(kIOHIDRequestTypeListenEvent)
+    if current == kIOHIDAccessTypeGranted {
+      refresh()
+      return
+    }
+
+    _ = IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
+    _ = IOHIDRequestAccess(kIOHIDRequestTypePostEvent)
+    _ = CGRequestPostEventAccess()
     _ = CGRequestListenEventAccess()
+
+    if current == kIOHIDAccessTypeDenied {
+      openInputMonitoringSettings()
+    }
     refresh()
+  }
+
+  private func openInputMonitoringSettings() {
+    let candidates = [
+      "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_ListenEvent",
+      "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent",
+    ]
+    for candidate in candidates {
+      if let url = URL(string: candidate), NSWorkspace.shared.open(url) {
+        return
+      }
+    }
   }
 
   func requestAccessibilityPrompt() {
