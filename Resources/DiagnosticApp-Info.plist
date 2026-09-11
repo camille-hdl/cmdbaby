@@ -4,6 +4,8 @@
 <dict>
     <key>BabyWorkSigningIdentity</key>
     <string>Non renseignée</string>
+    <key>BabyWorkSandboxMode</key>
+    <string>Non renseigné</string>
     <key>CFBundleDevelopmentRegion</key>
     <string>fr</string>
     <key>CFBundleDisplayName</key>

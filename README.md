@@ -62,6 +62,21 @@ codesign -d -r- .build/app/BabyWorkDiagnostics.app
 ```
 
 L’exigence désignée d’une signature Apple Development doit mentionner l’identifiant de bundle et le certificat feuille, et non seulement un `CDHash`. Elle doit rester identique d’un build à l’autre. L’inventaire factuel du Mac cible est dans `docs/phase-0/environment-inventory.md`.
+
+Pour comparer App Sandbox activé / désactivé :
+
+```sh
+BABYWORK_CODE_SIGN_IDENTITY="Apple Development: Exemple (TEAMID)" \
+  BABYWORK_APP_SANDBOX=0 \
+  ./scripts/build-diagnostics-app.sh
+
+BABYWORK_CODE_SIGN_IDENTITY="Apple Development: Exemple (TEAMID)" \
+  BABYWORK_APP_SANDBOX=1 \
+  BABYWORK_APP_OUTPUT_DIR=.build/app-sandbox \
+  ./scripts/build-diagnostics-app.sh
+```
+
+Le panneau **Filtrage actif** de l’application permet d’activer le `CGEventTap` de session, de demander les permissions et de compter les raccourcis absorbés sans journaliser les frappes. La grille manuelle est dans `docs/phase-0/input-filter-trials.md`.
 ## Relever l’environnement manuellement
 
 ```sh
