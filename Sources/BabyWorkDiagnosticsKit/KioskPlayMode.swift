@@ -52,3 +52,45 @@ public enum PlayGlyphResolver: Sendable {
     return .emoji(emojis[index])
   }
 }
+
+/// Emojis du champ d’étoiles en perspective.
+public enum WarpFieldCatalog: Sendable {
+  public static let stars = ["⭐️", "🌟", "✨", "💫"]
+  public static let rare = ["🌙", "🪐", "🌑", "☄️", "🛸", "🌍"]
+  public static let rareProbability = 0.08
+
+  public static func emoji(roll: Double, starIndex: Int, rareIndex: Int) -> String {
+    if roll < rareProbability {
+      return rare[abs(rareIndex) % rare.count]
+    }
+    return stars[abs(starIndex) % stars.count]
+  }
+}
+
+/// Vitesse de défilement : accélère à chaque frappe, ralentit à l’arrêt.
+public struct WarpDrive: Equatable, Sendable {
+  public static let rest = 1.0 / 6.0
+  public static let maxSpeed = rest * 5
+  public static let boostPerKey = 0.32 / 6.0
+  public static let decayPerSecond = 1.35 / 6.0
+  public static let idleDelay: TimeInterval = 0.2
+
+  public private(set) var speed: Double
+  public private(set) var lastImpulseAt: TimeInterval
+
+  public init(now: TimeInterval = 0, speed: Double = WarpDrive.rest) {
+    self.speed = Swift.max(Self.rest, Swift.min(Self.maxSpeed, speed))
+    self.lastImpulseAt = now
+  }
+
+  public mutating func impulse(at now: TimeInterval) {
+    lastImpulseAt = now
+    speed = Swift.min(Self.maxSpeed, speed + Self.boostPerKey)
+  }
+
+  public mutating func tick(now: TimeInterval, dt: TimeInterval) {
+    let clampedDt = Swift.max(0, dt)
+    guard now - lastImpulseAt >= Self.idleDelay else { return }
+    speed = Swift.max(Self.rest, speed - Self.decayPerSecond * clampedDt)
+  }
+}

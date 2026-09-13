@@ -2,29 +2,73 @@ import AppKit
 import BabyWorkDiagnosticsKit
 import QuartzCore
 
-/// Répartit les glyphes clavier sur un écran au hasard. Les clics et la souris restent locaux.
+/// Répartit les glyphes clavier et la vitesse de défilement entre les écrans.
 final class GalaxyDirector: @unchecked Sendable {
   private let lock = NSLock()
   private var painters: [GalaxyPainter] = []
+  private var drive = WarpDrive()
+  private var ticker: Timer?
+  private var lastTick: TimeInterval = 0
 
   func register(_ painter: GalaxyPainter) {
     lock.lock()
     painters.append(painter)
+    let shouldStart = ticker == nil
     lock.unlock()
+    if shouldStart {
+      startTicker()
+    }
   }
 
   func reset() {
     lock.lock()
     painters.removeAll(keepingCapacity: false)
+    drive = WarpDrive()
+    let timer = ticker
+    ticker = nil
     lock.unlock()
+    timer?.invalidate()
   }
 
   func spawnKeyGlyph(_ glyph: PlayGlyph) {
     lock.lock()
+    drive.impulse(at: ProcessInfo.processInfo.systemUptime)
     let snapshot = painters
     lock.unlock()
     guard !snapshot.isEmpty else { return }
     snapshot[Int.random(in: 0..<snapshot.count)].spawnGlyph(glyph, at: nil)
+  }
+
+  private func startTicker() {
+    lock.lock()
+    guard ticker == nil else {
+      lock.unlock()
+      return
+    }
+    lastTick = ProcessInfo.processInfo.systemUptime
+    let hop = MainHop { [weak self] in
+      self?.tick()
+    }
+    let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { _ in
+      hop.work()
+    }
+    ticker = timer
+    lock.unlock()
+    RunLoop.main.add(timer, forMode: .common)
+  }
+
+  private func tick() {
+    let now = ProcessInfo.processInfo.systemUptime
+    lock.lock()
+    let dt = lastTick == 0 ? 1.0 / 60.0 : min(0.05, max(1.0 / 120.0, now - lastTick))
+    lastTick = now
+    drive.tick(now: now, dt: dt)
+    let speed = drive.speed
+    let snapshot = painters
+    lock.unlock()
+    for painter in snapshot {
+      painter.tickWarp(dt: dt, speed: speed)
+    }
   }
 }
 
@@ -33,15 +77,18 @@ final class GalaxyPainter: @unchecked Sendable {
   private let lock = NSLock()
   private let glyphHost: CALayer
   private let starHost: CALayer
+  private let warpHost: CALayer
   private var glyphLayers: [CALayer] = []
   private var starLayers: [CALayer] = []
+  private var warpStars: [WarpStar] = []
   private var lastStarPoint: CGPoint?
   private var bounds: CGRect = .zero
   private var contentsScale: CGFloat
 
-  init(glyphHost: CALayer, starHost: CALayer, contentsScale: CGFloat) {
+  init(glyphHost: CALayer, starHost: CALayer, warpHost: CALayer, contentsScale: CGFloat) {
     self.glyphHost = glyphHost
     self.starHost = starHost
+    self.warpHost = warpHost
     self.contentsScale = contentsScale
   }
 
@@ -52,12 +99,21 @@ final class GalaxyPainter: @unchecked Sendable {
     lock.unlock()
     let glyphHost = glyphHost
     let starHost = starHost
+    let warpHost = warpHost
     runOnMain {
       CATransaction.begin()
       CATransaction.setDisableActions(true)
       glyphHost.frame = bounds
       starHost.frame = bounds
+      warpHost.frame = bounds
       CATransaction.commit()
+    }
+    populateWarpFieldIfNeeded()
+  }
+
+  func tickWarp(dt: TimeInterval, speed: Double) {
+    runOnMain { [weak self] in
+      self?.advanceWarpField(dt: dt, speed: speed)
     }
   }
 
@@ -103,6 +159,94 @@ final class GalaxyPainter: @unchecked Sendable {
         lifetime: 0.7
       )
     }
+  }
+
+  private func populateWarpFieldIfNeeded() {
+    runOnMain { [weak self] in
+      guard let self else { return }
+      self.lock.lock()
+      let already = !self.warpStars.isEmpty
+      let bounds = self.bounds
+      let scale = self.contentsScale
+      self.lock.unlock()
+      guard !already, bounds.width > 8, bounds.height > 8 else { return }
+      let maxRadius = hypot(bounds.width, bounds.height) * 0.55
+      let center = CGPoint(x: bounds.midX, y: bounds.midY)
+      var stars: [WarpStar] = []
+      for _ in 0..<16 {
+        stars.append(
+          self.makeWarpStar(
+            maxRadius: maxRadius,
+            scale: scale,
+            center: center,
+            seedNearCenter: false
+          )
+        )
+      }
+      self.lock.lock()
+      self.warpStars = stars
+      self.lock.unlock()
+    }
+  }
+
+  private func advanceWarpField(dt: TimeInterval, speed: Double) {
+    lock.lock()
+    let bounds = bounds
+    let scale = contentsScale
+    var stars = warpStars
+    lock.unlock()
+    guard bounds.width > 8, !stars.isEmpty else { return }
+
+    let center = CGPoint(x: bounds.midX, y: bounds.midY)
+    let maxRadius = hypot(bounds.width, bounds.height) * 0.55
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    for index in stars.indices {
+      stars[index].radius += speed * (22 + stars[index].radius * 2.4) * dt
+      if stars[index].radius > maxRadius {
+        stars[index].recycle(scale: scale)
+      }
+      stars[index].apply(center: center, scale: scale)
+    }
+    CATransaction.commit()
+    lock.lock()
+    warpStars = stars
+    lock.unlock()
+  }
+
+  private func makeWarpStar(
+    maxRadius: CGFloat,
+    scale: CGFloat,
+    center: CGPoint,
+    seedNearCenter: Bool
+  ) -> WarpStar {
+    let roll = Double.random(in: 0..<1)
+    let emoji = WarpFieldCatalog.emoji(
+      roll: roll,
+      starIndex: Int.random(in: 0..<WarpFieldCatalog.stars.count),
+      rareIndex: Int.random(in: 0..<WarpFieldCatalog.rare.count)
+    )
+    let isRare = roll < WarpFieldCatalog.rareProbability
+    let wrapper = CALayer()
+    let label = CATextLayer()
+    label.string = emoji
+    label.alignmentMode = .center
+    label.contentsScale = scale
+    label.font = NSFont(name: "Apple Color Emoji", size: isRare ? 54 : 36)
+      ?? NSFont.systemFont(ofSize: 36)
+    label.foregroundColor = NSColor.white.cgColor
+    wrapper.addSublayer(label)
+    warpHost.addSublayer(wrapper)
+    let star = WarpStar(
+      angle: Double.random(in: 0..<(2 * .pi)),
+      radius: seedNearCenter ? Double.random(in: 6...28) : Double.random(in: 8...Double(maxRadius) * 0.9),
+      emoji: emoji,
+      isRare: isRare,
+      wrapper: wrapper,
+      label: label
+    )
+    star.apply(center: center, scale: scale)
+    return star
   }
 
   private func addAnimatedText(
@@ -210,6 +354,44 @@ final class GalaxyPainter: @unchecked Sendable {
   }
 }
 
+private struct WarpStar {
+  var angle: Double
+  var radius: Double
+  var emoji: String
+  var isRare: Bool
+  let wrapper: CALayer
+  let label: CATextLayer
+
+  mutating func recycle(scale: CGFloat) {
+    angle = Double.random(in: 0..<(2 * .pi))
+    radius = Double.random(in: 8...36)
+    let roll = Double.random(in: 0..<1)
+    emoji = WarpFieldCatalog.emoji(
+      roll: roll,
+      starIndex: Int.random(in: 0..<WarpFieldCatalog.stars.count),
+      rareIndex: Int.random(in: 0..<WarpFieldCatalog.rare.count)
+    )
+    isRare = roll < WarpFieldCatalog.rareProbability
+    label.string = emoji
+    label.contentsScale = scale
+  }
+
+  func apply(center: CGPoint, scale: CGFloat) {
+    let x = center.x + CGFloat(cos(angle)) * CGFloat(radius)
+    let y = center.y + CGFloat(sin(angle)) * CGFloat(radius)
+    let growth = 0.22 + CGFloat(radius) / 260
+    let fontSize: CGFloat = (isRare ? 48 : 30) * growth
+    let box = fontSize * 1.8
+    wrapper.frame = CGRect(x: x - box / 2, y: y - box / 2, width: box, height: box)
+    wrapper.opacity = Float(min(0.92, 0.08 + radius / 160))
+    label.frame = wrapper.bounds
+    label.fontSize = fontSize
+    label.contentsScale = scale
+    label.font = NSFont(name: "Apple Color Emoji", size: fontSize)
+      ?? NSFont.systemFont(ofSize: fontSize)
+  }
+}
+
 /// Fond uni, lettres / emojis animés, traînée d’étoiles. Pas de SwiftUI (isolation MainActor).
 final class GalaxyStageView: NSView {
   private let inputBridge: KioskInputBridge
@@ -227,13 +409,21 @@ final class GalaxyStageView: NSView {
     self.director = director
     let glyphHost = CALayer()
     let starHost = CALayer()
-    glyphHost.zPosition = 2
+    let warpHost = CALayer()
+    warpHost.zPosition = 0
     starHost.zPosition = 1
-    self.painter = GalaxyPainter(glyphHost: glyphHost, starHost: starHost, contentsScale: scale)
+    glyphHost.zPosition = 2
+    self.painter = GalaxyPainter(
+      glyphHost: glyphHost,
+      starHost: starHost,
+      warpHost: warpHost,
+      contentsScale: scale
+    )
     super.init(frame: .zero)
     wantsLayer = true
     layer?.backgroundColor = background.cgColor
     layer?.contentsScale = scale
+    layer?.addSublayer(warpHost)
     layer?.addSublayer(starHost)
     layer?.addSublayer(glyphHost)
 
