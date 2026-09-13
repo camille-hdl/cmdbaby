@@ -175,6 +175,7 @@ final class CoverWindowCoordinator {
   var store = CoverWindowStore()
   private var windows: [NSWindow] = []
   private var inputBridge: KioskInputBridge?
+  private var playDirector: GalaxyDirector?
 
   func createCoverWindows() throws -> [ScreenDescriptor] {
     closeCoverWindows()
@@ -184,11 +185,13 @@ final class CoverWindowCoordinator {
     activateApp()
     let exitHandler = onAdultExit
     let hud = self.hud
+    let director = GalaxyDirector()
     let bridge = KioskInputBridge(hud: hud) { kind in
       hud.noteExit(kind)
       exitHandler?(kind)
     }
     inputBridge = bridge
+    playDirector = director
 
     var descriptors: [ScreenDescriptor] = []
     for (index, screen) in screens.enumerated() {
@@ -198,7 +201,7 @@ final class CoverWindowCoordinator {
         descriptor: descriptor,
         colorIndex: index,
         inputBridge: bridge,
-        hud: hud
+        director: director
       )
       windows.append(window)
       window.orderFrontRegardless()
@@ -220,6 +223,8 @@ final class CoverWindowCoordinator {
     _ = store.closeAll()
     windows.removeAll(keepingCapacity: false)
     inputBridge = nil
+    playDirector?.reset()
+    playDirector = nil
     hud.resetHandlers()
   }
 
@@ -233,7 +238,7 @@ final class CoverWindowCoordinator {
 }
 
 /// Reconnaissance des sorties depuis les callbacks AppKit (hors exécuteur MainActor).
-private final class KioskInputBridge: @unchecked Sendable {
+final class KioskInputBridge: @unchecked Sendable {
   private let lock = NSLock()
   private let recognizer = AdultExitRecognizer()
   private let clickCounter = FailsafeClickCounter()
@@ -297,7 +302,7 @@ private final class CoverWindow: NSWindow {
     descriptor: ScreenDescriptor,
     colorIndex: Int,
     inputBridge: KioskInputBridge,
-    hud: KioskHUD
+    director: GalaxyDirector
   ) {
     self.inputBridge = inputBridge
     super.init(
@@ -322,12 +327,13 @@ private final class CoverWindow: NSWindow {
     ignoresMouseEvents = false
     tabbingMode = .disallowed
     animationBehavior = .none
+    acceptsMouseMovedEvents = true
     identifier = NSUserInterfaceItemIdentifier("fr.camille.babywork.cover.\(descriptor.id)")
-    contentView = CoverContentView(
-      descriptor: descriptor,
+    contentView = GalaxyStageView(
       background: CoverPalette.color(at: colorIndex),
       inputBridge: inputBridge,
-      hud: hud
+      director: director,
+      scale: screen.backingScaleFactor
     )
     isReleasedWhenClosed = false
   }
@@ -345,9 +351,9 @@ private final class CoverWindow: NSWindow {
 
 private enum CoverPalette {
   private static let colors: [NSColor] = [
-    NSColor(calibratedRed: 0.12, green: 0.22, blue: 0.38, alpha: 1),
-    NSColor(calibratedRed: 0.28, green: 0.14, blue: 0.32, alpha: 1),
-    NSColor(calibratedRed: 0.08, green: 0.30, blue: 0.26, alpha: 1),
+    NSColor(calibratedRed: 0.05, green: 0.07, blue: 0.18, alpha: 1),
+    NSColor(calibratedRed: 0.12, green: 0.04, blue: 0.20, alpha: 1),
+    NSColor(calibratedRed: 0.03, green: 0.14, blue: 0.18, alpha: 1),
   ]
 
   static func color(at index: Int) -> NSColor {
@@ -375,14 +381,14 @@ private final class FailsafeClickCounter: @unchecked Sendable {
   }
 }
 
-private final class FailsafeClickView: NSView {
+final class FailsafeClickView: NSView {
   private let inputBridge: KioskInputBridge
 
   init(inputBridge: KioskInputBridge) {
     self.inputBridge = inputBridge
     super.init(frame: .zero)
     wantsLayer = true
-    layer?.backgroundColor = NSColor.white.withAlphaComponent(0.35).cgColor
+    layer?.backgroundColor = NSColor.white.withAlphaComponent(0.12).cgColor
     layer?.cornerRadius = 6
     setAccessibilityLabel("Sortie de secours")
     setAccessibilityRole(.button)
@@ -397,144 +403,6 @@ private final class FailsafeClickView: NSView {
 
   nonisolated override func mouseDown(with event: NSEvent) {
     inputBridge.noteFailsafeClick()
-  }
-}
-
-private final class HUDTextSink: @unchecked Sendable {
-  private let layer: CATextLayer
-
-  init(layer: CATextLayer) {
-    self.layer = layer
-  }
-
-  func apply(_ text: String) {
-    layer.string = text
-  }
-}
-
-private final class CoverContentView: NSView {
-  private let inputBridge: KioskInputBridge
-  private let hudLayer = CATextLayer()
-
-  init(
-    descriptor: ScreenDescriptor,
-    background: NSColor,
-    inputBridge: KioskInputBridge,
-    hud: KioskHUD
-  ) {
-    self.inputBridge = inputBridge
-    super.init(frame: .zero)
-    wantsLayer = true
-    layer?.backgroundColor = background.cgColor
-
-    hudLayer.foregroundColor = NSColor.white.cgColor
-    hudLayer.font = NSFont.monospacedDigitSystemFont(ofSize: 20, weight: .medium)
-    hudLayer.fontSize = 20
-    hudLayer.alignmentMode = .left
-    hudLayer.isWrapped = true
-    hudLayer.contentsScale = NSScreen.main?.backingScaleFactor ?? 2
-    hudLayer.string = "en attente d’événements…"
-    layer?.addSublayer(hudLayer)
-    let sink = HUDTextSink(layer: hudLayer)
-    hud.addHandler { text in
-      sink.apply(text)
-    }
-
-    let stack = NSStackView()
-    stack.orientation = .vertical
-    stack.alignment = .leading
-    stack.spacing = 16
-    stack.translatesAutoresizingMaskIntoConstraints = false
-
-    let title = makeLabel(
-      descriptor.isMain
-        ? "Écran principal — \(descriptor.name)"
-        : descriptor.name,
-      font: .systemFont(ofSize: 36, weight: .bold)
-    )
-    let origin = makeLabel(
-      String(
-        format: "Origine (%.0f, %.0f) · %.0f × %.0f pt · échelle %.1f×",
-        descriptor.originX,
-        descriptor.originY,
-        descriptor.width,
-        descriptor.height,
-        descriptor.scale
-      ),
-      font: .monospacedDigitSystemFont(ofSize: 20, weight: .medium)
-    )
-    let hint = makeLabel(
-      "Sortie adulte : parent + Entrée, ou Majuscule-Échap — quitte l’application.\nCommande-Q est absorbé et ne quitte pas.\nCarré pâle en bas à droite : 5 clics rapides (le premier compte).",
-      font: .systemFont(ofSize: 22, weight: .regular)
-    )
-
-    stack.addArrangedSubview(title)
-    stack.addArrangedSubview(origin)
-    stack.addArrangedSubview(hint)
-    addSubview(stack)
-
-    let failsafe = FailsafeClickView(inputBridge: inputBridge)
-    failsafe.translatesAutoresizingMaskIntoConstraints = false
-    addSubview(failsafe)
-
-    NSLayoutConstraint.activate([
-      stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 48),
-      stack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -48),
-      stack.topAnchor.constraint(equalTo: topAnchor, constant: 48),
-      failsafe.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-      failsafe.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -12),
-      failsafe.widthAnchor.constraint(equalToConstant: 72),
-      failsafe.heightAnchor.constraint(equalToConstant: 72),
-    ])
-  }
-
-  @available(*, unavailable)
-  required init?(coder: NSCoder) {
-    fatalError("init(coder:) n’est pas supporté")
-  }
-
-  override func layout() {
-    super.layout()
-    let height: CGFloat = 220
-    hudLayer.frame = CGRect(
-      x: 48,
-      y: max((bounds.height / 2) - (height / 2) - 40, 120),
-      width: max(bounds.width - 96, 120),
-      height: height
-    )
-  }
-
-  nonisolated override var acceptsFirstResponder: Bool { true }
-  nonisolated override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-
-  nonisolated override func mouseDown(with event: NSEvent) {
-    inputBridge.noteBackgroundClick()
-  }
-
-  nonisolated override func keyDown(with event: NSEvent) {
-    let code = UInt16(event.keyCode)
-    let isReturn = code == 0x24 || code == 0x4C
-    let isEscape = code == 0x35
-    let shiftDown = event.modifierFlags.contains(.shift)
-    let letter = event.charactersIgnoringModifiers?.lowercased().first { $0.isLetter }
-      ?? KeyboardLayoutLetter.shared.fromKeyCode(code)
-    inputBridge.noteKeyDown(
-      letter: letter,
-      isReturn: isReturn,
-      isEscape: isEscape,
-      shiftDown: shiftDown
-    )
-  }
-
-  private func makeLabel(_ text: String, font: NSFont) -> NSTextField {
-    let field = NSTextField(wrappingLabelWithString: text)
-    field.font = font
-    field.textColor = .white
-    field.drawsBackground = false
-    field.isBezeled = false
-    field.isEditable = false
-    field.isSelectable = false
-    return field
   }
 }
 
