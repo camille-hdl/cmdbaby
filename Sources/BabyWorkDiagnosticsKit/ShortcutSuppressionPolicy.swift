@@ -21,6 +21,7 @@ public struct InputModifierMask: OptionSet, Sendable, Hashable {
 /// Raccourcis dont la suppression doit être démontrée en phase 0.
 public enum MonitoredShortcut: String, CaseIterable, Sendable, Equatable, Hashable {
   case commandSpace
+  case optionSpace
   case commandTab
   case commandQ
   case commandH
@@ -34,6 +35,8 @@ public enum MonitoredShortcut: String, CaseIterable, Sendable, Equatable, Hashab
     switch self {
     case .commandSpace:
       "Commande-Espace"
+    case .optionSpace:
+      "Option-Espace"
     case .commandTab:
       "Commande-Tab"
     case .commandQ:
@@ -68,44 +71,56 @@ public enum MacVirtualKeyCode {
   public static let tab: UInt16 = 0x30
   public static let escape: UInt16 = 0x35
   public static let upArrow: UInt16 = 0x7E
-  public static let downArrow: UInt16 = 0x7F
+  public static let downArrow: UInt16 = 0x7D
 }
 
-/// Décide si une frappe doit être absorbée. Ne voit jamais le caractère saisi.
+/// Décide si une frappe doit être absorbée. Le caractère n’est utilisé que pour
+/// classer Q/H/M selon la disposition (AZERTY compris) ; il n’est jamais journalisé.
 public enum ShortcutSuppressionPolicy {
   private struct Rule {
     let shortcut: MonitoredShortcut
-    let keyCode: UInt16
+    let keyCode: UInt16?
+    let letter: Character?
     let modifiers: InputModifierMask
   }
 
   private static let rules: [Rule] = [
-    Rule(shortcut: .commandSpace, keyCode: MacVirtualKeyCode.space, modifiers: [.command]),
-    Rule(shortcut: .commandTab, keyCode: MacVirtualKeyCode.tab, modifiers: [.command]),
-    Rule(shortcut: .commandQ, keyCode: MacVirtualKeyCode.ansiQ, modifiers: [.command]),
-    Rule(shortcut: .commandH, keyCode: MacVirtualKeyCode.ansiH, modifiers: [.command]),
-    Rule(shortcut: .commandM, keyCode: MacVirtualKeyCode.ansiM, modifiers: [.command]),
+    Rule(shortcut: .commandSpace, keyCode: MacVirtualKeyCode.space, letter: nil, modifiers: [.command]),
+    Rule(shortcut: .optionSpace, keyCode: MacVirtualKeyCode.space, letter: nil, modifiers: [.option]),
+    Rule(shortcut: .commandTab, keyCode: MacVirtualKeyCode.tab, letter: nil, modifiers: [.command]),
+    Rule(shortcut: .commandQ, keyCode: MacVirtualKeyCode.ansiQ, letter: "q", modifiers: [.command]),
+    Rule(shortcut: .commandH, keyCode: MacVirtualKeyCode.ansiH, letter: "h", modifiers: [.command]),
+    Rule(shortcut: .commandM, keyCode: MacVirtualKeyCode.ansiM, letter: "m", modifiers: [.command]),
     Rule(
       shortcut: .optionCommandEscape,
       keyCode: MacVirtualKeyCode.escape,
+      letter: nil,
       modifiers: [.option, .command]
     ),
-    Rule(shortcut: .controlUp, keyCode: MacVirtualKeyCode.upArrow, modifiers: [.control]),
-    Rule(shortcut: .controlDown, keyCode: MacVirtualKeyCode.downArrow, modifiers: [.control]),
+    Rule(shortcut: .controlUp, keyCode: MacVirtualKeyCode.upArrow, letter: nil, modifiers: [.control]),
+    Rule(shortcut: .controlDown, keyCode: MacVirtualKeyCode.downArrow, letter: nil, modifiers: [.control]),
     Rule(
       shortcut: .controlCommandQ,
       keyCode: MacVirtualKeyCode.ansiQ,
+      letter: "q",
       modifiers: [.control, .command]
     ),
   ]
 
   public static func decision(
     keyCode: UInt16,
-    modifiers: InputModifierMask
+    modifiers: InputModifierMask,
+    letter: Character? = nil
   ) -> InputFilterDecision {
     let distinguishing = modifiers.intersection(.distinguishing)
-    for rule in rules where rule.keyCode == keyCode && rule.modifiers == distinguishing {
-      return .suppress(rule.shortcut)
+    let normalizedLetter = letter.flatMap { $0.lowercased().first }
+    for rule in rules where rule.modifiers == distinguishing {
+      if let expected = rule.letter, normalizedLetter == expected {
+        return .suppress(rule.shortcut)
+      }
+      if let expectedKey = rule.keyCode, expectedKey == keyCode {
+        return .suppress(rule.shortcut)
+      }
     }
     return .allow
   }

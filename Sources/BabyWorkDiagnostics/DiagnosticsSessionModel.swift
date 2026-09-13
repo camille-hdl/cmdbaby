@@ -1,59 +1,136 @@
 import AppKit
 import ApplicationServices
 import BabyWorkDiagnosticsKit
+import Carbon
+import Combine
 import CoreGraphics
 import Foundation
 import IOKit.hid
 
-@MainActor
-final class DiagnosticsSessionModel: ObservableObject {
-  @Published private(set) var report: DiagnosticReport
-  @Published private(set) var filterStatus: InputFilterStatus = .inactive
-  @Published private(set) var suppressedCounts: [MonitoredShortcut: Int] = [:]
+/// État affiché par SwiftUI. Intentionnellement hors `@MainActor` : le body SwiftUI
+/// est parfois évalué depuis un observateur AppKit, ce qui crashait l’accès à un
+/// `ObservableObject` isolé MainActor (`swift_task_isCurrentExecutor`).
+final class DiagnosticsPublishedState: ObservableObject, @unchecked Sendable {
+  @Published var report: DiagnosticReport
+  @Published var filterStatus: InputFilterStatus = .inactive
+  @Published var suppressedCounts: [MonitoredShortcut: Int] = [:]
+  @Published var kioskState = KioskSessionState()
+  @Published var injectedFailureChoice: FailureInjectionChoice = .none
 
-  private var filter: SessionInputFilter?
-
-  init() {
-    report = DiagnosticReport(snapshot: SystemSnapshotCollector.capture())
+  init(report: DiagnosticReport) {
+    self.report = report
   }
 
-  var isFilterActive: Bool {
-    switch filterStatus {
-    case .active, .starting, .disabledByTimeout, .disabledByUserInput:
-      true
-    case .inactive, .failed:
-      false
+  var isFilterActive: Bool { filterStatus.isRunning }
+  var isKioskActive: Bool { kioskState.blocksTermination }
+
+  func count(for shortcut: MonitoredShortcut) -> Int {
+    suppressedCounts[shortcut, default: 0]
+  }
+}
+
+@MainActor
+final class DiagnosticsSessionModel {
+  let ui: DiagnosticsPublishedState
+  private let environment: AppKitKioskEnvironment
+  private let kioskController: KioskSessionController
+  private weak var terminationDelegate: DiagnosticsAppDelegate?
+  private var kioskTask: Task<Void, Never>?
+
+  init(terminationGate: TerminationGate = TerminationGate()) {
+    let environment = AppKitKioskEnvironment(terminationGate: terminationGate)
+    self.environment = environment
+    kioskController = KioskSessionController(services: environment)
+    ui = DiagnosticsPublishedState(report: DiagnosticReport(snapshot: SystemSnapshotCollector.capture()))
+    KeyboardLayoutLetter.shared.refreshFromCurrentLayout()
+    DistributedNotificationCenter.default().addObserver(
+      forName: NSNotification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String),
+      object: nil,
+      queue: .main
+    ) { _ in
+      Task { @MainActor in
+        KeyboardLayoutLetter.shared.refreshFromCurrentLayout()
+      }
+    }
+
+    environment.onFilterStatus = { [weak self] status in
+      DispatchQueue.main.async {
+        MainActor.assumeIsolated {
+          guard let self else { return }
+          self.ui.filterStatus = status
+          if !self.ui.kioskState.blocksTermination {
+            self.refresh()
+          }
+        }
+      }
+    }
+    environment.onCountsChange = { [weak self] counts in
+      DispatchQueue.main.async {
+        MainActor.assumeIsolated {
+          self?.ui.suppressedCounts = counts
+        }
+      }
+    }
+
+    let ui = self.ui
+    let stopFlag = kioskController.externalStop
+    let gate = environment.terminationGate
+    environment.emergency.syncModel = { kind in
+      ui.filterStatus = .inactive
+      ui.kioskState = KioskSessionState(
+        phase: .configuration,
+        coveredScreens: [],
+        lastExitKind: kind
+      )
+      stopFlag.mark(kind)
+    }
+    environment.emergency.unblock = {
+      gate.setBlocked(false)
+    }
+  }
+
+  func attachTerminationDelegate(_ delegate: DiagnosticsAppDelegate) {
+    terminationDelegate = delegate
+  }
+
+  func attachDiagnosticWindow(hide: @escaping () -> Void, reveal: @escaping () -> Void) {
+    environment.onHideDiagnosticInterface = hide
+    environment.onRevealDiagnosticInterface = reveal
+  }
+
+  func attachRevealPump(_ pump: DiagnosticRevealPump) {
+    environment.emergency.reveal = {
+      pump.request()
     }
   }
 
   func refresh() {
-    report = DiagnosticReport(snapshot: SystemSnapshotCollector.capture())
+    ui.report = DiagnosticReport(snapshot: SystemSnapshotCollector.capture())
   }
 
   func requestInputMonitoringPrompt() {
-    // CGRequestListenEventAccess ne présente plus d’invite fiable.
-    // IOHIDRequestAccess enregistre l’app dans TCC Surveillance de l’entrée.
-    let current = IOHIDCheckAccess(kIOHIDRequestTypeListenEvent)
-    if current == kIOHIDAccessTypeGranted {
-      refresh()
-      return
-    }
-
-    _ = IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
-    _ = IOHIDRequestAccess(kIOHIDRequestTypePostEvent)
-    _ = CGRequestPostEventAccess()
     _ = CGRequestListenEventAccess()
-
-    if current == kIOHIDAccessTypeDenied {
-      openInputMonitoringSettings()
-    }
+    _ = CGRequestPostEventAccess()
+    _ = IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
+    openPrivacyPane(suffix: "Privacy_ListenEvent")
     refresh()
   }
 
-  private func openInputMonitoringSettings() {
+  func requestAccessibilityPrompt() {
+    let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+    _ = AXIsProcessTrustedWithOptions(options)
+    openPrivacyPane(suffix: "Privacy_Accessibility")
+    refresh()
+  }
+
+  func revealAppInFinder() {
+    NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
+  }
+
+  private func openPrivacyPane(suffix: String) {
     let candidates = [
-      "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_ListenEvent",
-      "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent",
+      "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?\(suffix)",
+      "x-apple.systempreferences:com.apple.preference.security?\(suffix)",
     ]
     for candidate in candidates {
       if let url = URL(string: candidate), NSWorkspace.shared.open(url) {
@@ -62,14 +139,8 @@ final class DiagnosticsSessionModel: ObservableObject {
     }
   }
 
-  func requestAccessibilityPrompt() {
-    let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
-    _ = AXIsProcessTrustedWithOptions(options)
-    refresh()
-  }
-
   func toggleFilter() {
-    if isFilterActive {
+    if ui.isFilterActive {
       stopFilter()
     } else {
       startFilter()
@@ -77,41 +148,84 @@ final class DiagnosticsSessionModel: ObservableObject {
   }
 
   func startFilter() {
-    stopFilter()
-    suppressedCounts = [:]
-    filterStatus = .starting
-
-    let engine = SessionInputFilter(
-      onStatusChange: { [weak self] status in
-        Task { @MainActor in
-          self?.filterStatus = status
-          if case .failed = status {
-            self?.filter = nil
-          }
-          self?.refresh()
-        }
-      },
-      onCountsChange: { [weak self] counts in
-        Task { @MainActor in
-          self?.suppressedCounts = counts
-        }
+    guard !ui.isKioskActive else { return }
+    ui.suppressedCounts = [:]
+    ui.filterStatus = .starting
+    KeyboardLayoutLetter.shared.refreshFromCurrentLayout()
+    Task {
+      do {
+        try await environment.startInputFilter()
+      } catch {
+        ui.filterStatus = .failed(error.localizedDescription)
+        refresh()
       }
-    )
-    filter = engine
-    engine.start()
+    }
   }
 
   func stopFilter() {
-    filter?.stop()
-    filter = nil
-    filterStatus = .inactive
+    environment.stopInputFilter()
+    ui.filterStatus = .inactive
   }
 
   func reenableFilter() {
-    filter?.reenableTapIfPossible()
+    environment.reenableFilter()
   }
 
-  func count(for shortcut: MonitoredShortcut) -> Int {
-    suppressedCounts[shortcut, default: 0]
+  func setInjectedFailure(_ choice: FailureInjectionChoice) {
+    ui.injectedFailureChoice = choice
+  }
+
+  func startKiosk(injected: FailureInjectionChoice) {
+    guard kioskTask == nil else { return }
+    switch ui.kioskState.phase {
+    case .configuration, .failed:
+      break
+    case .preparing, .activating, .active, .stopping:
+      return
+    }
+
+    ui.injectedFailureChoice = injected
+    KeyboardLayoutLetter.shared.refreshFromCurrentLayout()
+    ui.suppressedCounts = [:]
+    kioskController.injectedFailure = injected.step
+    environment.terminationGate.setBlocked(true)
+    environment.emergency.arm()
+
+    kioskTask = Task { [weak self] in
+      guard let self else { return }
+      let state = await self.kioskController.activate()
+      self.ui.kioskState = state
+      self.kioskTask = nil
+      if state.phase != .active {
+        self.environment.terminationGate.setBlocked(false)
+        self.ui.filterStatus = .inactive
+        self.environment.revealDiagnosticInterface()
+      }
+      if state.phase == .failed || state.phase == .configuration {
+        self.refresh()
+      }
+    }
+  }
+
+  func handleAdultExit(_ kind: AdultExitKind) {
+    switch kioskController.state.phase {
+    case .preparing, .activating, .active, .stopping:
+      ui.kioskState = kioskController.deactivate(exitKind: kind)
+      ui.filterStatus = .inactive
+      environment.terminationGate.setBlocked(false)
+      refresh()
+      environment.revealDiagnosticInterface()
+    case .configuration, .failed:
+      stopFilter()
+    }
+  }
+
+  func relaunch() {
+    let path = Bundle.main.bundlePath
+    let task = Process()
+    task.executableURL = URL(fileURLWithPath: "/bin/sh")
+    task.arguments = ["-c", "sleep 0.6; /usr/bin/open \"\(path)\""]
+    try? task.run()
+    NSApp.terminate(nil)
   }
 }

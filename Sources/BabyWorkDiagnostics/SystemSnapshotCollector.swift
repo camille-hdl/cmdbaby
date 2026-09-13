@@ -3,6 +3,7 @@ import ApplicationServices
 import BabyWorkDiagnosticsKit
 import CoreGraphics
 import Foundation
+import IOKit.hid
 
 @MainActor
 enum SystemSnapshotCollector {
@@ -34,6 +35,7 @@ enum SystemSnapshotCollector {
       signingIdentity: Bundle.main.object(
         forInfoDictionaryKey: "BabyWorkSigningIdentity"
       ) as? String ?? "Exécution SwiftPM non signée",
+      bundleLocation: bundleLocation,
       displays: NSScreen.screens.map { screen in
         DisplaySnapshot(
           name: screen.localizedName,
@@ -43,9 +45,20 @@ enum SystemSnapshotCollector {
           isMain: screen === NSScreen.main
         )
       },
-      inputMonitoringGranted: CGPreflightListenEventAccess(),
+      inputMonitoringListenGranted: CGPreflightListenEventAccess()
+        || IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted,
+      inputMonitoringPostGranted: CGPreflightPostEventAccess(),
       accessibilityGranted: AXIsProcessTrusted()
     )
+  }
+
+  private static var bundleLocation: String {
+    let path = Bundle.main.bundlePath
+    let home = FileManager.default.homeDirectoryForCurrentUser.path
+    if path.hasPrefix(home) {
+      return "~" + path.dropFirst(home.count)
+    }
+    return path
   }
 
   private static var architecture: String {

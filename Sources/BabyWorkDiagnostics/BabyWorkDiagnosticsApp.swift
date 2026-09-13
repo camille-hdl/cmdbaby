@@ -1,40 +1,162 @@
+import AppKit
 import BabyWorkDiagnosticsKit
 import SwiftUI
 
 @main
-struct BabyWorkDiagnosticsApp: App {
-  @StateObject private var model = DiagnosticsSessionModel()
-
-  var body: some Scene {
-    WindowGroup("Diagnostic BabyWork") {
-      DiagnosticView(model: model)
+enum DiagnosticsMain {
+  static func main() {
+    let app = NSApplication.shared
+    app.setActivationPolicy(.regular)
+    let delegate = MainActor.assumeIsolated { DiagnosticsAppDelegate() }
+    app.delegate = delegate
+    withExtendedLifetime(delegate) {
+      app.run()
     }
-    .defaultSize(width: 780, height: 860)
+  }
+}
+
+/// Actions destinées aux vues SwiftUI : aucun type isolé MainActor n’est capturé.
+struct DiagnosticActions: Sendable {
+  var refresh: @Sendable () -> Void
+  var toggleFilter: @Sendable () -> Void
+  var requestAccessibility: @Sendable () -> Void
+  var relaunch: @Sendable () -> Void
+  var revealInFinder: @Sendable () -> Void
+  var reenableFilter: @Sendable () -> Void
+  var setInjectedFailure: @Sendable (FailureInjectionChoice) -> Void
+  var startKiosk: @Sendable (FailureInjectionChoice) -> Void
+}
+
+@MainActor
+final class DiagnosticsAppDelegate: NSObject, NSApplicationDelegate {
+  private let terminationGate: TerminationGate
+  private let revealPump = DiagnosticRevealPump()
+  private let model: DiagnosticsSessionModel
+  private var diagnosticWindow: NSWindow?
+  private var hostingView: NSView?
+
+  override init() {
+    let gate = TerminationGate()
+    terminationGate = gate
+    model = DiagnosticsSessionModel(terminationGate: gate)
+    super.init()
+  }
+
+  func makeActions() -> DiagnosticActions {
+    let model = self.model
+    return DiagnosticActions(
+      refresh: { Task { @MainActor in model.refresh() } },
+      toggleFilter: { Task { @MainActor in model.toggleFilter() } },
+      requestAccessibility: { Task { @MainActor in model.requestAccessibilityPrompt() } },
+      relaunch: { Task { @MainActor in model.relaunch() } },
+      revealInFinder: { Task { @MainActor in model.revealAppInFinder() } },
+      reenableFilter: { Task { @MainActor in model.reenableFilter() } },
+      setInjectedFailure: { choice in
+        Task { @MainActor in model.setInjectedFailure(choice) }
+      },
+      startKiosk: { choice in
+        Task { @MainActor in model.startKiosk(injected: choice) }
+      }
+    )
+  }
+
+  func applicationDidFinishLaunching(_ notification: Notification) {
+    installMainMenu()
+    model.attachTerminationDelegate(self)
+    model.attachDiagnosticWindow(
+      hide: { [weak self] in self?.detachDiagnosticView() },
+      reveal: { [weak self] in self?.attachDiagnosticView() }
+    )
+
+    let window = NSWindow(
+      contentRect: NSRect(x: 0, y: 0, width: 780, height: 900),
+      styleMask: [.titled, .closable, .miniaturizable, .resizable],
+      backing: .buffered,
+      defer: false
+    )
+    window.title = "Diagnostic BabyWork"
+    window.identifier = NSUserInterfaceItemIdentifier("fr.camille.babywork.diagnostic")
+    window.isReleasedWhenClosed = false
+    window.center()
+    diagnosticWindow = window
+    revealPump.attach(window: window) {}
+    model.attachRevealPump(revealPump)
+    model.startKiosk(injected: .none)
+  }
+
+  nonisolated func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+    false
+  }
+
+  nonisolated func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+    terminationGate.isBlocked() ? .terminateCancel : .terminateNow
+  }
+
+  /// Détruit le graphe SwiftUI avant le kiosque. Réaffiché seulement si l’activation échoue.
+  private func detachDiagnosticView() {
+    diagnosticWindow?.contentView = NSView(frame: .zero)
+    diagnosticWindow?.orderOut(nil)
+    hostingView = nil
+  }
+
+  private func attachDiagnosticView() {
+    hostingView = nil
+    let hosting = NSHostingView(rootView: DiagnosticView(ui: model.ui, actions: makeActions()))
+    hostingView = hosting
+    diagnosticWindow?.contentView = hosting
+    diagnosticWindow?.makeKeyAndOrderFront(nil)
+    if #available(macOS 14, *) {
+      NSApp.activate()
+    } else {
+      NSApp.activate(ignoringOtherApps: true)
+    }
+  }
+
+  private func installMainMenu() {
+    let mainMenu = NSMenu()
+    let appItem = NSMenuItem()
+    mainMenu.addItem(appItem)
+    let appMenu = NSMenu(title: "Diagnostic BabyWork")
+    appMenu.addItem(
+      withTitle: "Quitter Diagnostic BabyWork",
+      action: #selector(NSApplication.terminate(_:)),
+      keyEquivalent: "q"
+    )
+    appItem.submenu = appMenu
+    NSApp.mainMenu = mainMenu
   }
 }
 
 private struct DiagnosticView: View {
-  @ObservedObject var model: DiagnosticsSessionModel
+  @ObservedObject var ui: DiagnosticsPublishedState
+  let actions: DiagnosticActions
 
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 24) {
         header
 
-        ForEach(model.report.sections.indices, id: \.self) { sectionIndex in
-          let section = model.report.sections[sectionIndex]
+        ForEach(ui.report.sections.indices, id: \.self) { sectionIndex in
+          let section = ui.report.sections[sectionIndex]
           DiagnosticSectionView(section: section)
         }
 
-        InputFilterPanel(model: model)
+        InputFilterPanel(ui: ui, actions: actions)
+        KioskPanel(ui: ui, actions: actions)
       }
       .padding(28)
       .frame(maxWidth: .infinity, alignment: .leading)
     }
     .background(Color(nsColor: .windowBackgroundColor))
+    .onReceive(
+      NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+    ) { _ in
+      guard !ui.isKioskActive else { return }
+      actions.refresh()
+    }
     .toolbar {
       Button("Actualiser", systemImage: "arrow.clockwise") {
-        model.refresh()
+        actions.refresh()
       }
       .help("Relire les informations système et les permissions")
     }
@@ -55,7 +177,8 @@ private struct DiagnosticView: View {
 }
 
 private struct InputFilterPanel: View {
-  @ObservedObject var model: DiagnosticsSessionModel
+  @ObservedObject var ui: DiagnosticsPublishedState
+  let actions: DiagnosticActions
 
   var body: some View {
     GroupBox {
@@ -64,7 +187,7 @@ private struct InputFilterPanel: View {
           GridRow {
             Text("État du filtre")
               .fontWeight(.medium)
-            Text(model.filterStatus.displayName)
+            Text(ui.filterStatus.displayName)
               .textSelection(.enabled)
           }
           GridRow {
@@ -76,32 +199,40 @@ private struct InputFilterPanel: View {
         }
 
         HStack(spacing: 12) {
-          Button(model.isFilterActive ? "Désactiver le filtre" : "Activer le filtre") {
-            model.toggleFilter()
+          Button(ui.isFilterActive ? "Désactiver le filtre" : "Activer le filtre") {
+            actions.toggleFilter()
           }
-          .keyboardShortcut(.defaultAction)
-
-          Button("Demander Surveillance de l’entrée") {
-            model.requestInputMonitoringPrompt()
-          }
+          .disabled(ui.isKioskActive)
 
           Button("Demander Accessibilité") {
-            model.requestAccessibilityPrompt()
+            actions.requestAccessibility()
           }
 
-          if case .disabledByTimeout = model.filterStatus {
+          Button("Quitter et relancer") {
+            actions.relaunch()
+          }
+
+          Button("Afficher dans le Finder") {
+            actions.revealInFinder()
+          }
+
+          if case .disabledByTimeout = ui.filterStatus {
             Button("Réactiver le tap") {
-              model.reenableFilter()
+              actions.reenableFilter()
             }
           }
-          if case .disabledByUserInput = model.filterStatus {
+          if case .disabledByUserInput = ui.filterStatus {
             Button("Réactiver le tap") {
-              model.reenableFilter()
+              actions.reenableFilter()
             }
           }
         }
 
-        Text("Pendant que le filtre est actif, tester les raccourcis ci-dessous. Le compteur augmente uniquement pour les absorptions détectées — jamais le caractère saisi.")
+        Text("Le filtre actif dépend d’Accessibilité, pas de Surveillance de l’entrée. Après avoir coché Diagnostic BabyWork dans Accessibilité, macOS mémorise « non » jusqu’à la relance : utilisez Quitter et relancer, pas Actualiser. Si la ligne n’existe pas, glissez l’app depuis le Finder sur la liste, ou ajoutez-la avec +.")
+          .font(.callout)
+          .foregroundStyle(.secondary)
+
+        Text("Sorties adultes : parent + Entrée, ou Majuscule-Échap. Elles quittent l’application après restauration de la présentation. Commande-Q est absorbé pendant le kiosque.")
           .font(.callout)
           .foregroundStyle(.secondary)
 
@@ -110,9 +241,9 @@ private struct InputFilterPanel: View {
             HStack {
               Text(shortcut.displayName)
               Spacer()
-              Text("\(model.count(for: shortcut))")
+              Text("\(ui.count(for: shortcut))")
                 .monospacedDigit()
-                .foregroundStyle(model.count(for: shortcut) > 0 ? Color.green : Color.secondary)
+                .foregroundStyle(ui.count(for: shortcut) > 0 ? Color.green : Color.secondary)
             }
           }
         }
@@ -134,6 +265,95 @@ private struct InputFilterPanel: View {
       return "Conteneur détecté à l’exécution"
     }
     return "Non détecté à l’exécution"
+  }
+}
+
+private struct KioskPanel: View {
+  @ObservedObject var ui: DiagnosticsPublishedState
+  let actions: DiagnosticActions
+
+  var body: some View {
+    GroupBox {
+      VStack(alignment: .leading, spacing: 16) {
+        Grid(alignment: .leading, horizontalSpacing: 20, verticalSpacing: 12) {
+          GridRow {
+            Text("État du kiosque")
+              .fontWeight(.medium)
+            Text(ui.kioskState.phase.displayName)
+              .textSelection(.enabled)
+          }
+          GridRow {
+            Text("Écrans couverts")
+              .fontWeight(.medium)
+            Text(coveredScreensLabel)
+              .textSelection(.enabled)
+          }
+          GridRow {
+            Text("Dernière sortie")
+              .fontWeight(.medium)
+            Text(exitLabel)
+              .textSelection(.enabled)
+          }
+          if let error = ui.kioskState.lastError {
+            GridRow {
+              Text("Dernier échec")
+                .fontWeight(.medium)
+              Text(error.localizedDescription)
+                .textSelection(.enabled)
+            }
+          }
+        }
+
+        VStack(alignment: .leading, spacing: 8) {
+          Text("Simuler une défaillance : \(ui.injectedFailureChoice.displayName)")
+            .fontWeight(.medium)
+          ForEach(FailureInjectionChoice.allCases) { choice in
+            Button(choice.displayName) {
+              ui.injectedFailureChoice = choice
+            }
+            .disabled(ui.isKioskActive)
+            .opacity(ui.injectedFailureChoice == choice ? 1 : 0.55)
+          }
+        }
+
+        Button(ui.isKioskActive ? "Kiosque actif…" : "Activer le kiosque") {
+          actions.startKiosk(ui.injectedFailureChoice)
+        }
+        .disabled(ui.isKioskActive)
+
+        Text("Le kiosque démarre à l’ouverture. Cette fenêtre n’apparaît que si l’activation échoue (Accessibilité, défaillance simulée). Commande-Q est absorbé pendant le kiosque. Une sortie adulte (parent + Entrée, Majuscule-Échap, 5 clics sur le carré pâle) restaure la présentation puis quitte l’application.")
+          .font(.callout)
+          .foregroundStyle(.secondary)
+      }
+      .padding(4)
+    } label: {
+      Text("Confinement multi-écrans")
+        .font(.headline)
+    }
+  }
+
+  private var coveredScreensLabel: String {
+    let screens = ui.kioskState.coveredScreens
+    if screens.isEmpty {
+      return ui.kioskState.phase == .active ? "Aucun" : "—"
+    }
+    return screens.map { screen in
+      let origin = "(\(Int(screen.originX.rounded())), \(Int(screen.originY.rounded())))"
+      return "\(screen.name) \(origin)"
+    }.joined(separator: " · ")
+  }
+
+  private var exitLabel: String {
+    switch ui.kioskState.lastExitKind {
+    case .passphrase:
+      "Séquence parent + Entrée"
+    case .shiftEscape:
+      "Majuscule-Échap"
+    case .failsafeClick:
+      "Clics de secours"
+    case nil:
+      "—"
+    }
   }
 }
 

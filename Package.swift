@@ -20,12 +20,23 @@ let package = Package(
   ],
   targets: [
     .target(name: "BabyWorkDiagnosticsKit"),
+    .target(
+      name: "BabyWorkAppKitBridge",
+      publicHeadersPath: "include",
+      linkerSettings: [
+        .linkedFramework("AppKit"),
+        .linkedFramework("ApplicationServices"),
+        .linkedFramework("CoreFoundation"),
+        .linkedFramework("CoreGraphics"),
+      ]
+    ),
     .executableTarget(
       name: "BabyWorkDiagnostics",
-      dependencies: ["BabyWorkDiagnosticsKit"],
+      dependencies: ["BabyWorkDiagnosticsKit", "BabyWorkAppKitBridge"],
       linkerSettings: [
         .linkedFramework("ApplicationServices"),
         .linkedFramework("AppKit"),
+        .linkedFramework("Carbon"),
         .linkedFramework("CoreGraphics"),
         .linkedFramework("IOKit"),
         .linkedFramework("SwiftUI"),

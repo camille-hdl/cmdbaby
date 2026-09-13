@@ -8,9 +8,15 @@ public struct DiagnosticSnapshot: Equatable, Sendable {
   public let developerDirectory: String
   public let bundleIdentifier: String
   public let signingIdentity: String
+  public let bundleLocation: String
   public let displays: [DisplaySnapshot]
-  public let inputMonitoringGranted: Bool
+  public let inputMonitoringListenGranted: Bool
+  public let inputMonitoringPostGranted: Bool
   public let accessibilityGranted: Bool
+
+  public var inputMonitoringGranted: Bool {
+    inputMonitoringListenGranted || inputMonitoringPostGranted
+  }
 
   public init(
     macOSVersion: String,
@@ -20,8 +26,10 @@ public struct DiagnosticSnapshot: Equatable, Sendable {
     developerDirectory: String,
     bundleIdentifier: String,
     signingIdentity: String,
+    bundleLocation: String,
     displays: [DisplaySnapshot],
-    inputMonitoringGranted: Bool,
+    inputMonitoringListenGranted: Bool,
+    inputMonitoringPostGranted: Bool = false,
     accessibilityGranted: Bool
   ) {
     self.macOSVersion = macOSVersion
@@ -31,8 +39,10 @@ public struct DiagnosticSnapshot: Equatable, Sendable {
     self.developerDirectory = developerDirectory
     self.bundleIdentifier = bundleIdentifier
     self.signingIdentity = signingIdentity
+    self.bundleLocation = bundleLocation
     self.displays = displays
-    self.inputMonitoringGranted = inputMonitoringGranted
+    self.inputMonitoringListenGranted = inputMonitoringListenGranted
+    self.inputMonitoringPostGranted = inputMonitoringPostGranted
     self.accessibilityGranted = accessibilityGranted
   }
 }
@@ -78,6 +88,7 @@ public struct DiagnosticReport: Equatable, Sendable {
         rows: [
           DiagnosticRow(label: "Bundle ID", value: snapshot.bundleIdentifier),
           DiagnosticRow(label: "Identité", value: snapshot.signingIdentity),
+          DiagnosticRow(label: "Emplacement", value: snapshot.bundleLocation),
         ]
       ),
       DiagnosticSection(
@@ -105,17 +116,24 @@ public struct DiagnosticReport: Equatable, Sendable {
         title: "Permissions",
         rows: [
           DiagnosticRow(
-            label: "Surveillance de l’entrée",
-            value: snapshot.inputMonitoringGranted
+            label: "Surveillance de l’entrée (écoute)",
+            value: snapshot.inputMonitoringListenGranted
               ? "Accordée"
-              : "Non accordée ou indéterminée",
-            state: snapshot.inputMonitoringGranted ? .granted : .attention
+              : "Non accordée — absente de la liste ou non relancée",
+            state: snapshot.inputMonitoringListenGranted ? .granted : .attention
+          ),
+          DiagnosticRow(
+            label: "Surveillance de l’entrée (modification)",
+            value: snapshot.inputMonitoringPostGranted
+              ? "Accordée"
+              : "Non accordée — absente de la liste ou non relancée",
+            state: snapshot.inputMonitoringPostGranted ? .granted : .attention
           ),
           DiagnosticRow(
             label: "Accessibilité",
             value: snapshot.accessibilityGranted
               ? "Accordée"
-              : "Non accordée ou indéterminée",
+              : "Non vue par ce processus — relancer après l’avoir cochée",
             state: snapshot.accessibilityGranted ? .granted : .attention
           ),
         ]

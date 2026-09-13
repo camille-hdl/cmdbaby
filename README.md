@@ -41,7 +41,7 @@ Pour une exécution locale sans identité installée :
 
 ```sh
 ./scripts/build-diagnostics-app.sh
-open .build/app/BabyWorkDiagnostics.app
+open /Applications/BabyWorkDiagnostics.app
 ```
 
 Cette voie utilise une signature ad hoc. Elle permet de vérifier le bundle et l’interface, mais **elle n’offre pas une identité suffisamment stable pour les essais TCC**.
@@ -56,9 +56,9 @@ BABYWORK_CODE_SIGN_IDENTITY="Apple Development: Exemple (TEAMID)" \
 Le Bundle ID reste `fr.camille.babywork.diagnostics`. Vérifier le bundle produit et l’exigence désignée :
 
 ```sh
-codesign --verify --deep --strict --verbose=2 .build/app/BabyWorkDiagnostics.app
-codesign --display --verbose=4 .build/app/BabyWorkDiagnostics.app
-codesign -d -r- .build/app/BabyWorkDiagnostics.app
+codesign --verify --deep --strict --verbose=2 /Applications/BabyWorkDiagnostics.app
+codesign --display --verbose=4 /Applications/BabyWorkDiagnostics.app
+codesign -d -r- /Applications/BabyWorkDiagnostics.app
 ```
 
 L’exigence désignée d’une signature Apple Development doit mentionner l’identifiant de bundle et le certificat feuille, et non seulement un `CDHash`. Elle doit rester identique d’un build à l’autre. L’inventaire factuel du Mac cible est dans `docs/phase-0/environment-inventory.md`.
@@ -72,8 +72,8 @@ BABYWORK_CODE_SIGN_IDENTITY="Apple Development: Exemple (TEAMID)" \
 
 BABYWORK_CODE_SIGN_IDENTITY="Apple Development: Exemple (TEAMID)" \
   BABYWORK_APP_SANDBOX=1 \
-  BABYWORK_APP_OUTPUT_DIR=.build/app-sandbox \
   ./scripts/build-diagnostics-app.sh
+open /Applications/BabyWorkDiagnostics-sandbox.app
 ```
 
 Le panneau **Filtrage actif** de l’application permet d’activer le `CGEventTap` de session, de demander les permissions et de compter les raccourcis absorbés sans journaliser les frappes. La grille manuelle est dans `docs/phase-0/input-filter-trials.md`.

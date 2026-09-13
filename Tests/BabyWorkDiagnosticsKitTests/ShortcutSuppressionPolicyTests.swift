@@ -6,6 +6,7 @@ import Testing
 func policySuppressesMonitoredShortcuts() {
   let cases: [(MonitoredShortcut, UInt16, InputModifierMask)] = [
     (.commandSpace, MacVirtualKeyCode.space, [.command]),
+    (.optionSpace, MacVirtualKeyCode.space, [.option]),
     (.commandTab, MacVirtualKeyCode.tab, [.command]),
     (.commandQ, MacVirtualKeyCode.ansiQ, [.command]),
     (.commandH, MacVirtualKeyCode.ansiH, [.command]),
@@ -58,7 +59,7 @@ func policyAllowsOrdinaryKeyPresses() {
   #expect(
     ShortcutSuppressionPolicy.decision(
       keyCode: MacVirtualKeyCode.space,
-      modifiers: [.option]
+      modifiers: [.shift]
     ) == .allow
   )
   #expect(
@@ -69,9 +70,31 @@ func policyAllowsOrdinaryKeyPresses() {
   )
 }
 
+@Test("Commande-Q et Commande-M suivent la lettre, pas la position QWERTY")
+func policyMatchesLettersIndependentOfAnsiPosition() {
+  let azertyQ = ShortcutSuppressionPolicy.decision(
+    keyCode: 0x00,
+    modifiers: [.command],
+    letter: "q"
+  )
+  let azertyM = ShortcutSuppressionPolicy.decision(
+    keyCode: 0x29,
+    modifiers: [.command],
+    letter: "m"
+  )
+  let azertyControlCommandQ = ShortcutSuppressionPolicy.decision(
+    keyCode: 0x00,
+    modifiers: [.control, .command],
+    letter: "q"
+  )
+  #expect(azertyQ == .suppress(.commandQ))
+  #expect(azertyM == .suppress(.commandM))
+  #expect(azertyControlCommandQ == .suppress(.controlCommandQ))
+}
+
 @Test("Les libellés des raccourcis surveillés restent stables")
 func monitoredShortcutDisplayNamesAreStable() {
   #expect(MonitoredShortcut.commandSpace.displayName == "Commande-Espace")
   #expect(MonitoredShortcut.optionCommandEscape.displayName == "Option-Commande-Échap")
-  #expect(MonitoredShortcut.allCases.count == 9)
+  #expect(MonitoredShortcut.allCases.count == 10)
 }

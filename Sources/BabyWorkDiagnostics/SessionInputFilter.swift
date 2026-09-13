@@ -4,6 +4,32 @@ import CoreGraphics
 import Foundation
 import OSLog
 
+/// Coupure globale du tap, lisible depuis le callback sans hop MainActor.
+final class SessionInputKillSwitch: @unchecked Sendable {
+  static let shared = SessionInputKillSwitch()
+
+  private let lock = NSLock()
+  private var engaged = false
+
+  func reset() {
+    lock.lock()
+    engaged = false
+    lock.unlock()
+  }
+
+  func engage() {
+    lock.lock()
+    engaged = true
+    lock.unlock()
+  }
+
+  var isEngaged: Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return engaged
+  }
+}
+
 /// Filtre de session Quartz : thread dédié, callback borné, aucune journalisation de frappe.
 final class SessionInputFilter: @unchecked Sendable {
   private let logger = Logger(
@@ -17,16 +43,23 @@ final class SessionInputFilter: @unchecked Sendable {
   private var tapPort: CFMachPort?
   private var runLoopSource: CFRunLoopSource?
   private var suppressedCounts: [MonitoredShortcut: Int] = [:]
+  private let exitRecognizer = AdultExitRecognizer()
 
   private let onStatusChange: @Sendable (InputFilterStatus) -> Void
   private let onCountsChange: @Sendable ([MonitoredShortcut: Int]) -> Void
+  private let onAdultExit: @Sendable (AdultExitKind) -> Void
+  private let hud: KioskHUD?
 
   init(
     onStatusChange: @escaping @Sendable (InputFilterStatus) -> Void,
-    onCountsChange: @escaping @Sendable ([MonitoredShortcut: Int]) -> Void
+    onCountsChange: @escaping @Sendable ([MonitoredShortcut: Int]) -> Void,
+    onAdultExit: @escaping @Sendable (AdultExitKind) -> Void,
+    hud: KioskHUD? = nil
   ) {
     self.onStatusChange = onStatusChange
     self.onCountsChange = onCountsChange
+    self.onAdultExit = onAdultExit
+    self.hud = hud
   }
 
   func start() {
@@ -35,8 +68,10 @@ final class SessionInputFilter: @unchecked Sendable {
     stateLock.unlock()
     guard !alreadyRunning else { return }
 
+    SessionInputKillSwitch.shared.reset()
     onStatusChange(.starting)
     resetCounts()
+    exitRecognizer.reset()
 
     let thread = Thread { [weak self] in
       self?.runTapThread()
@@ -51,7 +86,14 @@ final class SessionInputFilter: @unchecked Sendable {
     thread.start()
   }
 
+  func handles() -> (port: CFMachPort?, loop: CFRunLoop?) {
+    stateLock.lock()
+    defer { stateLock.unlock() }
+    return (tapPort, runLoop)
+  }
+
   func stop() {
+    SessionInputKillSwitch.shared.engage()
     stateLock.lock()
     let loop = runLoop
     let port = tapPort
@@ -63,20 +105,16 @@ final class SessionInputFilter: @unchecked Sendable {
     if let loop {
       CFRunLoopStop(loop)
     }
-
-    stateLock.lock()
-    thread = nil
-    runLoop = nil
-    if let source = runLoopSource {
-      if let loop {
-        CFRunLoopRemoveSource(loop, source, .commonModes)
-      }
-      runLoopSource = nil
-    }
-    tapPort = nil
-    stateLock.unlock()
-
+    hud?.noteTap("arrêté")
     onStatusChange(.inactive)
+  }
+
+  func isTapEnabled() -> Bool {
+    stateLock.lock()
+    let port = tapPort
+    stateLock.unlock()
+    guard let port else { return false }
+    return CGEvent.tapIsEnabled(tap: port)
   }
 
   func reenableTapIfPossible() {
@@ -84,6 +122,7 @@ final class SessionInputFilter: @unchecked Sendable {
     let port = tapPort
     stateLock.unlock()
     guard let port else { return }
+    if SessionInputKillSwitch.shared.isEngaged { return }
     CGEvent.tapEnable(tap: port, enable: true)
     onStatusChange(.active)
     logger.info("Réactivation du filtre demandée après désactivation système")
@@ -135,6 +174,7 @@ final class SessionInputFilter: @unchecked Sendable {
     stateLock.unlock()
 
     onStatusChange(.active)
+    hud?.noteTap("actif")
     logger.info("Filtre de session actif")
     CFRunLoopRun()
 
@@ -154,36 +194,76 @@ final class SessionInputFilter: @unchecked Sendable {
     type: CGEventType,
     event: CGEvent
   ) -> Unmanaged<CGEvent>? {
-    if type == .tapDisabledByTimeout {
-      logger.warning("Filtre désactivé par dépassement de délai")
-      onStatusChange(.disabledByTimeout)
-      return Unmanaged.passUnretained(event)
-    }
-    if type == .tapDisabledByUserInput {
-      logger.warning("Filtre désactivé par intervention utilisateur/système")
-      onStatusChange(.disabledByUserInput)
+    if SessionInputKillSwitch.shared.isEngaged {
       return Unmanaged.passUnretained(event)
     }
 
-    // Ne classer que keyDown pour la suppression ; absorber aussi keyUp du même code
-    // afin d’éviter des états de touche incohérents, sans jamais lire le caractère.
+    if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+      logger.warning("Filtre désactivé (\(String(describing: type))), réactivation")
+      hud?.noteTap("désactivé → réactivation")
+      stateLock.lock()
+      let port = tapPort
+      stateLock.unlock()
+      if let port {
+        CGEvent.tapEnable(tap: port, enable: true)
+      }
+      hud?.noteTap("actif")
+      onStatusChange(.active)
+      return Unmanaged.passUnretained(event)
+    }
+
+    if type == .flagsChanged {
+      let left = CGEventSource.keyState(.hidSystemState, key: CGKeyCode(0x38))
+      let right = CGEventSource.keyState(.hidSystemState, key: CGKeyCode(0x3C))
+      hud?.noteShifts(left: left, right: right, origin: "filtre flagsChanged")
+      return Unmanaged.passUnretained(event)
+    }
+
     guard type == .keyDown || type == .keyUp else {
       return Unmanaged.passUnretained(event)
     }
 
     let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
     let modifiers = InputModifierMask(cgEventFlags: event.flags)
-    let decision = ShortcutSuppressionPolicy.decision(keyCode: keyCode, modifiers: modifiers)
+    let letter = letterFromEvent(event, keyCode: keyCode)
+    let isReturn = keyCode == 0x24 || keyCode == 0x4C
+    let isEscape = keyCode == 0x35
+    let shiftDown = modifiers.contains(.shift)
 
-    switch decision {
-    case .allow:
-      return Unmanaged.passUnretained(event)
-    case .suppress(let shortcut):
-      if type == .keyDown {
-        recordSuppression(of: shortcut)
+    if type == .keyDown {
+      let distinguishing = modifiers.intersection(.distinguishing)
+      let letterForPhrase = distinguishing.isEmpty ? letter : nil
+      let kind = exitRecognizer.handleKeyDown(
+        letter: letterForPhrase,
+        isReturn: isReturn && distinguishing.subtracting(.shift).isEmpty,
+        isEscape: isEscape,
+        shiftDown: shiftDown
+      )
+      hud?.noteFilterKey(
+        letter: letter,
+        isReturn: isReturn,
+        isEscape: isEscape,
+        filled: exitRecognizer.prefixLength,
+        target: exitRecognizer.prefixTarget
+      )
+      if let kind {
+        SessionInputKillSwitch.shared.engage()
+        onAdultExit(kind)
+        return Unmanaged.passUnretained(event)
       }
+    }
+
+    let decision = ShortcutSuppressionPolicy.decision(
+      keyCode: keyCode,
+      modifiers: modifiers,
+      letter: letter
+    )
+    if type == .keyDown, case .suppress(let shortcut) = decision {
+      recordSuppression(of: shortcut)
       return nil
     }
+    // Les lettres ordinaires arrivent aux fenêtres de couverture, qui reconnaissent aussi la sortie.
+    return Unmanaged.passUnretained(event)
   }
 
   private func recordSuppression(of shortcut: MonitoredShortcut) {
@@ -201,19 +281,33 @@ final class SessionInputFilter: @unchecked Sendable {
     onCountsChange([:])
   }
 
+  private func letterFromEvent(_ event: CGEvent, keyCode: UInt16) -> Character? {
+    if let cached = KeyboardLayoutLetter.shared.fromKeyCode(keyCode) {
+      return cached
+    }
+    var length = 0
+    var chars = [UniChar](repeating: 0, count: 4)
+    event.keyboardGetUnicodeString(maxStringLength: 4, actualStringLength: &length, unicodeString: &chars)
+    guard length > 0 else { return nil }
+    let scalar = String(utf16CodeUnits: chars, count: Int(length))
+      .lowercased()
+      .unicodeScalars
+      .first
+    guard let scalar, CharacterSet.letters.contains(scalar) else { return nil }
+    return Character(scalar)
+  }
+
   private static func creationFailureReason() -> String {
     let inputMonitoring = CGPreflightListenEventAccess()
+    let post = CGPreflightPostEventAccess()
     let accessibility = AXIsProcessTrusted()
-    switch (inputMonitoring, accessibility) {
-    case (false, false):
-      return "permissions Surveillance de l’entrée et Accessibilité manquantes"
-    case (false, true):
-      return "permission Surveillance de l’entrée manquante"
-    case (true, false):
-      return "permission Accessibilité manquante"
-    case (true, true):
-      return "tap de session refusé malgré les pré-vérifications"
+    if accessibility {
+      return "tap de session refusé malgré Accessibilité"
     }
+    if inputMonitoring || post {
+      return "Accessibilité manquante (le tap actif n’utilise pas Surveillance de l’entrée)"
+    }
+    return "Accessibilité manquante"
   }
 }
 

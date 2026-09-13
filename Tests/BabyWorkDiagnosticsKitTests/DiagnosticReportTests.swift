@@ -24,6 +24,7 @@ func diagnosticPresentsInjectedSystemValues() {
         rows: [
           DiagnosticRow(label: "Bundle ID", value: "fr.camille.babywork.diagnostics"),
           DiagnosticRow(label: "Identité", value: "Apple Development: Exemple"),
+          DiagnosticRow(label: "Emplacement", value: "~/Applications/BabyWorkDiagnostics.app"),
         ]
       ),
       DiagnosticSection(
@@ -43,13 +44,18 @@ func diagnosticPresentsInjectedSystemValues() {
         title: "Permissions",
         rows: [
           DiagnosticRow(
-            label: "Surveillance de l’entrée",
+            label: "Surveillance de l’entrée (écoute)",
             value: "Accordée",
             state: .granted
           ),
           DiagnosticRow(
+            label: "Surveillance de l’entrée (modification)",
+            value: "Non accordée — absente de la liste ou non relancée",
+            state: .attention
+          ),
+          DiagnosticRow(
             label: "Accessibilité",
-            value: "Non accordée ou indéterminée",
+            value: "Non vue par ce processus — relancer après l’avoir cochée",
             state: .attention
           ),
         ]
@@ -63,7 +69,7 @@ func diagnosticReportsMissingDisplays() {
     xcodeVersion: "Indisponible",
     signingIdentity: "Signature ad hoc",
     displays: [],
-    inputMonitoringGranted: false
+    inputMonitoringListenGranted: false
   )
 
   let report = DiagnosticReport(snapshot: snapshot)
@@ -97,7 +103,7 @@ private func makeSnapshot(
       isMain: false
     ),
   ],
-  inputMonitoringGranted: Bool = true
+  inputMonitoringListenGranted: Bool = true
 ) -> DiagnosticSnapshot {
   DiagnosticSnapshot(
     macOSVersion: "15.7.7",
@@ -107,8 +113,9 @@ private func makeSnapshot(
     developerDirectory: "/Library/Developer/CommandLineTools",
     bundleIdentifier: "fr.camille.babywork.diagnostics",
     signingIdentity: signingIdentity,
+    bundleLocation: "~/Applications/BabyWorkDiagnostics.app",
     displays: displays,
-    inputMonitoringGranted: inputMonitoringGranted,
+    inputMonitoringListenGranted: inputMonitoringListenGranted,
     accessibilityGranted: false
   )
 }
