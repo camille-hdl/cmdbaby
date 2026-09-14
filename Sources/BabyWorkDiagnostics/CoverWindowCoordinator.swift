@@ -175,7 +175,7 @@ final class CoverWindowCoordinator {
   var store = CoverWindowStore()
   private var windows: [NSWindow] = []
   private var inputBridge: KioskInputBridge?
-  private var playDirector: GalaxyDirector?
+  private var playSession: PlaySession?
 
   func createCoverWindows() throws -> [ScreenDescriptor] {
     closeCoverWindows()
@@ -185,13 +185,13 @@ final class CoverWindowCoordinator {
     activateApp()
     let exitHandler = onAdultExit
     let hud = self.hud
-    let director = GalaxyDirector()
+    let session = PlaySession.makeDefault()
     let bridge = KioskInputBridge(hud: hud) { kind in
       hud.noteExit(kind)
       exitHandler?(kind)
     }
     inputBridge = bridge
-    playDirector = director
+    playSession = session
 
     var descriptors: [ScreenDescriptor] = []
     for (index, screen) in screens.enumerated() {
@@ -199,9 +199,13 @@ final class CoverWindowCoordinator {
       let window = CoverWindow(
         screen: screen,
         descriptor: descriptor,
-        colorIndex: index,
+        background: session.windowBackground(colorIndex: index),
         inputBridge: bridge,
-        director: director
+        contentView: session.makeContentView(
+          inputBridge: bridge,
+          colorIndex: index,
+          scale: screen.backingScaleFactor
+        )
       )
       windows.append(window)
       window.orderFrontRegardless()
@@ -223,8 +227,8 @@ final class CoverWindowCoordinator {
     _ = store.closeAll()
     windows.removeAll(keepingCapacity: false)
     inputBridge = nil
-    playDirector?.reset()
-    playDirector = nil
+    playSession?.reset()
+    playSession = nil
     hud.resetHandlers()
   }
 
@@ -290,6 +294,57 @@ final class KioskInputBridge: @unchecked Sendable {
   }
 }
 
+@MainActor
+private enum PlaySession {
+  case ocean(OceanDirector)
+  case galaxy(GalaxyDirector)
+
+  static func makeDefault() -> PlaySession {
+    switch KioskPlayModeCatalog.default {
+    case .ocean:
+      .ocean(OceanDirector())
+    case .galaxy:
+      .galaxy(GalaxyDirector())
+    }
+  }
+
+  func reset() {
+    switch self {
+    case .ocean(let director):
+      director.reset()
+    case .galaxy(let director):
+      director.reset()
+    }
+  }
+
+  func windowBackground(colorIndex: Int) -> NSColor {
+    switch self {
+    case .ocean:
+      OceanStageView.waterColor
+    case .galaxy:
+      CoverPalette.color(at: colorIndex)
+    }
+  }
+
+  func makeContentView(
+    inputBridge: KioskInputBridge,
+    colorIndex: Int,
+    scale: CGFloat
+  ) -> NSView {
+    switch self {
+    case .ocean(let director):
+      OceanStageView(inputBridge: inputBridge, director: director, scale: scale)
+    case .galaxy(let director):
+      GalaxyStageView(
+        background: CoverPalette.color(at: colorIndex),
+        inputBridge: inputBridge,
+        director: director,
+        scale: scale
+      )
+    }
+  }
+}
+
 private final class CoverWindow: NSWindow {
   private let inputBridge: KioskInputBridge
 
@@ -300,9 +355,9 @@ private final class CoverWindow: NSWindow {
   init(
     screen: NSScreen,
     descriptor: ScreenDescriptor,
-    colorIndex: Int,
+    background: NSColor,
     inputBridge: KioskInputBridge,
-    director: GalaxyDirector
+    contentView: NSView
   ) {
     self.inputBridge = inputBridge
     super.init(
@@ -316,7 +371,7 @@ private final class CoverWindow: NSWindow {
     hasShadow = false
     isMovable = false
     isRestorable = false
-    backgroundColor = CoverPalette.color(at: colorIndex)
+    backgroundColor = background
     collectionBehavior = [
       .canJoinAllSpaces,
       .fullScreenAuxiliary,
@@ -329,12 +384,7 @@ private final class CoverWindow: NSWindow {
     animationBehavior = .none
     acceptsMouseMovedEvents = true
     identifier = NSUserInterfaceItemIdentifier("fr.camille.babywork.cover.\(descriptor.id)")
-    contentView = GalaxyStageView(
-      background: CoverPalette.color(at: colorIndex),
-      inputBridge: inputBridge,
-      director: director,
-      scale: screen.backingScaleFactor
-    )
+    self.contentView = contentView
     isReleasedWhenClosed = false
   }
 

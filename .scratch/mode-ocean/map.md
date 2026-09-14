@@ -49,3 +49,9 @@ Ordre d’exécution : le plus petit numéro **non bloqué** et `ready-for-agent
 ## Commentaires
 
 - Les tickets 01–06 portent `Status: ready-for-agent` et `Type: task`. Passer à `claimed` puis `resolved` selon `docs/agents/issue-tracker.md`.
+- Ticket 01 résolu : les 60 sprites Kenney autorisés et `License.txt` sont disponibles dans `Sources/BabyWorkDiagnostics/Resources/Ocean/`, avec la ressource déclarée dans `Package.swift`.
+- Ticket 02 résolu : le catalogue expose `[.ocean, .galaxy]` et Océan est le mode jouable par défaut.
+- Ticket 03 résolu : `OceanSchool` spawne, nage, accélère les trop vieux au-delà de 100 et cull à droite, avec tests seedés sans AppKit.
+- Ticket 04 résolu : `OceanScenery` génère un décor déterministe (terre, sable, far/mid/foreground) et le fait défiler avec wrap ; les facteurs de parallaxe sont des `static let` pour le renderer. Voir [04](issues/04-generation-decor.md).
+- Ticket 05 résolu : `OceanDirector` / `OceanPainter` / `OceanStageView` dessinent le décor parallaxe, les poissons mirroirés et les bulles à 60 Hz, sans brancher les couvertures. Voir [05](issues/05-rendu-ocean.md).
+- Ticket 06 résolu : les couvertures instancient Océan via `KioskPlayModeCatalog.default` ; Galaxie reste constructible. Voir [06](issues/06-brancher-couvertures.md).

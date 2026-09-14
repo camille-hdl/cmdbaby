@@ -6,20 +6,20 @@ Type: task
 
 **Blocked by:** —
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 Lire [`.scratch/mode-ocean/spec.md`](../spec.md) sections **Glossaire**, **Poissons**, **Constantes**, **Interfaces kit attendues**. Copier les signatures. Le RNG est injecté ; aucun `Int.random` global.
 
 ## Checklist
 
-- [ ] `OceanFish`, `OceanFishKind`, `OceanSchool`, `OceanTick` existent dans le kit, `Sendable` + `Equatable`.
-- [ ] `spawnFish` place `x` dans `[padding, width/2]`, `y` dans la colonne d’eau au-dessus de `groundTop`, `speed` dans `[swimMin, swimMax]`, `kind` dans `OceanFishKind.allCases`, `displaySize` dans le range fourni.
-- [ ] Chaque spawn incrémente un `birthIndex` (`id`) monotone à partir de 1.
-- [ ] `tick` avance `x += speed * dt` pour chaque poisson. `y` inchangé.
-- [ ] Si `count > maxFish` (100), les `count - 100` poissons au plus petit `id` ont `speed == exitSpeed` (240). Ils **gardent** cette vitesse ensuite.
-- [ ] Un poisson avec `x > screenWidths[screenIndex] + displaySize/2` est retiré ; son `id` apparaît dans `OceanTick.removedIDs`.
-- [ ] Les tests seedés passent sans AppKit.
-- [ ] Aucune image, aucun `CALayer`.
+- [x] `OceanFish`, `OceanFishKind`, `OceanSchool`, `OceanTick` existent dans le kit, `Sendable` + `Equatable`.
+- [x] `spawnFish` place `x` dans `[padding, width/2]`, `y` dans la colonne d’eau au-dessus de `groundTop`, `speed` dans `[swimMin, swimMax]`, `kind` dans `OceanFishKind.allCases`, `displaySize` dans le range fourni.
+- [x] Chaque spawn incrémente un `birthIndex` (`id`) monotone à partir de 1.
+- [x] `tick` avance `x += speed * dt` pour chaque poisson. `y` inchangé.
+- [x] Si `count > maxFish` (100), les `count - 100` poissons au plus petit `id` ont `speed == exitSpeed` (240). Ils **gardent** cette vitesse ensuite.
+- [x] Un poisson avec `x > screenWidths[screenIndex] + displaySize/2` est retiré ; son `id` apparaît dans `OceanTick.removedIDs`.
+- [x] Les tests seedés passent sans AppKit.
+- [x] Aucune image, aucun `CALayer`.
 
 ## Fichiers cibles
 
@@ -91,3 +91,7 @@ Si le kit n’a pas de `SplitMix64`, un `struct` de test dans le fichier de test
 ## Commentaires
 
 - Le director (ticket 05) appellera `spawnFish` au layout (1× par écran) et à chaque frappe (écran aléatoire — l’aléa écran est **hors** de ce module, côté director).
+
+## Réponse
+
+`OceanSchool` vit dans le kit : spawn injecté par RNG (ordre kind → displaySize → x → y → speed), nage `x += speed * dt`, boost immédiat des plus vieux dès `count > 100`, cull à droite (et si `screenIndex` est hors bornes). Les 9 tests seedés passent, sans AppKit ni images.

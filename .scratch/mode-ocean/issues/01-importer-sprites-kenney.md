@@ -6,7 +6,7 @@ Type: task
 
 **Blocked by:** —
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 Lire d’abord [`.scratch/mode-ocean/spec.md`](../spec.md) section **Assets**. Source : `/Volumes/WD_BLACK/2D/kenney_fish-pack_2`. Si le volume est absent, s’arrêter avec un message clair. Ne pas substituer d’autres packs.
 
@@ -123,5 +123,11 @@ swift build
 - Committer des fichiers hors de `Resources/Ocean/` et `Package.swift`.
 
 ## Commentaires
+
+## Réponse
+
+Les 60 PNG demandés du répertoire `PNG/Double/` ont été copiés dans `Sources/BabyWorkDiagnostics/Resources/Ocean/`, avec `License.txt` à la racine du pack. Aucun asset exclu n’a été importé. `Package.swift` déclare désormais `.process("Resources/Ocean")` sur la target `BabyWorkDiagnostics`.
+
+Vérifications effectuées : `swift build` et `swift test` passent ; les tests du kit passent avec 33 tests.
 
 - Licence CC0 : crédit Kenney encouragé, non obligatoire. Garder `License.txt` dans le bundle suffit.

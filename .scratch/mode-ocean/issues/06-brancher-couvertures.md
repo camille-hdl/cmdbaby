@@ -6,22 +6,22 @@ Type: task
 
 **Blocked by:** 02, 05
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 Lire [`.scratch/mode-ocean/spec.md`](../spec.md) sections **Démarrage**, **Entrées et sorties adultes**, **Câblage des couvertures**. Fichier actuel : [`CoverWindowCoordinator.swift`](../../../Sources/BabyWorkDiagnostics/CoverWindowCoordinator.swift) (director et `contentView` câblés sur Galaxie).
 
 ## Checklist
 
-- [ ] `createCoverWindows` switch sur `KioskPlayModeCatalog.default`.
-- [ ] Défaut actuel = Océan → `OceanDirector` + `OceanStageView` par écran.
-- [ ] `case .galaxy` construit encore `GalaxyDirector` + `GalaxyStageView` (pour plus tard). Aucune UI de choix.
-- [ ] Le director n’est plus typé `GalaxyDirector?` seulement : enum interne `{ galaxy(GalaxyDirector), ocean(OceanDirector) }` avec `reset()` appelé depuis `closeCoverWindows`.
-- [ ] `CoverWindow` n’importe plus `GalaxyDirector` en dur ; il reçoit le `NSView` déjà créé, ou un enum de play, sans dupliquer le reste de l’init fenêtre (level, collectionBehavior, failsafe déjà dans le stage).
-- [ ] `OceanStageView.keyDown` notifie `inputBridge` **puis** `director.spawnKeyFish()` (pas `PlayGlyphResolver`).
-- [ ] `mouseDown` : 1–3 bulles au `locationInWindow` ; `FailsafeClickView` toujours présent.
-- [ ] `mouseMoved` / `mouseDragged` : pas de traînée en Océan.
+- [x] `createCoverWindows` switch sur `KioskPlayModeCatalog.default`.
+- [x] Défaut actuel = Océan → `OceanDirector` + `OceanStageView` par écran.
+- [x] `case .galaxy` construit encore `GalaxyDirector` + `GalaxyStageView` (pour plus tard). Aucune UI de choix.
+- [x] Le director n’est plus typé `GalaxyDirector?` seulement : enum interne `{ galaxy(GalaxyDirector), ocean(OceanDirector) }` avec `reset()` appelé depuis `closeCoverWindows`.
+- [x] `CoverWindow` n’importe plus `GalaxyDirector` en dur ; il reçoit le `NSView` déjà créé, ou un enum de play, sans dupliquer le reste de l’init fenêtre (level, collectionBehavior, failsafe déjà dans le stage).
+- [x] `OceanStageView.keyDown` notifie `inputBridge` **puis** `director.spawnKeyFish()` (pas `PlayGlyphResolver`).
+- [x] `mouseDown` : 1–3 bulles au `locationInWindow` ; `FailsafeClickView` toujours présent.
+- [x] `mouseMoved` / `mouseDragged` : pas de traînée en Océan.
 - [ ] Une session kiosk sur Océan : 1 poisson par écran au départ, frappe ajoute un poisson (moitié gauche, écran aléatoire), clic ajoute des bulles, `parent`+Entrée et Maj+Échap et 5 clics secours fonctionnent encore.
-- [ ] `swift test` et `swift build` passent. Tests kit catalogue + banc + décor verts.
+- [x] `swift test` et `swift build` passent. Tests kit catalogue + banc + décor verts.
 
 ## Fichiers cibles
 
@@ -97,3 +97,7 @@ Sur le Mac cible, session kiosk :
 ## Commentaires
 
 - Dernier ticket de la série. Après `resolved`, noter dans [`map.md`](../map.md) un pointeur vers le commit.
+
+## Réponse
+
+`CoverWindowCoordinator.createCoverWindows` switch sur `KioskPlayModeCatalog.default` (Océan). Enum interne `PlaySession { ocean, galaxy }` avec `reset()` au `closeCoverWindows`. `CoverWindow` reçoit un `contentView` déjà construit (`OceanStageView` ou `GalaxyStageView`) : pas de `GalaxyDirector` en dur, init fenêtre partagée. Clavier → poisson, clic → bulles (câblé au 05). `swift build` et 51 tests passent. Vérif visuelle kiosk à faire sur la machine cible (matrice ci-dessus).

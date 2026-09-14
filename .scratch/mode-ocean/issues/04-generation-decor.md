@@ -6,20 +6,20 @@ Type: task
 
 **Blocked by:** —
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 Lire [`.scratch/mode-ocean/spec.md`](../spec.md) sections **Parallaxe et décor**, **Constantes**, **Interfaces kit attendues**. Aucune image dans ce ticket : le décor est une liste de props nommés (`assetName` = nom de fichier sans `.png`).
 
 ## Checklist
 
-- [ ] `OceanScenery.generate(bounds:rng:)` produit un sol terre (bande basse `0.10 * height`) + sable (`0.12 * height` au-dessus). `groundTop == dirtHeight + sandHeight` (≈ `0.22 * height`).
-- [ ] Des props `terrain_dirt_*` / `terrain_dirt_top_*` couvrent la bande terre ; `terrain_sand_*` / `terrain_sand_top_*` couvrent la bande sable. La crête (`*_top_*`) est alignée sur le haut de chaque bande.
-- [ ] Couche `far` : au moins 4 silhouettes parmi `background_seaweed_*` / `background_rock_*` (et optionnellement `background_terrain`), y dans la moitié haute de l’eau.
-- [ ] Couche `mid` : au moins 3 props (algues ou rochers de fond), y entre `groundTop` et ~`0.55 * height`.
-- [ ] Couche `foreground` : au moins 3 props `seaweed_*` ou `rock_*` plantés sur la crête de sable (`y` proche de `groundTop`).
-- [ ] `scroll(cameraDelta:bounds:)` déplace `x` de `-cameraDelta * factor` selon la couche (far 0,18, mid 0,40, ground 0,72, foreground 1,0) puis wrap dans `[0, width)` (ou équivalent qui empêche les props de disparaître définitivement).
-- [ ] Même `bounds` + même seed ⇒ mêmes props (noms et positions).
-- [ ] Tests sans AppKit. Aucun PNG chargé.
+- [x] `OceanScenery.generate(bounds:rng:)` produit un sol terre (bande basse `0.10 * height`) + sable (`0.12 * height` au-dessus). `groundTop == dirtHeight + sandHeight` (≈ `0.22 * height`).
+- [x] Des props `terrain_dirt_*` / `terrain_dirt_top_*` couvrent la bande terre ; `terrain_sand_*` / `terrain_sand_top_*` couvrent la bande sable. La crête (`*_top_*`) est alignée sur le haut de chaque bande.
+- [x] Couche `far` : au moins 4 silhouettes parmi `background_seaweed_*` / `background_rock_*` (et optionnellement `background_terrain`), y dans la moitié haute de l’eau.
+- [x] Couche `mid` : au moins 3 props (algues ou rochers de fond), y entre `groundTop` et ~`0.55 * height`.
+- [x] Couche `foreground` : au moins 3 props `seaweed_*` ou `rock_*` plantés sur la crête de sable (`y` proche de `groundTop`).
+- [x] `scroll(cameraDelta:bounds:)` déplace `x` de `-cameraDelta * factor` selon la couche (far 0,18, mid 0,40, ground 0,72, foreground 1,0) puis wrap dans `[0, width)` (ou équivalent qui empêche les props de disparaître définitivement).
+- [x] Même `bounds` + même seed ⇒ mêmes props (noms et positions).
+- [x] Tests sans AppKit. Aucun PNG chargé.
 
 ## Fichiers cibles
 
@@ -71,3 +71,7 @@ Densités minimales (pour un écran ≥ 800×600 ; proportionnelles à `width` s
 ## Commentaires
 
 - Le renderer posera un `CALayer` par prop, `contents` = image du `assetName`. Ce ticket ne fait que des nombres et des noms.
+
+## Réponse
+
+`OceanScenery` vit dans le kit : `generate` pose terre + sable (tuiles `a–d` / crêtes `a–h`), silhouettes loin, props milieu, algues et rochers sur la crête. `scroll` applique le facteur de couche puis wrap avec marge 80 pt. `OceanPropKind` est un struct `assetName` (l’enum associé de la spec n’est pas `RawRepresentable`). Neuf tests seedés passent, sans AppKit ni PNG.

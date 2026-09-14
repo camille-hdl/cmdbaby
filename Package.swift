@@ -33,6 +33,9 @@ let package = Package(
     .executableTarget(
       name: "BabyWorkDiagnostics",
       dependencies: ["BabyWorkDiagnosticsKit", "BabyWorkAppKitBridge"],
+      resources: [
+        .process("Resources/Ocean"),
+      ],
       linkerSettings: [
         .linkedFramework("ApplicationServices"),
         .linkedFramework("AppKit"),

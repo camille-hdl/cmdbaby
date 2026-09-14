@@ -36,9 +36,18 @@ info_path="$contents_path/Info.plist"
 swift build --configuration "$configuration" --product BabyWorkDiagnostics
 binary_dir=$(swift build --configuration "$configuration" --show-bin-path)
 
-mkdir -p "$contents_path/MacOS"
+mkdir -p "$contents_path/MacOS" "$contents_path/Resources"
 install -m 755 "$binary_dir/BabyWorkDiagnostics" "$executable_path"
 install -m 644 "$project_dir/Resources/DiagnosticApp-Info.plist" "$info_path"
+
+resource_bundle="$binary_dir/BabyWork_BabyWorkDiagnostics.bundle"
+if [[ ! -d "$resource_bundle" ]]; then
+    print -u2 "Bundle de ressources introuvable : $resource_bundle"
+    exit 1
+fi
+rm -rf "$app_path/BabyWork_BabyWorkDiagnostics.bundle"
+rm -rf "$contents_path/Resources/BabyWork_BabyWorkDiagnostics.bundle"
+cp -R "$resource_bundle" "$contents_path/Resources/BabyWork_BabyWorkDiagnostics.bundle"
 /usr/bin/plutil -replace BabyWorkSigningIdentity -string "$signing_label" "$info_path"
 /usr/bin/plutil -replace BabyWorkSandboxMode -string "$sandbox_label" "$info_path"
 

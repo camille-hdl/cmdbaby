@@ -1,18 +1,22 @@
 import Foundation
 
-/// Modes jouables du kiosk. D’autres identifiants s’ajouteront (feuille, paysage, jeux)
+/// Modes jouables du kiosk. Océan est le mode par défaut ; d’autres identifiants
+/// s’ajouteront (feuille, paysage, jeux)
 /// sans changer le confinement ni les sorties adultes.
 public enum KioskPlayModeID: String, Sendable, CaseIterable, Equatable {
+  case ocean
   case galaxy
 }
 
 public enum KioskPlayModeCatalog: Sendable {
-  public static var available: [KioskPlayModeID] { [.galaxy] }
+  public static var available: [KioskPlayModeID] { [.ocean, .galaxy] }
 
-  public static var `default`: KioskPlayModeID { .galaxy }
+  public static var `default`: KioskPlayModeID { .ocean }
 
   public static func displayName(_ id: KioskPlayModeID) -> String {
     switch id {
+    case .ocean:
+      "Océan"
     case .galaxy:
       "Galaxie"
     }

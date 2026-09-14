@@ -6,7 +6,7 @@ Type: task
 
 **Blocked by:** 01, 03, 04
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 Lire [`.scratch/mode-ocean/spec.md`](../spec.md) en entier et copier la structure de [`GalaxyPlayMode.swift`](../../../Sources/BabyWorkDiagnostics/GalaxyPlayMode.swift) (`Director` / `Painter` / `StageView`, `NSLock`, `runOnMain`, `MainHop`, timer `1/60` sur `RunLoop.main` en `.common`, `dt` clampé).
 
@@ -14,17 +14,17 @@ Prérequis : PNG dans `Bundle.module`, `OceanSchool` et `OceanScenery` compilés
 
 ## Checklist
 
-- [ ] `OceanDirector`, `OceanPainter`, `OceanStageView` existent dans `Sources/BabyWorkDiagnostics/OceanPlayMode.swift`.
-- [ ] Un director, un banc partagé ; un painter par stage ; timer 60 Hz dès le premier `register`.
-- [ ] Au premier `setBounds` valide, le painter génère le décor (`OceanScenery.generate`) et le director spawn 1 poisson pour cet écran.
-- [ ] Fond = eau `#7EC8E3`. Couches CA : décor (far/mid/ground/foreground), poissons, bulles. Z-order = spec.
-- [ ] Props : `CALayer.contents` = `CGImage` du PNG `assetName`. Sol et silhouettes défilent via `scenery.scroll` puis positions layer.
-- [ ] Poissons : sprite `fish_<kind>`, `transform.scale.x = -1`, taille `displaySize`, position = `(fish.x, fish.y)`. Cull = retrait du layer quand l’id est dans `removedIDs`.
-- [ ] Chaque poisson émet 1–2 bulles toutes les 2–4 s. Clic : 1–3 bulles au point (API painter, branchée au ticket 06).
-- [ ] `reset()` du director invalide le timer, vide painters et banc (comme `GalaxyDirector.reset`).
-- [ ] `FailsafeClickView` est déjà posé sur le stage (même contraintes que Galaxie) pour que 06 n’ait pas à le rajouter.
-- [ ] `swift build` passe. Pas d’emoji, pas de `PlayGlyphResolver` dans ce fichier.
-- [ ] `CoverWindowCoordinator` n’est **pas** modifié (ticket 06).
+- [x] `OceanDirector`, `OceanPainter`, `OceanStageView` existent dans `Sources/BabyWorkDiagnostics/OceanPlayMode.swift`.
+- [x] Un director, un banc partagé ; un painter par stage ; timer 60 Hz dès le premier `register`.
+- [x] Au premier `setBounds` valide, le painter génère le décor (`OceanScenery.generate`) et le director spawn 1 poisson pour cet écran.
+- [x] Fond = eau `#7EC8E3`. Couches CA : décor (far/mid/ground/foreground), poissons, bulles. Z-order = spec.
+- [x] Props : `CALayer.contents` = `CGImage` du PNG `assetName`. Sol et silhouettes défilent via `scenery.scroll` puis positions layer.
+- [x] Poissons : sprite `fish_<kind>`, `transform.scale.x = -1`, taille `displaySize`, position = `(fish.x, fish.y)`. Cull = retrait du layer quand l’id est dans `removedIDs`.
+- [x] Chaque poisson émet 1–2 bulles toutes les 2–4 s. Clic : 1–3 bulles au point (API painter, branchée au ticket 06).
+- [x] `reset()` du director invalide le timer, vide painters et banc (comme `GalaxyDirector.reset`).
+- [x] `FailsafeClickView` est déjà posé sur le stage (même contraintes que Galaxie) pour que 06 n’ait pas à le rajouter.
+- [x] `swift build` passe. Pas d’emoji, pas de `PlayGlyphResolver` dans ce fichier.
+- [x] `CoverWindowCoordinator` n’est **pas** modifié (ticket 06).
 
 ## Fichiers cibles
 
@@ -90,3 +90,7 @@ Reprendre `GalaxyPainter` : AppKit peut appeler `keyDown` hors MainActor isolé 
 
 - Référence visuelle : dune de sable sur terre, eau claire, poissons gauche → droite, algues plantées. Le `Sample.png` du pack (hors dépôt) donne l’ambiance, sans le score HUD.
 - Vérif manuelle complète au ticket 06.
+
+## Réponse
+
+`OceanPlayMode.swift` reprend la pile Galaxie (`Director` / `Painter` / `StageView`, timer 60 Hz, `NSLock`, `runOnMain`). Le painter pose le décor Kenney (eau `#7EC8E3`, parallaxe, sol terre/sable), les poissons mirroirés (`scale.x = -1`) et les bulles (émission poisson + clic). `FailsafeClickView` est déjà sur le stage. `CoverWindowCoordinator` n’est pas touché. `swift build` et `swift test` passent.

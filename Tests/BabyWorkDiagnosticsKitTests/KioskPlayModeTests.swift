@@ -2,10 +2,11 @@ import Testing
 
 @testable import BabyWorkDiagnosticsKit
 
-@Test("Le catalogue expose le mode galaxie par défaut")
-func playModeCatalogStartsWithGalaxy() {
-  #expect(KioskPlayModeCatalog.available == [.galaxy])
-  #expect(KioskPlayModeCatalog.default == .galaxy)
+@Test("Le catalogue expose le mode océan par défaut")
+func playModeCatalogDefaultsToOcean() {
+  #expect(KioskPlayModeCatalog.available == [.ocean, .galaxy])
+  #expect(KioskPlayModeCatalog.default == .ocean)
+  #expect(KioskPlayModeCatalog.displayName(.ocean) == "Océan")
   #expect(KioskPlayModeCatalog.displayName(.galaxy) == "Galaxie")
 }
 

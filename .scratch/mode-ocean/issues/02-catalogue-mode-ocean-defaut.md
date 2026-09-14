@@ -6,7 +6,7 @@ Type: task
 
 **Blocked by:** —
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 Lire [`.scratch/mode-ocean/spec.md`](../spec.md) sections **Glossaire** et **Architecture** (kit, catalogue seulement).
 
@@ -83,3 +83,7 @@ Commande : `swift test --filter playModeCatalogDefaultsToOcean` puis `swift test
 ## Commentaires
 
 - L’exécutable continue d’ouvrir Galaxie tant que 06 n’est pas fait. C’est attendu.
+
+## Réponse
+
+Le catalogue kit expose désormais `[.ocean, .galaxy]`, avec Océan comme mode jouable par défaut et les noms d’affichage `Océan` et `Galaxie`. Les tests catalogue ont été mis à jour ; le test ciblé passe. `PlayGlyphResolver` et `WarpDrive` sont inchangés.
