@@ -17,44 +17,44 @@ fi
 
 case "$sandbox_mode" in
     1|true|TRUE|yes|YES)
-        entitlements_path="$project_dir/Resources/DiagnosticApp.sandbox.entitlements"
+        entitlements_path="$project_dir/Resources/BabyWorks.sandbox.entitlements"
         sandbox_label="App Sandbox activé"
-        app_name="BabyWorkDiagnostics-sandbox.app"
+        app_name="BabyWorks-sandbox.app"
         ;;
     *)
-        entitlements_path="$project_dir/Resources/DiagnosticApp.nosandbox.entitlements"
+        entitlements_path="$project_dir/Resources/BabyWorks.nosandbox.entitlements"
         sandbox_label="App Sandbox désactivé"
-        app_name="BabyWorkDiagnostics.app"
+        app_name="BabyWorks.app"
         ;;
 esac
 
 app_path="$output_dir/$app_name"
 contents_path="$app_path/Contents"
-executable_path="$contents_path/MacOS/BabyWorkDiagnostics"
+executable_path="$contents_path/MacOS/BabyWorks"
 info_path="$contents_path/Info.plist"
 
-swift build --configuration "$configuration" --product BabyWorkDiagnostics
+swift build --configuration "$configuration" --product BabyWorks
 binary_dir=$(swift build --configuration "$configuration" --show-bin-path)
 
 mkdir -p "$contents_path/MacOS" "$contents_path/Resources"
-install -m 755 "$binary_dir/BabyWorkDiagnostics" "$executable_path"
-install -m 644 "$project_dir/Resources/DiagnosticApp-Info.plist" "$info_path"
+install -m 755 "$binary_dir/BabyWorks" "$executable_path"
+install -m 644 "$project_dir/Resources/BabyWorks-Info.plist" "$info_path"
 
-resource_bundle="$binary_dir/BabyWork_BabyWorkDiagnostics.bundle"
+resource_bundle="$binary_dir/BabyWork_BabyWorks.bundle"
 if [[ ! -d "$resource_bundle" ]]; then
     print -u2 "Bundle de ressources introuvable : $resource_bundle"
     exit 1
 fi
-rm -rf "$app_path/BabyWork_BabyWorkDiagnostics.bundle"
-rm -rf "$contents_path/Resources/BabyWork_BabyWorkDiagnostics.bundle"
-cp -R "$resource_bundle" "$contents_path/Resources/BabyWork_BabyWorkDiagnostics.bundle"
+rm -rf "$app_path/BabyWork_BabyWorks.bundle"
+rm -rf "$contents_path/Resources/BabyWork_BabyWorks.bundle"
+cp -R "$resource_bundle" "$contents_path/Resources/BabyWork_BabyWorks.bundle"
 /usr/bin/plutil -replace BabyWorkSigningIdentity -string "$signing_label" "$info_path"
 /usr/bin/plutil -replace BabyWorkSandboxMode -string "$sandbox_label" "$info_path"
 
 if [[ "$sandbox_mode" == 1 || "$sandbox_mode" == true || "$sandbox_mode" == TRUE || "$sandbox_mode" == yes || "$sandbox_mode" == YES ]]; then
-    /usr/bin/plutil -replace CFBundleIdentifier -string "fr.camille.babywork.diagnostics.sandbox" "$info_path"
-    /usr/bin/plutil -replace CFBundleDisplayName -string "Diagnostic BabyWork (sandbox)" "$info_path"
-    /usr/bin/plutil -replace CFBundleName -string "BabyWorkDiagnosticsSandbox" "$info_path"
+    /usr/bin/plutil -replace CFBundleIdentifier -string "fr.camille.babywork.sandbox" "$info_path"
+    /usr/bin/plutil -replace CFBundleDisplayName -string "BabyWorks (sandbox)" "$info_path"
+    /usr/bin/plutil -replace CFBundleName -string "BabyWorksSandbox" "$info_path"
 fi
 
 /usr/bin/codesign \

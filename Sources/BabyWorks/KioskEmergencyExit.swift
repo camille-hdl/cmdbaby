@@ -95,7 +95,7 @@ enum UnsafeAppKit {
     if identifier.hasPrefix("fr.camille.babywork.cover.") {
       return true
     }
-    if identifier == "fr.camille.babywork.diagnostic" {
+    if identifier == "fr.camille.babywork.parent" {
       return false
     }
     return windowLevel(window) >= 1000
@@ -307,7 +307,7 @@ final class KioskEmergencyExit: @unchecked Sendable {
   private let lock = NSLock()
   private var didRun = false
   private let logger = Logger(
-    subsystem: Bundle.main.bundleIdentifier ?? "fr.camille.babywork.diagnostics",
+    subsystem: Bundle.main.bundleIdentifier ?? "fr.camille.babywork",
     category: "KioskExit"
   )
 

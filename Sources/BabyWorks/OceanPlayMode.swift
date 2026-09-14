@@ -17,7 +17,7 @@ enum OceanSprite {
   /// `Bundle.module` SPM cherche le `.bundle` à la racine du `.app`, interdit par codesign.
   /// Le script d’empaquetage le pose dans `Contents/Resources/`.
   private static let oceanBundle: Bundle = {
-    let names = "BabyWork_BabyWorkDiagnostics.bundle"
+    let names = "BabyWork_BabyWorks.bundle"
     if let resources = Bundle.main.resourceURL {
       let packaged = resources.appendingPathComponent(names)
       if let bundle = Bundle(url: packaged) {

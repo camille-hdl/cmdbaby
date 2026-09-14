@@ -9,15 +9,15 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>fr</string>
     <key>CFBundleDisplayName</key>
-    <string>Diagnostic BabyWork</string>
+    <string>BabyWorks</string>
     <key>CFBundleExecutable</key>
-    <string>BabyWorkDiagnostics</string>
+    <string>BabyWorks</string>
     <key>CFBundleIdentifier</key>
-    <string>fr.camille.babywork.diagnostics</string>
+    <string>fr.camille.babywork</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>BabyWorkDiagnostics</string>
+    <string>BabyWorks</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -31,8 +31,8 @@
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSInputMonitoringUsageDescription</key>
-    <string>BabyWork a besoin de surveiller le clavier et la souris pour absorber les raccourcis système pendant une session enfant. Aucune frappe n’est enregistrée.</string>
+    <string>BabyWorks a besoin de surveiller le clavier et la souris pour absorber les raccourcis système pendant une session enfant. Aucune frappe n’est enregistrée.</string>
     <key>NSHumanReadableCopyright</key>
-    <string>Projet personnel BabyWork</string>
+    <string>Projet personnel BabyWorks</string>
 </dict>
 </plist>

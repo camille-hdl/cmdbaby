@@ -33,7 +33,7 @@ final class SessionInputKillSwitch: @unchecked Sendable {
 /// Filtre de session Quartz : thread dédié, callback borné, aucune journalisation de frappe.
 final class SessionInputFilter: @unchecked Sendable {
   private let logger = Logger(
-    subsystem: Bundle.main.bundleIdentifier ?? "fr.camille.babywork.diagnostics",
+    subsystem: Bundle.main.bundleIdentifier ?? "fr.camille.babywork",
     category: "InputFilter"
   )
 
@@ -76,7 +76,7 @@ final class SessionInputFilter: @unchecked Sendable {
     let thread = Thread { [weak self] in
       self?.runTapThread()
     }
-    thread.name = "fr.camille.babywork.diagnostics.input-filter"
+    thread.name = "fr.camille.babywork.input-filter"
     thread.qualityOfService = .userInteractive
 
     stateLock.lock()

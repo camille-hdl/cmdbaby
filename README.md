@@ -1,92 +1,52 @@
-# BabyWork
+# BabyWorks
 
-BabyWork est un projet d’application macOS ludique permettant à un jeune enfant de manipuler le clavier et la souris dans un environnement visuel confiné. Le produit reste un confinement anti-bêtises robuste, pas une frontière de sécurité inviolable.
+A small macOS app I’m building on evenings and weekends so my kid can poke at the screen without launching Spotlight, switching spaces, or otherwise “helping” with the rest of the Mac.
 
-Le développement se trouve dans la phase 0 de faisabilité. L’inventaire du Mac cible et la signature TCC stable sont en place ; la prochaine tranche autorisée est le prototype de filtrage actif des entrées (ticket 02).
+If you’re a young parent who’s comfortable with macOS and doesn’t mind granting Accessibility once in a while, this might be your kind of toy project too.
 
-## Prérequis actuels
+Made by [Camille](https://camillehdl.dev). **Every line of code in this repo was written by an AI coding agent** (human direction, agent execution).
 
-- macOS 13 ou ultérieur ;
-- Swift 6.1 ou ultérieur ;
-- Xcode complet pour le développement normal et les essais d’identité Apple ; les Command Line Tools suffisent pour compiler le diagnostic actuel ;
-- une identité Apple Development ou Developer ID Application **valide** dans le trousseau pour les essais TCC ;
-- l’intermédiaire Apple WWDR G3 si `security find-identity -v` ne liste aucune identité alors qu’un certificat Apple Development est déjà présent.
+## What it does
 
-Afficher les identités disponibles :
+- **Full-screen kiosk** across your displays — calm underwater scene by default (fish, sand, bubbles), with a galaxy mode still in the codebase.
+- **Keyboard shielding** during play: common shortcuts get swallowed so tiny fingers don’t escape the sandbox. Keystrokes are not logged or stored.
+- **Grown-up exits**: parent passphrase + Return, Shift-Escape, or the pale failsafe corner — then the app quits and your desktop comes back.
 
-```sh
-security find-identity -v -p codesigning
-```
+On launch, BabyWorks tries to go straight into kid mode. You only see the French “parent tools” window if something blocked full-screen (permissions, simulated failure, etc.).
 
-Si une identité apparaît sans `-v` mais qu’aucune n’est « valid », et que `codesign` signale `unable to build chain to self-signed root`, importer l’intermédiaire public :
+## Art credits
 
-```sh
-curl -fsSL -o AppleWWDRCAG3.cer \
-  https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
-security import AppleWWDRCAG3.cer \
-  -k ~/Library/Keychains/login.keychain-db -t cert
-```
+Underwater sprites come from **[Kenney](https://www.kenney.nl) — Fish Pack 2.0** (CC0). See `Sources/BabyWorks/Resources/Ocean/License.txt` in the repo.
 
-## Tester
+## Build & run
 
-```sh
+Requirements: **macOS 13+**, **Swift 6.1** (Xcode or Swift toolchain).
+
+```bash
 swift test
+swift build --product BabyWorks
+.build/release/BabyWorks
 ```
 
-Les tests du diagnostic passent par son interface publique de rapport. Les valeurs macOS y sont injectées afin que les attentes restent déterministes et ne dépendent pas du poste exécutant la suite.
+For a signed `.app` in `/Applications` (recommended so Accessibility remembers the same binary):
 
-## Construire l’application diagnostique
+```bash
+# Optional: stable signing for TCC / Accessibility
+export BABYWORK_CODE_SIGN_IDENTITY="Apple Development: Your Name (TEAMID)"
 
-Pour une exécution locale sans identité installée :
-
-```sh
-./scripts/build-diagnostics-app.sh
-open /Applications/BabyWorkDiagnostics.app
+./scripts/build-app.sh
+open /Applications/BabyWorks.app
 ```
 
-Cette voie utilise une signature ad hoc. Elle permet de vérifier le bundle et l’interface, mais **elle n’offre pas une identité suffisamment stable pour les essais TCC**.
+Sandbox experiment (separate bundle ID):
 
-Pour une signature stable, fournir exactement le nom d’une identité **valide** retournée par `security find-identity -v` :
-
-```sh
-BABYWORK_CODE_SIGN_IDENTITY="Apple Development: Exemple (TEAMID)" \
-  ./scripts/build-diagnostics-app.sh
+```bash
+BABYWORK_APP_SANDBOX=1 ./scripts/build-app.sh
+open /Applications/BabyWorks-sandbox.app
 ```
 
-Le Bundle ID reste `fr.camille.babywork.diagnostics`. Vérifier le bundle produit et l’exigence désignée :
+Grant **Accessibility** to BabyWorks when macOS asks — that’s what lets the app filter shortcuts during kiosk mode. If you change your mind after denying, quit and relaunch the app (or drag it into the Accessibility list from Finder).
 
-```sh
-codesign --verify --deep --strict --verbose=2 /Applications/BabyWorkDiagnostics.app
-codesign --display --verbose=4 /Applications/BabyWorkDiagnostics.app
-codesign -d -r- /Applications/BabyWorkDiagnostics.app
-```
+---
 
-L’exigence désignée d’une signature Apple Development doit mentionner l’identifiant de bundle et le certificat feuille, et non seulement un `CDHash`. Elle doit rester identique d’un build à l’autre. L’inventaire factuel du Mac cible est dans `docs/phase-0/environment-inventory.md`.
-
-Pour comparer App Sandbox activé / désactivé :
-
-```sh
-BABYWORK_CODE_SIGN_IDENTITY="Apple Development: Exemple (TEAMID)" \
-  BABYWORK_APP_SANDBOX=0 \
-  ./scripts/build-diagnostics-app.sh
-
-BABYWORK_CODE_SIGN_IDENTITY="Apple Development: Exemple (TEAMID)" \
-  BABYWORK_APP_SANDBOX=1 \
-  ./scripts/build-diagnostics-app.sh
-open /Applications/BabyWorkDiagnostics-sandbox.app
-```
-
-Le panneau **Filtrage actif** de l’application permet d’activer le `CGEventTap` de session, de demander les permissions et de compter les raccourcis absorbés sans journaliser les frappes. La grille manuelle est dans `docs/phase-0/input-filter-trials.md`.
-## Relever l’environnement manuellement
-
-```sh
-sw_vers
-uname -m
-xcodebuild -version
-xcode-select -p
-xcrun swift --version
-system_profiler SPDisplaysDataType -json
-security find-identity -v -p codesigning
-```
-
-Ces commandes sont en lecture seule. Le rapport de phase 0 ne doit contenir ni donnée saisie au clavier, ni chemin privé complet, ni contenu d’image.
+Personal project, no warranty, no roadmap promises — just something that works on our family Mac.

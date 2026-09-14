@@ -3,11 +3,11 @@ import BabyWorkDiagnosticsKit
 import SwiftUI
 
 @main
-enum DiagnosticsMain {
+enum BabyWorksMain {
   static func main() {
     let app = NSApplication.shared
     app.setActivationPolicy(.regular)
-    let delegate = MainActor.assumeIsolated { DiagnosticsAppDelegate() }
+    let delegate = MainActor.assumeIsolated { BabyWorksAppDelegate() }
     app.delegate = delegate
     withExtendedLifetime(delegate) {
       app.run()
@@ -28,7 +28,7 @@ struct DiagnosticActions: Sendable {
 }
 
 @MainActor
-final class DiagnosticsAppDelegate: NSObject, NSApplicationDelegate {
+final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
   private let terminationGate: TerminationGate
   private let revealPump = DiagnosticRevealPump()
   private let model: DiagnosticsSessionModel
@@ -74,8 +74,8 @@ final class DiagnosticsAppDelegate: NSObject, NSApplicationDelegate {
       backing: .buffered,
       defer: false
     )
-    window.title = "Diagnostic BabyWork"
-    window.identifier = NSUserInterfaceItemIdentifier("fr.camille.babywork.diagnostic")
+    window.title = "BabyWorks"
+    window.identifier = NSUserInterfaceItemIdentifier("fr.camille.babywork.parent")
     window.isReleasedWhenClosed = false
     window.center()
     diagnosticWindow = window
@@ -116,9 +116,9 @@ final class DiagnosticsAppDelegate: NSObject, NSApplicationDelegate {
     let mainMenu = NSMenu()
     let appItem = NSMenuItem()
     mainMenu.addItem(appItem)
-    let appMenu = NSMenu(title: "Diagnostic BabyWork")
+    let appMenu = NSMenu(title: "BabyWorks")
     appMenu.addItem(
-      withTitle: "Quitter Diagnostic BabyWork",
+      withTitle: "Quitter BabyWorks",
       action: #selector(NSApplication.terminate(_:)),
       keyEquivalent: "q"
     )
@@ -164,9 +164,9 @@ private struct DiagnosticView: View {
 
   private var header: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text("Diagnostic de faisabilité")
+      Text("Outils parents")
         .font(.largeTitle.bold())
-      Text("Inventaire local et prototype de filtrage d’entrée pour la phase 0.")
+      Text("Cette fenêtre n’apparaît que si le mode plein écran ne peut pas démarrer.")
         .font(.title3)
         .foregroundStyle(.secondary)
       Text("Les frappes ne sont jamais journalisées ni persistées. Seuls des compteurs de raccourcis absorbés sont affichés.")
@@ -228,7 +228,7 @@ private struct InputFilterPanel: View {
           }
         }
 
-        Text("Le filtre actif dépend d’Accessibilité, pas de Surveillance de l’entrée. Après avoir coché Diagnostic BabyWork dans Accessibilité, macOS mémorise « non » jusqu’à la relance : utilisez Quitter et relancer, pas Actualiser. Si la ligne n’existe pas, glissez l’app depuis le Finder sur la liste, ou ajoutez-la avec +.")
+        Text("Le filtre actif dépend d’Accessibilité, pas de Surveillance de l’entrée. Après avoir coché BabyWorks dans Accessibilité, macOS mémorise « non » jusqu’à la relance : utilisez Quitter et relancer, pas Actualiser. Si la ligne n’existe pas, glissez l’app depuis le Finder sur la liste, ou ajoutez-la avec +.")
           .font(.callout)
           .foregroundStyle(.secondary)
 

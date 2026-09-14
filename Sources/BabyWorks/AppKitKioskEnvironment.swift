@@ -20,7 +20,7 @@ final class AppKitKioskEnvironment: KioskSessionServices {
   private let windowStore = CoverWindowStore()
   private let filterHolder = FilterHolder()
   private let logger = Logger(
-    subsystem: Bundle.main.bundleIdentifier ?? "fr.camille.babywork.diagnostics",
+    subsystem: Bundle.main.bundleIdentifier ?? "fr.camille.babywork",
     category: "Kiosk"
   )
 

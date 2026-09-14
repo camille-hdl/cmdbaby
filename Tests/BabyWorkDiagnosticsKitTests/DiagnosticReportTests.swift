@@ -22,9 +22,9 @@ func diagnosticPresentsInjectedSystemValues() {
       DiagnosticSection(
         title: "Signature",
         rows: [
-          DiagnosticRow(label: "Bundle ID", value: "fr.camille.babywork.diagnostics"),
+          DiagnosticRow(label: "Bundle ID", value: "fr.camille.babywork"),
           DiagnosticRow(label: "Identité", value: "Apple Development: Exemple"),
-          DiagnosticRow(label: "Emplacement", value: "~/Applications/BabyWorkDiagnostics.app"),
+          DiagnosticRow(label: "Emplacement", value: "~/Applications/BabyWorks.app"),
         ]
       ),
       DiagnosticSection(
@@ -111,9 +111,9 @@ private func makeSnapshot(
     architecture: "arm64",
     xcodeVersion: xcodeVersion,
     developerDirectory: "/Library/Developer/CommandLineTools",
-    bundleIdentifier: "fr.camille.babywork.diagnostics",
+    bundleIdentifier: "fr.camille.babywork",
     signingIdentity: signingIdentity,
-    bundleLocation: "~/Applications/BabyWorkDiagnostics.app",
+    bundleLocation: "~/Applications/BabyWorks.app",
     displays: displays,
     inputMonitoringListenGranted: inputMonitoringListenGranted,
     accessibilityGranted: false

@@ -14,8 +14,8 @@ let package = Package(
       targets: ["BabyWorkDiagnosticsKit"]
     ),
     .executable(
-      name: "BabyWorkDiagnostics",
-      targets: ["BabyWorkDiagnostics"]
+      name: "BabyWorks",
+      targets: ["BabyWorks"]
     ),
   ],
   targets: [
@@ -31,7 +31,7 @@ let package = Package(
       ]
     ),
     .executableTarget(
-      name: "BabyWorkDiagnostics",
+      name: "BabyWorks",
       dependencies: ["BabyWorkDiagnosticsKit", "BabyWorkAppKitBridge"],
       resources: [
         .process("Resources/Ocean"),

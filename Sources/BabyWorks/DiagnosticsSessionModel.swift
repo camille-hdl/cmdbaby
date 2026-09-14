@@ -34,7 +34,7 @@ final class DiagnosticsSessionModel {
   let ui: DiagnosticsPublishedState
   private let environment: AppKitKioskEnvironment
   private let kioskController: KioskSessionController
-  private weak var terminationDelegate: DiagnosticsAppDelegate?
+  private weak var terminationDelegate: BabyWorksAppDelegate?
   private var kioskTask: Task<Void, Never>?
 
   init(terminationGate: TerminationGate = TerminationGate()) {
@@ -89,7 +89,7 @@ final class DiagnosticsSessionModel {
     }
   }
 
-  func attachTerminationDelegate(_ delegate: DiagnosticsAppDelegate) {
+  func attachTerminationDelegate(_ delegate: BabyWorksAppDelegate) {
     terminationDelegate = delegate
   }
 
