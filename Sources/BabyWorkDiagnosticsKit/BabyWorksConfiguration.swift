@@ -28,10 +28,11 @@ public struct BabyWorksConfiguration: Codable, Equatable, Sendable {
   public init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     let defaults = BabyWorksConfiguration()
+    let rawMode = try container.decodeIfPresent(String.self, forKey: .mode)
     self.init(
       schemaVersion: try container.decodeIfPresent(Int.self, forKey: .schemaVersion)
         ?? defaults.schemaVersion,
-      mode: try container.decodeIfPresent(KioskPlayModeID.self, forKey: .mode) ?? defaults.mode,
+      mode: rawMode.map(KioskPlayModeCatalog.sessionMode(fromRawID:)) ?? defaults.mode,
       launchAtLogin: try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin)
         ?? defaults.launchAtLogin
     )

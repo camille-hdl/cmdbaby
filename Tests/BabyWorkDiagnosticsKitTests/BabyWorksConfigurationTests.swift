@@ -30,3 +30,12 @@ func configurationMissingFieldsDecodeToDefaults() throws {
   )
   #expect(partial == BabyWorksConfiguration(mode: .galaxy))
 }
+
+@Test("Un mode JSON inconnu replie sur Océan et conserve les autres champs")
+func configurationUnknownModeDecodesToOcean() throws {
+  let decoded = try JSONDecoder().decode(
+    BabyWorksConfiguration.self,
+    from: Data(#"{"mode":"leaf","launchAtLogin":true}"#.utf8)
+  )
+  #expect(decoded == BabyWorksConfiguration(mode: .ocean, launchAtLogin: true))
+}

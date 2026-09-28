@@ -34,6 +34,17 @@ func invalidConfigurationFileLoadsDefaults() throws {
   #expect(store.load() == BabyWorksConfiguration())
 }
 
+@Test("Un mode inconnu dans le fichier replie sur Océan et conserve le reste")
+func unknownModeInConfigurationFileFallsBackToOcean() throws {
+  let file = TemporaryConfigurationFile()
+  defer { file.remove() }
+  try FileManager.default.createDirectory(at: file.directory, withIntermediateDirectories: true)
+  try Data(#"{"mode":"leaf","launchAtLogin":true}"#.utf8).write(to: file.fileURL)
+
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  #expect(store.load() == BabyWorksConfiguration(mode: .ocean, launchAtLogin: true))
+}
+
 @Test("Le chemin par défaut est Application Support/BabyWorks/config.json")
 func defaultConfigurationPathIsApplicationSupport() {
   let url = BabyWorksConfigurationStore.defaultFileURL
