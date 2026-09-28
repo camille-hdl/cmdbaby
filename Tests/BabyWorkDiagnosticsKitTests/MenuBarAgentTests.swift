@@ -19,7 +19,7 @@ func menuBarAgentMenuHasThreeFixedEntries() {
   #expect(MenuBarAgent.items.map(\.title) == ["Lancer session", "Réglages…", "Quitter"])
 }
 
-@Test("Seul Quitter termine le process ; les autres actions sont des stubs")
-func menuBarAgentOnlyQuitTerminatesProcess() {
-  #expect(MenuBarAgent.items.map(\.action) == [.stub, .stub, .terminate])
+@Test("Réglages ouvre la fenêtre ; Lancer reste un stub ; seul Quitter termine")
+func menuBarAgentSettingsOpensWindowAndOnlyQuitTerminates() {
+  #expect(MenuBarAgent.items.map(\.action) == [.stub, .openSettings, .terminate])
 }
