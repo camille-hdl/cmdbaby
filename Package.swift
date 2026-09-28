@@ -42,6 +42,7 @@ let package = Package(
         .linkedFramework("Carbon"),
         .linkedFramework("CoreGraphics"),
         .linkedFramework("IOKit"),
+        .linkedFramework("ServiceManagement"),
         .linkedFramework("SwiftUI"),
       ]
     ),
