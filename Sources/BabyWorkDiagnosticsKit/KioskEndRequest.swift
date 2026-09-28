@@ -10,11 +10,8 @@ public enum KioskEndRequest: Equatable, Sendable {
 
   public var terminatesProcess: Bool {
     switch self {
-    case .adultExit(let kind):
-      switch kind {
-      case .passphrase, .shiftEscape, .failsafeClick, .timeLimit:
-        false
-      }
+    case .adultExit:
+      false
     case .explicitQuit:
       true
     }

@@ -203,6 +203,10 @@ final class DiagnosticsSessionModel {
     }
   }
 
+  func quit() {
+    environment.emergency.quit()
+  }
+
   func handleAdultExit(_ kind: AdultExitKind) {
     switch kioskController.state.phase {
     case .preparing, .activating, .active, .stopping:

@@ -92,9 +92,9 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     terminationGate.isBlocked() ? .terminateCancel : .terminateNow
   }
 
-  /// Chemin Quitter explicite : demande `terminate:` (hors sortie adulte).
+  /// Chemin Quitter explicite : même démontage que la sortie adulte, puis `terminate:`.
   @objc func quitApplication(_ sender: Any?) {
-    NSApp.terminate(sender)
+    model.quit()
   }
 
   /// Détruit le graphe SwiftUI avant le kiosque. Réaffiché seulement si l’activation échoue.
