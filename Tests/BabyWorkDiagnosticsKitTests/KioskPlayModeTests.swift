@@ -22,6 +22,14 @@ func playModeCatalogRejectsUnknownID() {
   #expect(KioskPlayModeCatalog.resolve("") == nil)
 }
 
+@Test("Le mode de session suit l’identifiant enregistré, sinon Océan")
+func playModeCatalogSessionModeFallsBackToOcean() {
+  #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "ocean") == .ocean)
+  #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "galaxy") == .galaxy)
+  #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "leaf") == .ocean)
+  #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "") == .ocean)
+}
+
 @Test("Une lettre devient un glyphe majuscule")
 func letterBecomesUppercaseGlyph() {
   #expect(PlayGlyphResolver.glyph(fromVisibleCharacter: "a", emojiIndex: 0) == .character("A"))

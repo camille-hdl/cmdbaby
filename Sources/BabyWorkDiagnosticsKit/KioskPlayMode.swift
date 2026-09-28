@@ -26,6 +26,11 @@ public enum KioskPlayModeCatalog: Sendable {
   public static func resolve(_ id: String) -> KioskPlayModeID? {
     available.first { $0.rawValue == id }
   }
+
+  /// Mode de session pour une clé de config : identifiant enregistré, sinon Océan.
+  public static func sessionMode(fromRawID id: String) -> KioskPlayModeID {
+    resolve(id) ?? `default`
+  }
 }
 
 public enum PlayGlyph: Equatable, Sendable {

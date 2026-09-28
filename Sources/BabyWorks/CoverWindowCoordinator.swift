@@ -190,7 +190,10 @@ final class CoverWindowCoordinator {
     activateApp()
     let exitHandler = onAdultExit
     let hud = self.hud
-    let session = PlaySession.makeDefault()
+    let configuration = BabyWorksConfigurationStore().load()
+    let session = PlaySession.make(
+      KioskPlayModeCatalog.sessionMode(fromRawID: configuration.mode.rawValue)
+    )
     let bridge = KioskInputBridge(hud: hud) { kind in
       hud.noteExit(kind)
       exitHandler?(kind)
@@ -350,8 +353,8 @@ private enum PlaySession {
   case ocean(OceanDirector)
   case galaxy(GalaxyDirector)
 
-  static func makeDefault() -> PlaySession {
-    switch KioskPlayModeCatalog.default {
+  static func make(_ mode: KioskPlayModeID) -> PlaySession {
+    switch mode {
     case .ocean:
       .ocean(OceanDirector())
     case .galaxy:
