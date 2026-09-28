@@ -575,16 +575,6 @@ final class OceanStageView: NSView {
     layer?.addSublayer(foregroundHost)
     layer?.addSublayer(fishHost)
     layer?.addSublayer(bubbleHost)
-
-    let failsafe = FailsafeClickView(inputBridge: inputBridge)
-    failsafe.translatesAutoresizingMaskIntoConstraints = false
-    addSubview(failsafe)
-    NSLayoutConstraint.activate([
-      failsafe.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-      failsafe.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -12),
-      failsafe.widthAnchor.constraint(equalToConstant: 72),
-      failsafe.heightAnchor.constraint(equalToConstant: 72),
-    ])
     director.register(painter)
   }
 

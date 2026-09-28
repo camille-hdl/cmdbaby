@@ -24,6 +24,7 @@ public enum AdultExitKind: Equatable, Sendable {
   case passphrase
   case shiftEscape
   case failsafeClick
+  case timeLimit
 }
 
 /// Reconnaît les sorties adultes sans dépendre du rendu et sans journaliser le tampon.

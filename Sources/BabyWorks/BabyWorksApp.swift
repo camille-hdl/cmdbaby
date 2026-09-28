@@ -321,7 +321,7 @@ private struct KioskPanel: View {
         }
         .disabled(ui.isKioskActive)
 
-        Text("Le kiosque démarre à l’ouverture. Cette fenêtre n’apparaît que si l’activation échoue (Accessibilité, défaillance simulée). Commande-Q est absorbé pendant le kiosque. Une sortie adulte (parent + Entrée, Majuscule-Échap, 5 clics sur le carré pâle) restaure la présentation puis quitte l’application.")
+        Text("Le kiosque démarre à l’ouverture. Cette fenêtre n’apparaît que si l’activation échoue (Accessibilité, défaillance simulée). Commande-Q est absorbé pendant le kiosque. Une sortie adulte (parent + Entrée, Majuscule-Échap, 5 clics sur le carré pâle, ou \(Int(SessionTimeLimit.defaultDuration / 60)) minutes) restaure la présentation puis quitte l’application.")
           .font(.callout)
           .foregroundStyle(.secondary)
       }
@@ -351,6 +351,8 @@ private struct KioskPanel: View {
       "Majuscule-Échap"
     case .failsafeClick:
       "Clics de secours"
+    case .timeLimit:
+      "Minuteur"
     case nil:
       "—"
     }
