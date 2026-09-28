@@ -27,12 +27,13 @@ public struct BabyWorksConfiguration: Codable, Equatable, Sendable {
 
   public init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
+    let defaults = BabyWorksConfiguration()
     self.init(
       schemaVersion: try container.decodeIfPresent(Int.self, forKey: .schemaVersion)
-        ?? Self.currentSchemaVersion,
-      mode: try container.decodeIfPresent(KioskPlayModeID.self, forKey: .mode)
-        ?? KioskPlayModeCatalog.default,
-      launchAtLogin: try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin) ?? false
+        ?? defaults.schemaVersion,
+      mode: try container.decodeIfPresent(KioskPlayModeID.self, forKey: .mode) ?? defaults.mode,
+      launchAtLogin: try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin)
+        ?? defaults.launchAtLogin
     )
   }
 }
