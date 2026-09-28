@@ -102,8 +102,10 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     model.quit()
   }
 
-  /// Lancer session reste un stub jusqu’au ticket de lancement.
-  @objc func ignoreStatusItemAction(_ sender: Any?) {}
+  /// Lancer session : kiosque lazy (scène, filtre, couvertures) avec le mode config.
+  @objc func startSession(_ sender: Any?) {
+    model.startKiosk(injected: .none)
+  }
 
   /// Réglages : fenêtre native avec le choix du mode.
   @objc func openSettings(_ sender: Any?) {
@@ -169,8 +171,8 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
 
   private func selector(for action: MenuBarAgent.Action) -> Selector {
     switch action {
-    case .stub:
-      #selector(ignoreStatusItemAction(_:))
+    case .startSession:
+      #selector(startSession(_:))
     case .openSettings:
       #selector(openSettings(_:))
     case .terminate:

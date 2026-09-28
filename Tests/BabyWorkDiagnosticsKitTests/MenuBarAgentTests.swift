@@ -19,7 +19,7 @@ func menuBarAgentMenuHasThreeFixedEntries() {
   #expect(MenuBarAgent.items.map(\.title) == ["Lancer session", "Réglages…", "Quitter"])
 }
 
-@Test("Réglages ouvre la fenêtre ; Lancer reste un stub ; seul Quitter termine")
-func menuBarAgentSettingsOpensWindowAndOnlyQuitTerminates() {
-  #expect(MenuBarAgent.items.map(\.action) == [.stub, .openSettings, .terminate])
+@Test("Lancer session démarre le kiosque ; Réglages ouvre la fenêtre ; seul Quitter termine")
+func menuBarAgentLaunchStartsSessionSettingsOpenAndOnlyQuitTerminates() {
+  #expect(MenuBarAgent.items.map(\.action) == [.startSession, .openSettings, .terminate])
 }
