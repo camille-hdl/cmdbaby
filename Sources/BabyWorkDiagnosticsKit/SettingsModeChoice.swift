@@ -2,7 +2,7 @@ import Foundation
 
 /// Choix du mode dans Réglages : options du registre, persisté dans la config.
 public struct SettingsModeChoice: Sendable {
-  public let store: BabyWorksConfigurationStore
+  private let store: BabyWorksConfigurationStore
 
   public init(store: BabyWorksConfigurationStore = BabyWorksConfigurationStore()) {
     self.store = store
