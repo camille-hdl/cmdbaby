@@ -6,7 +6,10 @@ import SwiftUI
 enum BabyWorksMain {
   static func main() {
     let app = NSApplication.shared
-    app.setActivationPolicy(.regular)
+    switch MenuBarAgent.activationPolicy {
+    case .accessory:
+      app.setActivationPolicy(.accessory)
+    }
     let delegate = MainActor.assumeIsolated { BabyWorksAppDelegate() }
     app.delegate = delegate
     withExtendedLifetime(delegate) {
@@ -34,6 +37,7 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
   private let model: DiagnosticsSessionModel
   private var diagnosticWindow: NSWindow?
   private var hostingView: NSView?
+  private var statusItem: NSStatusItem?
 
   override init() {
     let gate = TerminationGate()
@@ -62,6 +66,7 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     installMainMenu()
+    installStatusItem()
     model.attachTerminationDelegate(self)
     model.attachDiagnosticWindow(
       hide: { [weak self] in self?.detachDiagnosticView() },
@@ -81,7 +86,6 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     diagnosticWindow = window
     revealPump.attach(window: window) {}
     model.attachRevealPump(revealPump)
-    model.startKiosk(injected: .none)
   }
 
   nonisolated func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -96,6 +100,9 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
   @objc func quitApplication(_ sender: Any?) {
     model.quit()
   }
+
+  /// Lancer session et Réglages restent des stubs jusqu’aux tickets suivants.
+  @objc func ignoreStatusItemAction(_ sender: Any?) {}
 
   /// Détruit le graphe SwiftUI avant le kiosque. Réaffiché seulement si l’activation échoue.
   private func detachDiagnosticView() {
@@ -129,6 +136,38 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     )
     appItem.submenu = appMenu
     NSApp.mainMenu = mainMenu
+  }
+
+  private func installStatusItem() {
+    let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    let image = NSImage(
+      systemSymbolName: MenuBarAgent.systemSymbolName,
+      accessibilityDescription: "BabyWorks"
+    )
+    image?.isTemplate = MenuBarAgent.usesTemplateImage
+    item.button?.image = image
+
+    let menu = NSMenu()
+    for spec in MenuBarAgent.items {
+      let menuItem = NSMenuItem(
+        title: spec.title,
+        action: selector(for: spec.action),
+        keyEquivalent: ""
+      )
+      menuItem.target = self
+      menu.addItem(menuItem)
+    }
+    item.menu = menu
+    statusItem = item
+  }
+
+  private func selector(for action: MenuBarAgent.Action) -> Selector {
+    switch action {
+    case .stub:
+      #selector(ignoreStatusItemAction(_:))
+    case .terminate:
+      #selector(quitApplication(_:))
+    }
   }
 }
 
@@ -326,7 +365,7 @@ private struct KioskPanel: View {
         }
         .disabled(ui.isKioskActive)
 
-        Text("Le kiosque démarre à l’ouverture. Commande-Q est absorbé pendant le kiosque. Une sortie adulte (parent + Entrée, Majuscule-Échap, 5 clics sur le carré pâle, ou \(Int(SessionTimeLimit.defaultDuration / 60)) minutes) restaure la présentation et réaffiche cette fenêtre ; l’application reste ouverte. Quitter BabyWorks termine le process.")
+        Text("L’application démarre en agent idle. La session se lance à la demande depuis le menu ou le bouton ci-dessus. Commande-Q est absorbé pendant le kiosque. Une sortie adulte (parent + Entrée, Majuscule-Échap, 5 clics sur le carré pâle, ou \(Int(SessionTimeLimit.defaultDuration / 60)) minutes) restaure la présentation et réaffiche cette fenêtre ; l’application reste ouverte. Quitter BabyWorks termine le process.")
           .font(.callout)
           .foregroundStyle(.secondary)
       }
