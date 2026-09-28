@@ -191,9 +191,7 @@ final class CoverWindowCoordinator {
     let exitHandler = onAdultExit
     let hud = self.hud
     let configuration = BabyWorksConfigurationStore().load()
-    let session = PlaySession.make(
-      KioskPlayModeCatalog.sessionMode(fromRawID: configuration.mode.rawValue)
-    )
+    let session = PlaySession.make(configuration.mode)
     let bridge = KioskInputBridge(hud: hud) { kind in
       hud.noteExit(kind)
       exitHandler?(kind)
