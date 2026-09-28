@@ -3,7 +3,7 @@ import Foundation
 /// Modes jouables du kiosk. Océan est le mode par défaut ; d’autres identifiants
 /// s’ajouteront (feuille, paysage, jeux)
 /// sans changer le confinement ni les sorties adultes.
-public enum KioskPlayModeID: String, Sendable, CaseIterable, Equatable {
+public enum KioskPlayModeID: String, Codable, Sendable, CaseIterable, Equatable {
   case ocean
   case galaxy
 }
