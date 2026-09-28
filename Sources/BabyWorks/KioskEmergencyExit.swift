@@ -274,9 +274,13 @@ final class FilterHolder: @unchecked Sendable {
   func stop() {
     lock.lock()
     let current = filter
-    filter = nil
     lock.unlock()
     current?.stop()
+    lock.lock()
+    if filter === current {
+      filter = nil
+    }
+    lock.unlock()
   }
 }
 
