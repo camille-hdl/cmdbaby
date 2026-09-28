@@ -10,6 +10,18 @@ func playModeCatalogDefaultsToOcean() {
   #expect(KioskPlayModeCatalog.displayName(.galaxy) == "Galaxie")
 }
 
+@Test("Le registre résout Océan et Galaxie par identifiant")
+func playModeCatalogResolvesRegisteredIDs() {
+  #expect(KioskPlayModeCatalog.resolve("ocean") == .ocean)
+  #expect(KioskPlayModeCatalog.resolve("galaxy") == .galaxy)
+}
+
+@Test("Un identifiant de mode inconnu n’est pas résolu")
+func playModeCatalogRejectsUnknownID() {
+  #expect(KioskPlayModeCatalog.resolve("leaf") == nil)
+  #expect(KioskPlayModeCatalog.resolve("") == nil)
+}
+
 @Test("Une lettre devient un glyphe majuscule")
 func letterBecomesUppercaseGlyph() {
   #expect(PlayGlyphResolver.glyph(fromVisibleCharacter: "a", emojiIndex: 0) == .character("A"))
