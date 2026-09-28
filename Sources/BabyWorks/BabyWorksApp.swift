@@ -365,7 +365,7 @@ private struct KioskPanel: View {
         }
         .disabled(ui.isKioskActive)
 
-        Text("Le kiosque démarre à l’ouverture. Commande-Q est absorbé pendant le kiosque. Une sortie adulte (parent + Entrée, Majuscule-Échap, 5 clics sur le carré pâle, ou \(Int(SessionTimeLimit.defaultDuration / 60)) minutes) restaure la présentation et réaffiche cette fenêtre ; l’application reste ouverte. Quitter BabyWorks termine le process.")
+        Text("L’application démarre en agent idle. La session se lance à la demande depuis le menu ou le bouton ci-dessus. Commande-Q est absorbé pendant le kiosque. Une sortie adulte (parent + Entrée, Majuscule-Échap, 5 clics sur le carré pâle, ou \(Int(SessionTimeLimit.defaultDuration / 60)) minutes) restaure la présentation et réaffiche cette fenêtre ; l’application reste ouverte. Quitter BabyWorks termine le process.")
           .font(.callout)
           .foregroundStyle(.secondary)
       }
