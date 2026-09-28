@@ -23,10 +23,12 @@ static NSString *BabyWorkWindowIdentifier(NSWindow *window) {
 }
 
 static void BabyWorkHideWindow(NSWindow *window) {
+  window.contentView = nil;
   window.ignoresMouseEvents = YES;
   window.alphaValue = 0;
   window.level = NSNormalWindowLevel;
   [window orderOut:nil];
+  [window close];
 }
 
 static int32_t BabyWorkPerformTeardown(

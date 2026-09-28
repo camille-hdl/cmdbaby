@@ -240,11 +240,15 @@ final class CoverWindowCoordinator {
 
   func closeCoverWindows() {
     stopOutlineClock()
+    for window in windows {
+      window.contentView = nil
+    }
     _ = store.closeAll()
     windows.removeAll(keepingCapacity: false)
     inputBridge = nil
     playSession?.reset()
     playSession = nil
+    OceanSprite.purge()
     hud.resetHandlers()
   }
 
@@ -470,7 +474,8 @@ private final class CoverWindow: NSWindow {
     acceptsMouseMovedEvents = true
     identifier = NSUserInterfaceItemIdentifier("fr.camille.babywork.cover.\(descriptor.id)")
     self.contentView = contentView
-    isReleasedWhenClosed = false
+    // Idle : la fenêtre ne doit pas survivre à `close()` (scène + calques).
+    isReleasedWhenClosed = true
   }
 
   nonisolated override func flagsChanged(with event: NSEvent) {
