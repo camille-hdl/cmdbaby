@@ -38,6 +38,7 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
   private var diagnosticWindow: NSWindow?
   private var hostingView: NSView?
   private var statusItem: NSStatusItem?
+  private let settingsWindowController = SettingsWindowController()
 
   override init() {
     let gate = TerminationGate()
@@ -101,8 +102,13 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     model.quit()
   }
 
-  /// Lancer session et Réglages restent des stubs jusqu’aux tickets suivants.
+  /// Lancer session reste un stub jusqu’au ticket de lancement.
   @objc func ignoreStatusItemAction(_ sender: Any?) {}
+
+  /// Réglages : fenêtre native avec le choix du mode.
+  @objc func openSettings(_ sender: Any?) {
+    settingsWindowController.show()
+  }
 
   /// Détruit le graphe SwiftUI avant le kiosque. Réaffiché seulement si l’activation échoue.
   private func detachDiagnosticView() {
@@ -165,6 +171,8 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     switch action {
     case .stub:
       #selector(ignoreStatusItemAction(_:))
+    case .openSettings:
+      #selector(openSettings(_:))
     case .terminate:
       #selector(quitApplication(_:))
     }

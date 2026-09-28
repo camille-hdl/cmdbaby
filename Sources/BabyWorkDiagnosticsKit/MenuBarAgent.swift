@@ -9,7 +9,7 @@ public enum MenuBarAgent {
 
   public static let items: [Item] = [
     Item(title: "Lancer session", action: .stub),
-    Item(title: "Réglages…", action: .stub),
+    Item(title: "Réglages…", action: .openSettings),
     Item(title: "Quitter", action: .terminate),
   ]
 
@@ -25,6 +25,7 @@ public enum MenuBarAgent {
 
   public enum Action: Equatable, Sendable {
     case stub
+    case openSettings
     case terminate
   }
 }
