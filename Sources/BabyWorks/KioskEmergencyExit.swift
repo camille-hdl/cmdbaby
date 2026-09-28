@@ -295,7 +295,8 @@ final class TerminationGate: @unchecked Sendable {
   }
 }
 
-/// Arrête le kiosque, restaure la présentation, puis quitte le processus.
+/// Démonte le kiosque. Une sortie adulte laisse le process vivant ;
+/// Quitter enchaîne `terminate:` après le même démontage (`should_quit`).
 final class KioskEmergencyExit: @unchecked Sendable {
   let store: CoverWindowStore
   var hud: KioskHUD?
@@ -323,8 +324,16 @@ final class KioskEmergencyExit: @unchecked Sendable {
   }
 
   func run(_ kind: AdultExitKind) {
+    schedule(.adultExit(kind))
+  }
+
+  func quit() {
+    schedule(.explicitQuit)
+  }
+
+  private func schedule(_ request: KioskEndRequest) {
     lock.lock()
-    if didRun {
+    if didRun && !request.terminatesProcess {
       lock.unlock()
       return
     }
@@ -339,16 +348,21 @@ final class KioskEmergencyExit: @unchecked Sendable {
     let raw = UInt64(store.capturedRaw())
     let (port, loop) = tapHandles?() ?? (nil, nil)
     let box = TeardownDoneBox(
-      kind: kind,
+      request: request,
       unblock: unblock,
       syncModel: syncModel
     )
-    logger.info("Sortie adulte : démontage ObjC planifié")
+    if request.terminatesProcess {
+      logger.info("Quitter : démontage ObjC puis terminate")
+    } else {
+      logger.info("Sortie adulte : démontage ObjC planifié")
+    }
     BabyWorkScheduleKioskTeardown(
       Unmanaged.passRetained(windows).toOpaque(),
       raw,
       port.map { Unmanaged.passUnretained($0).toOpaque() },
       loop.map { Unmanaged.passUnretained($0).toOpaque() },
+      request.terminatesProcess,
       teardownDoneTrampoline,
       Unmanaged.passRetained(box).toOpaque()
     )
@@ -356,23 +370,25 @@ final class KioskEmergencyExit: @unchecked Sendable {
 }
 
 private final class TeardownDoneBox: @unchecked Sendable {
-  let kind: AdultExitKind
+  let request: KioskEndRequest
   let unblock: (@Sendable () -> Void)?
   let syncModel: (@Sendable (AdultExitKind) -> Void)?
 
   init(
-    kind: AdultExitKind,
+    request: KioskEndRequest,
     unblock: (@Sendable () -> Void)?,
     syncModel: (@Sendable (AdultExitKind) -> Void)?
   ) {
-    self.kind = kind
+    self.request = request
     self.unblock = unblock
     self.syncModel = syncModel
   }
 
   func finish(hidden _: Int) {
     unblock?()
-    syncModel?(kind)
+    if case .adultExit(let kind) = request {
+      syncModel?(kind)
+    }
   }
 }
 

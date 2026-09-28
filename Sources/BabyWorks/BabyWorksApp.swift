@@ -92,6 +92,11 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     terminationGate.isBlocked() ? .terminateCancel : .terminateNow
   }
 
+  /// Chemin Quitter explicite : même démontage que la sortie adulte, puis `terminate:`.
+  @objc func quitApplication(_ sender: Any?) {
+    model.quit()
+  }
+
   /// Détruit le graphe SwiftUI avant le kiosque. Réaffiché seulement si l’activation échoue.
   private func detachDiagnosticView() {
     diagnosticWindow?.contentView = NSView(frame: .zero)
@@ -119,7 +124,7 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     let appMenu = NSMenu(title: "BabyWorks")
     appMenu.addItem(
       withTitle: "Quitter BabyWorks",
-      action: #selector(NSApplication.terminate(_:)),
+      action: #selector(quitApplication(_:)),
       keyEquivalent: "q"
     )
     appItem.submenu = appMenu
@@ -166,7 +171,7 @@ private struct DiagnosticView: View {
     VStack(alignment: .leading, spacing: 8) {
       Text("Outils parents")
         .font(.largeTitle.bold())
-      Text("Cette fenêtre n’apparaît que si le mode plein écran ne peut pas démarrer.")
+      Text("Cette fenêtre réapparaît après une sortie adulte, ou si le mode plein écran ne peut pas démarrer.")
         .font(.title3)
         .foregroundStyle(.secondary)
       Text("Les frappes ne sont jamais journalisées ni persistées. Seuls des compteurs de raccourcis absorbés sont affichés.")
@@ -232,7 +237,7 @@ private struct InputFilterPanel: View {
           .font(.callout)
           .foregroundStyle(.secondary)
 
-        Text("Sorties adultes : parent + Entrée, ou Majuscule-Échap. Elles quittent l’application après restauration de la présentation. Commande-Q est absorbé pendant le kiosque.")
+        Text("Sorties adultes : parent + Entrée, ou Majuscule-Échap. Elles restaurent la présentation et laissent l’application ouverte. Commande-Q est absorbé pendant le kiosque. Quitter BabyWorks termine le process.")
           .font(.callout)
           .foregroundStyle(.secondary)
 
@@ -321,7 +326,7 @@ private struct KioskPanel: View {
         }
         .disabled(ui.isKioskActive)
 
-        Text("Le kiosque démarre à l’ouverture. Cette fenêtre n’apparaît que si l’activation échoue (Accessibilité, défaillance simulée). Commande-Q est absorbé pendant le kiosque. Une sortie adulte (parent + Entrée, Majuscule-Échap, 5 clics sur le carré pâle, ou \(Int(SessionTimeLimit.defaultDuration / 60)) minutes) restaure la présentation puis quitte l’application.")
+        Text("Le kiosque démarre à l’ouverture. Commande-Q est absorbé pendant le kiosque. Une sortie adulte (parent + Entrée, Majuscule-Échap, 5 clics sur le carré pâle, ou \(Int(SessionTimeLimit.defaultDuration / 60)) minutes) restaure la présentation et réaffiche cette fenêtre ; l’application reste ouverte. Quitter BabyWorks termine le process.")
           .font(.callout)
           .foregroundStyle(.secondary)
       }
