@@ -6,36 +6,6 @@ import ObjectiveC
 import OSLog
 
 /// Appels AppKit sans passer par l’isolation MainActor Swift.
-final class DiagnosticRevealPump: NSObject, @unchecked Sendable {
-  private let lock = NSLock()
-  private weak var window: NSWindow?
-  private var rebuild: (@Sendable () -> Void)?
-
-  func attach(window: NSWindow, rebuild: @escaping @Sendable () -> Void) {
-    lock.lock()
-    self.window = window
-    self.rebuild = rebuild
-    lock.unlock()
-  }
-
-  @objc func reveal() {
-    lock.lock()
-    let window = window
-    let rebuild = rebuild
-    lock.unlock()
-    guard let window else { return }
-    UnsafeAppKit.orderFrontDiagnosticWindow(window)
-    rebuild?()
-  }
-
-  func request() {
-    DispatchQueue.main.async { [weak self] in
-      self?.reveal()
-    }
-    CFRunLoopWakeUp(CFRunLoopGetMain())
-  }
-}
-
 enum UnsafeAppKit {
   static func setPresentationOptions(_ raw: UInt) {
     typealias Setter = @convention(c) (AnyObject, Selector, UInt) -> Void
@@ -64,22 +34,6 @@ enum UnsafeAppKit {
       hidden += 1
     }
     return hidden
-  }
-
-  static func orderFrontDiagnosticWindow(_ window: NSWindow) {
-    setWindowLevel(window, 0)
-    setAlpha(window, 1)
-    setIgnoresMouseEvents(window, false)
-    makeKeyAndOrderFront(window)
-    activateApp()
-  }
-
-  static func makeKeyAndOrderFront(_ window: NSWindow) {
-    invoke(window, NSSelectorFromString("makeKeyAndOrderFront:"), object: nil)
-  }
-
-  static func setContentView(_ window: NSWindow, _ view: NSView) {
-    invoke(window, NSSelectorFromString("setContentView:"), object: view)
   }
 
   private static func hideWindow(_ window: NSWindow) {
@@ -157,20 +111,6 @@ enum UnsafeAppKit {
   private static func nsApplication() -> AnyObject? {
     guard let appClass: AnyObject = NSClassFromString("NSApplication") else { return nil }
     return appClass.perform(NSSelectorFromString("sharedApplication"))?.takeUnretainedValue()
-  }
-
-  private static func activateApp() {
-    guard let app = nsApplication() else { return }
-    let ignoring = NSSelectorFromString("activateIgnoringOtherApps:")
-    if let method = class_getInstanceMethod(NSApplication.self, ignoring) {
-      typealias Setter = @convention(c) (AnyObject, Selector, ObjCBool) -> Void
-      unsafeBitCast(method_getImplementation(method), to: Setter.self)(app, ignoring, true)
-      return
-    }
-    let activate = NSSelectorFromString("activate")
-    guard let method = class_getInstanceMethod(NSApplication.self, activate) else { return }
-    typealias Fn = @convention(c) (AnyObject, Selector) -> Void
-    unsafeBitCast(method_getImplementation(method), to: Fn.self)(app, activate)
   }
 
   private static func allApplicationWindows() -> [NSWindow] {

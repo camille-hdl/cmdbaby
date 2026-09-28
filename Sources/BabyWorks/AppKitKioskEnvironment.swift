@@ -9,7 +9,6 @@ final class AppKitKioskEnvironment: KioskSessionServices {
   var onFilterStatus: (@Sendable (InputFilterStatus) -> Void)?
   var onCountsChange: (@Sendable ([MonitoredShortcut: Int]) -> Void)?
   var onHideDiagnosticInterface: (() -> Void)?
-  var onRevealDiagnosticInterface: (() -> Void)?
 
   let emergency: KioskEmergencyExit
   let terminationGate: TerminationGate
@@ -131,10 +130,6 @@ final class AppKitKioskEnvironment: KioskSessionServices {
 
   func hideDiagnosticInterface() {
     onHideDiagnosticInterface?()
-  }
-
-  func revealDiagnosticInterface() {
-    onRevealDiagnosticInterface?()
   }
 }
 
