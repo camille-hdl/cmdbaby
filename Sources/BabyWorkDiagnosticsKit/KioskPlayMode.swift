@@ -21,6 +21,11 @@ public enum KioskPlayModeCatalog: Sendable {
       "Galaxie"
     }
   }
+
+  /// Identifiant brut → mode enregistré ; `nil` si inconnu, sans repli silencieux.
+  public static func resolve(_ id: String) -> KioskPlayModeID? {
+    available.first { $0.rawValue == id }
+  }
 }
 
 public enum PlayGlyph: Equatable, Sendable {
