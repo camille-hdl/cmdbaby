@@ -75,6 +75,10 @@ final class SettingsWindowController {
     }
   }
 
+  func hide() {
+    window?.orderOut(nil)
+  }
+
   private func existingOrMakeWindow() -> NSWindow {
     if let window {
       return window
