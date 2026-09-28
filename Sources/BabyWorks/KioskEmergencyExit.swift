@@ -295,7 +295,7 @@ final class TerminationGate: @unchecked Sendable {
   }
 }
 
-/// Arrête le kiosque, restaure la présentation, puis quitte le processus.
+/// Arrête le kiosque et restaure la présentation. Le process reste vivant.
 final class KioskEmergencyExit: @unchecked Sendable {
   let store: CoverWindowStore
   var hud: KioskHUD?
@@ -349,6 +349,7 @@ final class KioskEmergencyExit: @unchecked Sendable {
       raw,
       port.map { Unmanaged.passUnretained($0).toOpaque() },
       loop.map { Unmanaged.passUnretained($0).toOpaque() },
+      KioskEndRequest.adultExit(kind).terminatesProcess,
       teardownDoneTrampoline,
       Unmanaged.passRetained(box).toOpaque()
     )

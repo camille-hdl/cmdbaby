@@ -83,6 +83,7 @@ void BabyWorkScheduleKioskTeardown(
   uint64_t presentation_raw,
   void *tap_port,
   void *tap_loop,
+  bool should_quit,
   BabyWorkTeardownDone done,
   void *context
 ) {
@@ -112,7 +113,9 @@ void BabyWorkScheduleKioskTeardown(
       notified = YES;
       done(hidden, context);
     }
-    [[NSApplication sharedApplication] terminate:nil];
+    if (should_quit) {
+      [[NSApplication sharedApplication] terminate:nil];
+    }
   };
 
   dispatch_async(dispatch_get_main_queue(), work);

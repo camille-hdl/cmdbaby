@@ -72,17 +72,13 @@ final class DiagnosticsSessionModel {
       }
     }
 
-    let ui = self.ui
     let stopFlag = kioskController.externalStop
     let gate = environment.terminationGate
-    environment.emergency.syncModel = { kind in
-      ui.filterStatus = .inactive
-      ui.kioskState = KioskSessionState(
-        phase: .configuration,
-        coveredScreens: [],
-        lastExitKind: kind
-      )
+    environment.emergency.syncModel = { [weak self] kind in
       stopFlag.mark(kind)
+      Task { @MainActor in
+        self?.handleAdultExit(kind)
+      }
     }
     environment.emergency.unblock = {
       gate.setBlocked(false)
