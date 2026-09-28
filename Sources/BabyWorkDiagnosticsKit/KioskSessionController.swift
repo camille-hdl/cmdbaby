@@ -1,6 +1,7 @@
 import Foundation
 
-/// Collaborateurs système du kiosque. Toutes les opérations de nettoyage sont idempotentes.
+/// Collaborateurs système du kiosque. Les nettoyages sont idempotents et
+/// relâchent la session : pas de tap, pas de couvertures, pas de ressources de mode.
 @MainActor
 public protocol KioskSessionServices: AnyObject {
   func capturePresentation() throws -> PresentationOptionsSnapshot

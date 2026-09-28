@@ -37,6 +37,7 @@ enum UnsafeAppKit {
   }
 
   private static func hideWindow(_ window: NSWindow) {
+    invoke(window, NSSelectorFromString("setContentView:"), object: nil)
     setIgnoresMouseEvents(window, true)
     setAlpha(window, 0)
     setWindowLevel(window, 0)
@@ -215,6 +216,11 @@ final class FilterHolder: @unchecked Sendable {
     let current = filter
     lock.unlock()
     current?.stop()
+    lock.lock()
+    if filter === current {
+      filter = nil
+    }
+    lock.unlock()
   }
 }
 

@@ -51,8 +51,43 @@ func failsafeClickDeactivatesKiosk() async {
 
   #expect(state.phase == .configuration)
   #expect(state.lastExitKind == .failsafeClick)
-  #expect(services.openWindows.isEmpty)
-  #expect(!services.filterRunning)
+  assertIdleWithoutSessionResources(services)
+}
+
+@MainActor
+@Test("Une sortie adulte laisse l’idle sans couverture, filtre ni ressources de mode")
+func adultExitLeavesIdleWithoutSessionResources() async {
+  let services = FakeKioskServices(screens: threeTargetScreens)
+  let controller = KioskSessionController(services: services)
+  _ = await controller.activate()
+  #expect(services.playModeResourcesLoaded)
+  #expect(services.filterHeld)
+
+  let state = controller.deactivate(exitKind: .passphrase)
+
+  #expect(state.phase == .configuration)
+  #expect(state.coveredScreens.isEmpty)
+  #expect(!state.blocksTermination)
+  assertIdleWithoutSessionResources(services)
+}
+
+@MainActor
+@Test("Une nouvelle session démarre après une sortie adulte")
+func activationSucceedsAfterAdultExit() async {
+  let services = FakeKioskServices(screens: threeTargetScreens)
+  let controller = KioskSessionController(services: services)
+  _ = await controller.activate()
+  _ = controller.deactivate(exitKind: .timeLimit)
+
+  let state = await controller.activate()
+
+  #expect(state.phase == .active)
+  #expect(state.coveredScreens.count == 3)
+  #expect(services.openWindows.count == 3)
+  #expect(services.filterRunning)
+  #expect(services.filterHeld)
+  #expect(services.playModeResourcesLoaded)
+  #expect(services.currentPresentation == KioskPresentationPolicy.kiosk)
 }
 
 @MainActor
@@ -71,8 +106,7 @@ func deactivationRestoresExactCapturedPresentation() async {
   #expect(state.phase == .configuration)
   #expect(state.lastExitKind == .passphrase)
   #expect(state.coveredScreens.isEmpty)
-  #expect(services.openWindows.isEmpty)
-  #expect(!services.filterRunning)
+  assertIdleWithoutSessionResources(services)
   #expect(services.currentPresentation == original)
   #expect(services.restoredSnapshots == [original])
 }
@@ -152,9 +186,16 @@ private func assertNoKioskResidue(
   _ services: FakeKioskServices,
   originalPresentation: PresentationOptionsSnapshot
 ) {
+  assertIdleWithoutSessionResources(services)
+  #expect(services.currentPresentation == originalPresentation)
+}
+
+@MainActor
+private func assertIdleWithoutSessionResources(_ services: FakeKioskServices) {
   #expect(services.openWindows.isEmpty)
   #expect(!services.filterRunning)
-  #expect(services.currentPresentation == originalPresentation)
+  #expect(!services.filterHeld)
+  #expect(!services.playModeResourcesLoaded)
 }
 
 private let threeTargetScreens = [
@@ -197,6 +238,8 @@ private final class FakeKioskServices: KioskSessionServices {
   var currentPresentation: PresentationOptionsSnapshot
   var openWindows: [ScreenDescriptor] = []
   var filterRunning = false
+  var filterHeld = false
+  var playModeResourcesLoaded = false
   var restoredSnapshots: [PresentationOptionsSnapshot] = []
   var operations: [String] = []
 
@@ -218,6 +261,7 @@ private final class FakeKioskServices: KioskSessionServices {
     operations.append("createCoverWindows")
     guard !screens.isEmpty else { throw KioskSessionError.noScreens }
     openWindows = screens
+    playModeResourcesLoaded = true
     return screens
   }
 
@@ -229,6 +273,7 @@ private final class FakeKioskServices: KioskSessionServices {
   func startInputFilter() async throws {
     operations.append("startInputFilter")
     filterRunning = true
+    filterHeld = true
   }
 
   func restorePresentation(_ snapshot: PresentationOptionsSnapshot) {
@@ -240,11 +285,13 @@ private final class FakeKioskServices: KioskSessionServices {
   func closeCoverWindows() {
     operations.append("closeCoverWindows")
     openWindows = []
+    playModeResourcesLoaded = false
   }
 
   func stopInputFilter() {
     operations.append("stopInputFilter")
     filterRunning = false
+    filterHeld = false
   }
 
   func hideDiagnosticInterface() {

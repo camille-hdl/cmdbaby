@@ -12,6 +12,10 @@ enum OceanSprite {
     cache.image(named: name)
   }
 
+  static func purge() {
+    cache.removeAll()
+  }
+
   private static let cache = OceanSpriteCache()
 
   /// `Bundle.module` SPM cherche le `.bundle` à la racine du `.app`, interdit par codesign.
@@ -48,6 +52,12 @@ private final class OceanSpriteCache: @unchecked Sendable {
     images[name] = cgImage
     lock.unlock()
     return cgImage
+  }
+
+  func removeAll() {
+    lock.lock()
+    images.removeAll(keepingCapacity: false)
+    lock.unlock()
   }
 }
 
