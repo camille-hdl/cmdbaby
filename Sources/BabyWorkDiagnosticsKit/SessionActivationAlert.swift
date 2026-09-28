@@ -39,8 +39,8 @@ public struct SessionActivationAlert: Equatable, Sendable {
 
   private static func informativeText(for error: KioskSessionError) -> String {
     switch error {
-    case .filterUnavailable:
-      "BabyWorks n’a pas pu activer le kiosque. Accordez Accessibilité dans Réglages système, puis quittez et relancez l’application."
+    case .filterUnavailable(let reason):
+      "BabyWorks n’a pas pu activer le kiosque (\(reason)). Accordez Accessibilité dans Réglages système, puis quittez et relancez l’application."
     case .noScreens:
       "Aucun écran n’est disponible pour la couverture."
     case .presentationRejected:

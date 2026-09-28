@@ -9,7 +9,8 @@ func accessibilityFailureAlertOpensSystemSettings() {
   )
 
   #expect(alert.title == "La session n’a pas pu démarrer")
-  #expect(alert.informativeText.contains("Accessibilité"))
+  #expect(alert.informativeText.contains("Accessibilité refusée"))
+  #expect(alert.informativeText.contains("Accordez Accessibilité"))
   #expect(alert.informativeText.contains("relance"))
   #expect(alert.actions == [
     .openAccessibilitySettings,
