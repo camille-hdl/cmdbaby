@@ -29,18 +29,24 @@ public struct SessionActivationAlert: Equatable, Sendable {
     "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
   ]
 
-  public static func forFailedActivation(_ error: KioskSessionError) -> SessionActivationAlert {
+  public static func forFailedActivation(
+    _ error: KioskSessionError,
+    runningBinaryURL: URL? = nil
+  ) -> SessionActivationAlert {
     SessionActivationAlert(
       title: "La session n’a pas pu démarrer",
-      informativeText: informativeText(for: error),
+      informativeText: informativeText(for: error, runningBinaryURL: runningBinaryURL),
       actions: actions(for: error)
     )
   }
 
-  private static func informativeText(for error: KioskSessionError) -> String {
+  private static func informativeText(
+    for error: KioskSessionError,
+    runningBinaryURL: URL?
+  ) -> String {
     switch error {
     case .filterUnavailable(let reason):
-      "BabyWorks n’a pas pu activer le kiosque (\(reason)). Accordez Accessibilité dans Réglages système, puis quittez et relancez l’application."
+      filterUnavailableText(reason: reason, runningBinaryURL: runningBinaryURL)
     case .noScreens:
       "Aucun écran n’est disponible pour la couverture."
     case .presentationRejected:
@@ -48,6 +54,22 @@ public struct SessionActivationAlert: Equatable, Sendable {
     case .injectedFailure:
       "La session n’a pas pu démarrer. Réessayez depuis le menu."
     }
+  }
+
+  private static func filterUnavailableText(reason: String, runningBinaryURL: URL?) -> String {
+    var lines = [
+      "BabyWorks n’a pas pu activer le kiosque (\(reason))."
+    ]
+    if let runningBinaryURL {
+      lines.append("Binaire actuel : \(runningBinaryURL.path)")
+    }
+    lines.append(
+      "Retirez les anciennes entrées BabyWorks dans Réglages système → Accessibilité, puis ré-autorisez cette copie. Une signature ad hoc invalide l’identité TCC à chaque rebuild."
+    )
+    lines.append(
+      "Accordez Accessibilité, puis quittez et relancez l’application."
+    )
+    return lines.joined(separator: "\n\n")
   }
 
   private static func actions(for error: KioskSessionError) -> [Action] {
