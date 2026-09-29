@@ -13,15 +13,15 @@ public struct PresentationOptionsSnapshot: Equatable, Sendable {
 /// Combinaisons d’options de présentation validées par construction.
 /// Les bits suivent `NSApplication.PresentationOptions`.
 public enum KioskPresentationPolicy {
-  public static let hideDock: UInt = 1 << 0
-  public static let hideMenuBar: UInt = 1 << 1
-  public static let disableAppleMenu: UInt = 1 << 2
-  public static let disableProcessSwitching: UInt = 1 << 3
-  public static let disableForceQuit: UInt = 1 << 4
-  public static let disableSessionTermination: UInt = 1 << 5
-  public static let disableHideApplication: UInt = 1 << 6
-  public static let autoHideMenuBar: UInt = 1 << 7
-  public static let autoHideDock: UInt = 1 << 8
+  public static let autoHideDock: UInt = 1 << 0
+  public static let hideDock: UInt = 1 << 1
+  public static let autoHideMenuBar: UInt = 1 << 2
+  public static let hideMenuBar: UInt = 1 << 3
+  public static let disableAppleMenu: UInt = 1 << 4
+  public static let disableProcessSwitching: UInt = 1 << 5
+  public static let disableForceQuit: UInt = 1 << 6
+  public static let disableSessionTermination: UInt = 1 << 7
+  public static let disableHideApplication: UInt = 1 << 8
   public static let fullScreen: UInt = 1 << 10
 
   /// Dock et barre de menus masqués, bascule d’app / Force Quit / fin de session / masquage désactivés.
