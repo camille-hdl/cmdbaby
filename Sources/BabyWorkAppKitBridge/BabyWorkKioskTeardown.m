@@ -76,7 +76,6 @@ static int32_t BabyWorkPerformTeardown(
     }
   }
 
-  os_log_info(BabyWorkTeardownLog(), "kiosque démonté, %d couverture(s)", hidden);
   return hidden;
 }
 
@@ -99,6 +98,13 @@ void BabyWorkScheduleKioskTeardown(
     CFRetain(loop);
   }
 
+  os_log_info(
+    BabyWorkTeardownLog(),
+    "teardown.begin should_quit=%{public}s cover_count=%d caller=objc",
+    should_quit ? "true" : "false",
+    (int)windowArray.count
+  );
+
   dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INTERACTIVE, 0), ^{
     if (port != NULL) {
       CGEventTapEnable(port, false);
@@ -113,6 +119,12 @@ void BabyWorkScheduleKioskTeardown(
     int32_t hidden = BabyWorkPerformTeardown(windowArray, presentation_raw, port, loop);
     if (!notified && done != NULL) {
       notified = YES;
+      os_log_info(
+        BabyWorkTeardownLog(),
+        "teardown.done should_quit=%{public}s cover_count=%d caller=objc",
+        should_quit ? "true" : "false",
+        hidden
+      );
       done(hidden, context);
     }
     if (should_quit) {

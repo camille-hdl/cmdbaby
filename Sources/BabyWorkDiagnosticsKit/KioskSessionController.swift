@@ -41,10 +41,15 @@ public final class KioskSessionController {
   public let externalStop = KioskExternalStop()
 
   private let services: any KioskSessionServices
+  private let log: LifecycleLogRecorder
   private var capturedPresentation: PresentationOptionsSnapshot?
 
-  public init(services: any KioskSessionServices) {
+  public init(
+    services: any KioskSessionServices,
+    log: LifecycleLogRecorder = .shared
+  ) {
     self.services = services
+    self.log = log
   }
 
   nonisolated public func markExternallyStopped(exitKind: AdultExitKind) {
@@ -70,7 +75,8 @@ public final class KioskSessionController {
     services.stopInputFilter()
 
     do {
-      state.phase = .preparing
+      log.emit(.sessionStart)
+      setPhase(.preparing)
 
       let captured = try services.capturePresentation()
       capturedPresentation = captured
@@ -80,7 +86,7 @@ public final class KioskSessionController {
       // Laisse AppKit retirer les observateurs SwiftUI avant couverture / présentation.
       await Task.yield()
 
-      state.phase = .activating
+      setPhase(.activating)
       try await services.startInputFilter()
       guard isActivationCurrent else { return state }
       try abortIfInjected(plannedFailure, .startInputFilter)
@@ -95,7 +101,7 @@ public final class KioskSessionController {
       guard isActivationCurrent else { return state }
       try abortIfInjected(plannedFailure, .applyPresentation)
 
-      state.phase = .active
+      setPhase(.active)
       state.lastError = nil
       return state
     } catch let error as KioskSessionError {
@@ -117,12 +123,13 @@ public final class KioskSessionController {
       break
     }
 
-    state.phase = .stopping
+    log.emit(.sessionStop(kind: .adultExit))
+    setPhase(.stopping)
     if let exitKind {
       state.lastExitKind = exitKind
     }
     tearDown()
-    state.phase = .configuration
+    setPhase(.configuration)
     state.lastError = nil
     return state
   }
@@ -144,7 +151,7 @@ public final class KioskSessionController {
 
   private func rollback(_ error: KioskSessionError) -> KioskSessionState {
     tearDown()
-    state.phase = .failed
+    setPhase(.failed)
     state.lastError = error
     return state
   }
@@ -161,10 +168,17 @@ public final class KioskSessionController {
 
   private func consumeExternalStop() {
     guard let stop = externalStop.take() else { return }
-    state.phase = .configuration
+    setPhase(.configuration)
     state.lastExitKind = stop
     state.lastError = nil
     state.coveredScreens = []
     capturedPresentation = nil
+  }
+
+  private func setPhase(_ phase: KioskSessionPhase) {
+    let from = state.phase
+    state.phase = phase
+    guard from != phase else { return }
+    log.emit(.sessionPhase(from: from, to: phase))
   }
 }

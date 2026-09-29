@@ -1,7 +1,6 @@
 import AppKit
 import BabyWorkDiagnosticsKit
 import Foundation
-import OSLog
 
 /// Pont AppKit pour le contrôleur de kiosque : écrans vivants, présentation, filtre.
 @MainActor
@@ -18,10 +17,6 @@ final class AppKitKioskEnvironment: KioskSessionServices {
   private let hud = KioskHUD()
   private let windowStore = CoverWindowStore()
   private let filterHolder = FilterHolder()
-  private let logger = Logger(
-    subsystem: Bundle.main.bundleIdentifier ?? "fr.camille.babywork",
-    category: "Kiosk"
-  )
 
   init(terminationGate: TerminationGate = TerminationGate()) {
     self.terminationGate = terminationGate
@@ -94,9 +89,12 @@ final class AppKitKioskEnvironment: KioskSessionServices {
         engine.start()
         Task {
           try await Task.sleep(for: .seconds(2))
-          once.resume(
+          let timedOut = once.resume(
             with: .failure(KioskSessionError.filterUnavailable("délai de création du filtre dépassé"))
           )
+          if timedOut {
+            LifecycleLogRecorder.shared.emit(.tapFail(reason: "deadline"))
+          }
         }
       }
     } catch {
@@ -106,9 +104,9 @@ final class AppKitKioskEnvironment: KioskSessionServices {
 
     guard filterHolder.current()?.isTapEnabled() == true else {
       stopInputFilter()
+      LifecycleLogRecorder.shared.emit(.tapFail(reason: "inactive"))
       throw KioskSessionError.filterUnavailable("tap créé mais inactif")
     }
-    logger.info("Filtre du kiosque actif")
   }
 
   func restorePresentation(_ snapshot: PresentationOptionsSnapshot) {
@@ -142,11 +140,14 @@ private final class OnceResume: @unchecked Sendable {
     self.continuation = continuation
   }
 
-  func resume(with result: Result<Void, Error>) {
+  @discardableResult
+  func resume(with result: Result<Void, Error>) -> Bool {
     lock.lock()
     let pending = continuation
     continuation = nil
     lock.unlock()
-    pending?.resume(with: result)
+    guard let pending else { return false }
+    pending.resume(with: result)
+    return true
   }
 }
