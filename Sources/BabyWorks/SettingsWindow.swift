@@ -126,14 +126,15 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
   func hide() {
     window?.orderOut(nil)
-    restoreIdleActivationIfNeeded()
+    restoreActivationPolicy()
   }
 
-  func windowWillClose(_ notification: Notification) {
-    restoreIdleActivationIfNeeded()
+  func windowShouldClose(_ sender: NSWindow) -> Bool {
+    hide()
+    return false
   }
 
-  private func restoreIdleActivationIfNeeded() {
+  private func restoreActivationPolicy() {
     SettingsWindowPresentation.activationPolicyAfterHiding(
       otherParentUIVisible: isOtherParentUIVisible()
     ).apply(to: NSApp)
