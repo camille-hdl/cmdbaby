@@ -134,6 +134,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
   func hide() {
     cancelPendingShow()
+    restoreWindowAfterHiding()
     window?.orderOut(nil)
     restoreActivationPolicy()
   }
@@ -174,18 +175,28 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     if sequence.shouldOrderFront {
       orderFrontAndActivate()
-      performAfterCurrentTracking { [weak self] in
-        guard let self, self.showGeneration == generation else { return }
-        guard var sequence = self.showSequence else { return }
-        let visible = self.window?.isVisible == true
-        let key = self.window?.isKeyWindow == true
-        let event = sequence.recordOrderFront(isVisible: visible, isKeyWindow: key)
-        self.showSequence = sequence
-        self.log.emit(event)
-        if sequence.shouldOrderFront {
-          self.continueShow()
+      if sequence.orderFrontIsRetry {
+        performAfterOrderFrontRetry { [weak self] in
+          self?.finishOrderFrontObservation(generation: generation)
+        }
+      } else {
+        performAfterCurrentTracking { [weak self] in
+          self?.finishOrderFrontObservation(generation: generation)
         }
       }
+    }
+  }
+
+  private func finishOrderFrontObservation(generation: Int) {
+    guard showGeneration == generation else { return }
+    guard var sequence = showSequence else { return }
+    let visible = window?.isVisible == true
+    let key = window?.isKeyWindow == true
+    let event = sequence.recordOrderFront(isVisible: visible, isKeyWindow: key)
+    showSequence = sequence
+    log.emit(event)
+    if sequence.shouldOrderFront {
+      continueShow()
     }
   }
 
@@ -242,6 +253,19 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     waitingForMenuTracking = false
   }
 
+  /// Entre deux tentatives : laisser à AppKit le temps de prendre le key.
+  private func performAfterOrderFrontRetry(_ work: @escaping @MainActor () -> Void) {
+    let generation = showGeneration
+    DispatchQueue.main.asyncAfter(
+      deadline: .now() + SettingsWindowPresentation.orderFrontRetryDelay
+    ) { [weak self] in
+      DispatchQueue.main.async {
+        guard let self, self.showGeneration == generation else { return }
+        work()
+      }
+    }
+  }
+
   /// Après le tracking menu : le mode par défaut ne tourne qu’une fois le run loop imbriqué fini.
   private func performAfterCurrentTracking(_ work: @escaping @MainActor () -> Void) {
     let generation = showGeneration
@@ -258,8 +282,16 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
   }
 
   private func orderFrontAndActivate() {
-    window?.makeKeyAndOrderFront(nil)
+    guard let window else { return }
+    window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+    window.level = .floating
     activateApp()
+    window.makeKeyAndOrderFront(nil)
+  }
+
+  private func restoreWindowAfterHiding() {
+    window?.level = .normal
+    window?.collectionBehavior = []
   }
 
   private func activateApp() {
