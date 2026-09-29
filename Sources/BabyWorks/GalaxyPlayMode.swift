@@ -3,78 +3,64 @@ import BabyWorkDiagnosticsKit
 import QuartzCore
 
 /// Répartit les glyphes clavier et la vitesse de défilement entre les écrans.
-final class GalaxyDirector: @unchecked Sendable {
-  private let lock = NSLock()
+@MainActor
+final class GalaxyDirector {
   private var painters: [GalaxyPainter] = []
   private var drive = WarpDrive()
   private var ticker: Timer?
   private var lastTick: TimeInterval = 0
 
   func register(_ painter: GalaxyPainter) {
-    lock.lock()
     painters.append(painter)
     let shouldStart = ticker == nil
-    lock.unlock()
     if shouldStart {
       startTicker()
     }
   }
 
   func reset() {
-    lock.lock()
     painters.removeAll(keepingCapacity: false)
     drive = WarpDrive()
     let timer = ticker
     ticker = nil
-    lock.unlock()
     timer?.invalidate()
   }
 
   func spawnKeyGlyph(_ glyph: PlayGlyph) {
-    lock.lock()
     drive.impulse(at: ProcessInfo.processInfo.systemUptime)
     let snapshot = painters
-    lock.unlock()
     guard !snapshot.isEmpty else { return }
     snapshot[Int.random(in: 0..<snapshot.count)].spawnGlyph(glyph, at: nil)
   }
 
   private func startTicker() {
-    lock.lock()
-    guard ticker == nil else {
-      lock.unlock()
-      return
-    }
+    guard ticker == nil else { return }
     lastTick = ProcessInfo.processInfo.systemUptime
-    let hop = MainHop { [weak self] in
-      self?.tick()
-    }
-    let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { _ in
-      hop.work()
+    let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.tick()
+      }
     }
     ticker = timer
-    lock.unlock()
     RunLoop.main.add(timer, forMode: .common)
   }
 
   private func tick() {
     let now = ProcessInfo.processInfo.systemUptime
-    lock.lock()
     let dt = lastTick == 0 ? 1.0 / 60.0 : min(0.05, max(1.0 / 120.0, now - lastTick))
     lastTick = now
     drive.tick(now: now, dt: dt)
     let speed = drive.speed
     let snapshot = painters
-    lock.unlock()
     for painter in snapshot {
       painter.tickWarp(dt: dt, speed: speed)
     }
   }
 }
 
-/// Dessin Core Animation hors isolation MainActor de `NSView`.
-final class GalaxyPainter: @unchecked Sendable {
-  private let lock = NSLock()
+/// Dessin Core Animation de la scène galaxie.
+@MainActor
+final class GalaxyPainter {
   private let glyphHost: CALayer
   private let starHost: CALayer
   private let warpHost: CALayer
@@ -93,28 +79,19 @@ final class GalaxyPainter: @unchecked Sendable {
   }
 
   func setBounds(_ bounds: CGRect, scale: CGFloat) {
-    lock.lock()
     self.bounds = bounds
     self.contentsScale = scale
-    lock.unlock()
-    let glyphHost = glyphHost
-    let starHost = starHost
-    let warpHost = warpHost
-    runOnMain {
-      CATransaction.begin()
-      CATransaction.setDisableActions(true)
-      glyphHost.frame = bounds
-      starHost.frame = bounds
-      warpHost.frame = bounds
-      CATransaction.commit()
-    }
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    glyphHost.frame = bounds
+    starHost.frame = bounds
+    warpHost.frame = bounds
+    CATransaction.commit()
     populateWarpFieldIfNeeded()
   }
 
   func tickWarp(dt: TimeInterval, speed: Double) {
-    runOnMain { [weak self] in
-      self?.advanceWarpField(dt: dt, speed: speed)
-    }
+    advanceWarpField(dt: dt, speed: speed)
   }
 
   func spawnGlyph(_ glyph: PlayGlyph, at point: CGPoint?) {
@@ -123,82 +100,61 @@ final class GalaxyPainter: @unchecked Sendable {
       if case .emoji = glyph { return 96 }
       return 110
     }()
-    runOnMain { [weak self] in
-      guard let self else { return }
-      let origin = point ?? self.randomPointLocked(padding: 90)
-      self.addAnimatedText(
-        text,
-        at: origin,
-        fontSize: fontSize,
-        host: self.glyphHost,
-        isGlyph: true,
-        cap: 36,
-        lifetime: 2.8
-      )
-    }
+    let origin = point ?? randomPoint(padding: 90)
+    addAnimatedText(
+      text,
+      at: origin,
+      fontSize: fontSize,
+      host: glyphHost,
+      isGlyph: true,
+      cap: 36,
+      lifetime: 2.8
+    )
   }
 
   func spawnStar(at point: CGPoint) {
-    runOnMain { [weak self] in
-      guard let self else { return }
-      self.lock.lock()
-      if let last = self.lastStarPoint, hypot(point.x - last.x, point.y - last.y) < 22 {
-        self.lock.unlock()
-        return
-      }
-      self.lastStarPoint = point
-      self.lock.unlock()
-      let star = ["✦", "✧", "★", "⋆"].randomElement() ?? "✦"
-      self.addAnimatedText(
-        star,
-        at: point,
-        fontSize: 22,
-        host: self.starHost,
-        isGlyph: false,
-        cap: 48,
-        lifetime: 0.7
-      )
+    if let last = lastStarPoint, hypot(point.x - last.x, point.y - last.y) < 22 {
+      return
     }
+    lastStarPoint = point
+    let star = ["✦", "✧", "★", "⋆"].randomElement() ?? "✦"
+    addAnimatedText(
+      star,
+      at: point,
+      fontSize: 22,
+      host: starHost,
+      isGlyph: false,
+      cap: 48,
+      lifetime: 0.7
+    )
   }
 
   private func populateWarpFieldIfNeeded() {
-    runOnMain { [weak self] in
-      guard let self else { return }
-      self.lock.lock()
-      let already = !self.warpStars.isEmpty
-      let bounds = self.bounds
-      let scale = self.contentsScale
-      self.lock.unlock()
-      guard !already, bounds.width > 8, bounds.height > 8 else { return }
-      let maxRadius = hypot(bounds.width, bounds.height) * 0.55
-      let center = CGPoint(x: bounds.midX, y: bounds.midY)
-      var stars: [WarpStar] = []
-      for _ in 0..<16 {
-        stars.append(
-          self.makeWarpStar(
-            maxRadius: maxRadius,
-            scale: scale,
-            center: center,
-            seedNearCenter: false
-          )
+    guard warpStars.isEmpty, bounds.width > 8, bounds.height > 8 else { return }
+    let maxRadius = hypot(bounds.width, bounds.height) * 0.55
+    let center = CGPoint(x: bounds.midX, y: bounds.midY)
+    let scale = contentsScale
+    var stars: [WarpStar] = []
+    for _ in 0..<16 {
+      stars.append(
+        makeWarpStar(
+          maxRadius: maxRadius,
+          scale: scale,
+          center: center,
+          seedNearCenter: false
         )
-      }
-      self.lock.lock()
-      self.warpStars = stars
-      self.lock.unlock()
+      )
     }
+    warpStars = stars
   }
 
   private func advanceWarpField(dt: TimeInterval, speed: Double) {
-    lock.lock()
-    let bounds = bounds
-    let scale = contentsScale
-    var stars = warpStars
-    lock.unlock()
-    guard bounds.width > 8, !stars.isEmpty else { return }
+    guard bounds.width > 8, !warpStars.isEmpty else { return }
 
     let center = CGPoint(x: bounds.midX, y: bounds.midY)
     let maxRadius = hypot(bounds.width, bounds.height) * 0.55
+    let scale = contentsScale
+    var stars = warpStars
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     for index in stars.indices {
@@ -209,9 +165,7 @@ final class GalaxyPainter: @unchecked Sendable {
       stars[index].apply(center: center, scale: scale)
     }
     CATransaction.commit()
-    lock.lock()
     warpStars = stars
-    lock.unlock()
   }
 
   private func makeWarpStar(
@@ -258,7 +212,6 @@ final class GalaxyPainter: @unchecked Sendable {
     cap: Int,
     lifetime: CFTimeInterval
   ) {
-    lock.lock()
     if isGlyph {
       while glyphLayers.count >= cap {
         glyphLayers.removeFirst().removeFromSuperlayer()
@@ -269,7 +222,6 @@ final class GalaxyPainter: @unchecked Sendable {
       }
     }
     let scale = contentsScale
-    lock.unlock()
 
     let size = fontSize * 1.6
     let wrapper = CALayer()
@@ -297,13 +249,11 @@ final class GalaxyPainter: @unchecked Sendable {
     wrapper.addSublayer(label)
     host.addSublayer(wrapper)
 
-    lock.lock()
     if isGlyph {
       glyphLayers.append(wrapper)
     } else {
       starLayers.append(wrapper)
     }
-    lock.unlock()
 
     let pulse = CAKeyframeAnimation(keyPath: "transform.scale")
     pulse.values = [0.35, 1.18, 0.92, 1.08, 1]
@@ -326,23 +276,17 @@ final class GalaxyPainter: @unchecked Sendable {
     group.isRemovedOnCompletion = false
     wrapper.add(group, forKey: "play")
 
-    let hop = MainHop { [weak self, weak wrapper] in
-      guard let self, let wrapper else { return }
-      wrapper.removeFromSuperlayer()
-      self.lock.lock()
-      self.glyphLayers.removeAll { $0 === wrapper }
-      self.starLayers.removeAll { $0 === wrapper }
-      self.lock.unlock()
-    }
-    DispatchQueue.main.asyncAfter(deadline: .now() + lifetime) {
-      hop.work()
+    DispatchQueue.main.asyncAfter(deadline: .now() + lifetime) { [weak self, weak wrapper] in
+      MainActor.assumeIsolated {
+        guard let self, let wrapper else { return }
+        wrapper.removeFromSuperlayer()
+        self.glyphLayers.removeAll { $0 === wrapper }
+        self.starLayers.removeAll { $0 === wrapper }
+      }
     }
   }
 
-  private func randomPointLocked(padding: CGFloat) -> CGPoint {
-    lock.lock()
-    let bounds = bounds
-    lock.unlock()
+  private func randomPoint(padding: CGFloat) -> CGPoint {
     let inset = bounds.insetBy(dx: padding, dy: padding)
     guard inset.width > 8, inset.height > 8 else {
       return CGPoint(x: bounds.midX, y: bounds.midY)
@@ -454,10 +398,10 @@ final class GalaxyStageView: NSView {
     painter.setBounds(bounds, scale: window?.backingScaleFactor ?? 2)
   }
 
-  nonisolated override var acceptsFirstResponder: Bool { true }
-  nonisolated override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+  override var acceptsFirstResponder: Bool { true }
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-  nonisolated override func mouseDown(with event: NSEvent) {
+  override func mouseDown(with event: NSEvent) {
     let point = event.locationInWindow
     painter.spawnGlyph(
       PlayGlyphResolver.glyph(
@@ -468,15 +412,15 @@ final class GalaxyStageView: NSView {
     )
   }
 
-  nonisolated override func mouseMoved(with event: NSEvent) {
+  override func mouseMoved(with event: NSEvent) {
     painter.spawnStar(at: event.locationInWindow)
   }
 
-  nonisolated override func mouseDragged(with event: NSEvent) {
+  override func mouseDragged(with event: NSEvent) {
     painter.spawnStar(at: event.locationInWindow)
   }
 
-  nonisolated override func keyDown(with event: NSEvent) {
+  override func keyDown(with event: NSEvent) {
     let code = UInt16(event.keyCode)
     let isReturn = code == 0x24 || code == 0x4C
     let isEscape = code == 0x35
@@ -499,20 +443,5 @@ final class GalaxyStageView: NSView {
       emojiIndex: Int.random(in: 0..<PlayGlyphResolver.emojis.count)
     )
     director.spawnKeyGlyph(glyph)
-  }
-}
-
-private struct MainHop: @unchecked Sendable {
-  let work: () -> Void
-}
-
-private func runOnMain(_ work: @escaping () -> Void) {
-  if Thread.isMainThread {
-    work()
-  } else {
-    let hop = MainHop(work: work)
-    DispatchQueue.main.async {
-      hop.work()
-    }
   }
 }

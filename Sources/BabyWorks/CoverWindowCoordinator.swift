@@ -312,9 +312,8 @@ final class CoverWindowCoordinator {
 }
 
 /// Pont clavier et clics des fenêtres et des scènes.
-/// Verrou temporaire : Océan et Galaxie appellent encore `noteKeyDown` hors isolation MainActor (#45).
-final class KioskInputBridge: @unchecked Sendable {
-  private let lock = NSLock()
+@MainActor
+final class KioskInputBridge {
   private let recognizer = AdultExitRecognizer()
   private let clickCounter = FailsafeClickCounter()
   private let hud: KioskHUD
@@ -326,7 +325,6 @@ final class KioskInputBridge: @unchecked Sendable {
   }
 
   func noteKeyDown(letter: Character?, isReturn: Bool, isEscape: Bool, shiftDown: Bool) {
-    lock.lock()
     let kind = recognizer.handleKeyDown(
       letter: letter,
       isReturn: isReturn,
@@ -335,7 +333,6 @@ final class KioskInputBridge: @unchecked Sendable {
     )
     let filled = recognizer.prefixLength
     let target = recognizer.prefixTarget
-    lock.unlock()
     hud.noteWindowKey(
       letter: letter,
       isReturn: isReturn,

@@ -8,14 +8,17 @@ enum OceanSprite {
       ?? oceanBundle.image(forResource: "\(name).png")
   }
 
+  @MainActor
   static func cgImage(named name: String) -> CGImage? {
     cache.image(named: name)
   }
 
+  @MainActor
   static func purge() {
     cache.removeAll()
   }
 
+  @MainActor
   private static let cache = OceanSpriteCache()
 
   /// `Bundle.module` SPM cherche le `.bundle` à la racine du `.app`, interdit par codesign.
@@ -32,40 +35,33 @@ enum OceanSprite {
   }()
 }
 
-private final class OceanSpriteCache: @unchecked Sendable {
-  private let lock = NSLock()
+@MainActor
+private final class OceanSpriteCache {
   private var images: [String: CGImage] = [:]
 
   func image(named name: String) -> CGImage? {
-    lock.lock()
     if let cached = images[name] {
-      lock.unlock()
       return cached
     }
-    lock.unlock()
     guard let image = OceanSprite.image(named: name) else { return nil }
     var rect = CGRect(origin: .zero, size: image.size)
     guard let cgImage = image.cgImage(forProposedRect: &rect, context: nil, hints: nil) else {
       return nil
     }
-    lock.lock()
     images[name] = cgImage
-    lock.unlock()
     return cgImage
   }
 
   func removeAll() {
-    lock.lock()
     images.removeAll(keepingCapacity: false)
-    lock.unlock()
   }
 }
 
 /// Répartit le banc et le timer entre les écrans.
-final class OceanDirector: @unchecked Sendable {
+@MainActor
+final class OceanDirector {
   static let displaySizeRange = 96.0...150.0
 
-  private let lock = NSLock()
   private let sessionSalt: UInt64
   private var painters: [OceanPainter] = []
   private var school = OceanSchool()
@@ -79,11 +75,9 @@ final class OceanDirector: @unchecked Sendable {
   }
 
   func register(_ painter: OceanPainter) {
-    lock.lock()
     let index = painters.count
     painters.append(painter)
     let shouldStart = ticker == nil
-    lock.unlock()
     painter.attach(screenIndex: index, sessionSalt: sessionSalt)
     if shouldStart {
       startTicker()
@@ -91,26 +85,21 @@ final class OceanDirector: @unchecked Sendable {
   }
 
   func reset() {
-    lock.lock()
     painters.removeAll(keepingCapacity: false)
     school = OceanSchool()
     rng = SystemRandomNumberGenerator()
     spawnedInitial.removeAll(keepingCapacity: false)
     let timer = ticker
     ticker = nil
-    lock.unlock()
     timer?.invalidate()
   }
 
   func spawnKeyFish() {
-    lock.lock()
     let snapshot = painters
-    lock.unlock()
     guard !snapshot.isEmpty else { return }
     let painter = snapshot[Int.random(in: 0..<snapshot.count)]
     let layout = painter.layoutSnapshot()
     guard layout.ready else { return }
-    lock.lock()
     _ = school.spawnFish(
       screenIndex: layout.screenIndex,
       screenSize: layout.size,
@@ -118,14 +107,11 @@ final class OceanDirector: @unchecked Sendable {
       displaySizeRange: Self.displaySizeRange,
       rng: &rng
     )
-    lock.unlock()
   }
 
   func ensureInitialFish(for painter: OceanPainter) {
     let layout = painter.layoutSnapshot()
     guard layout.ready else { return }
-    lock.lock()
-    defer { lock.unlock() }
     guard !spawnedInitial.contains(layout.screenIndex) else { return }
     spawnedInitial.insert(layout.screenIndex)
     _ = school.spawnFish(
@@ -138,39 +124,29 @@ final class OceanDirector: @unchecked Sendable {
   }
 
   private func startTicker() {
-    lock.lock()
-    guard ticker == nil else {
-      lock.unlock()
-      return
-    }
+    guard ticker == nil else { return }
     lastTick = ProcessInfo.processInfo.systemUptime
-    let hop = MainHop { [weak self] in
-      self?.tick()
-    }
-    let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { _ in
-      hop.work()
+    let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.tick()
+      }
     }
     ticker = timer
-    lock.unlock()
     RunLoop.main.add(timer, forMode: .common)
   }
 
   private func tick() {
     let now = ProcessInfo.processInfo.systemUptime
-    lock.lock()
     let dt = lastTick == 0 ? 1.0 / 60.0 : min(0.05, max(1.0 / 120.0, now - lastTick))
     lastTick = now
     let snapshot = painters
-    lock.unlock()
 
     for painter in snapshot {
       ensureInitialFish(for: painter)
     }
 
-    lock.lock()
     let widths = snapshot.map { Double($0.layoutSnapshot().size.width) }
     let result = school.tick(dt: dt, screenWidths: widths)
-    lock.unlock()
 
     for painter in snapshot {
       painter.tick(dt: dt, fish: result.fish, removedIDs: result.removedIDs)
@@ -178,8 +154,9 @@ final class OceanDirector: @unchecked Sendable {
   }
 }
 
-/// Dessin Core Animation hors isolation MainActor de `NSView`.
-final class OceanPainter: @unchecked Sendable {
+/// Dessin Core Animation de la scène océan.
+@MainActor
+final class OceanPainter {
   static let cameraSpeed = 22.0
   static let bubblePeriod = 2.0...4.0
   static let fishBubblesPerEmit = 1...2
@@ -188,7 +165,6 @@ final class OceanPainter: @unchecked Sendable {
   static let bubbleLifetime = 1.4...2.2
   static let bubbleDisplaySize = 24.0...48.0
 
-  private let lock = NSLock()
   private let farHost: CALayer
   private let midHost: CALayer
   private let groundHost: CALayer
@@ -224,16 +200,12 @@ final class OceanPainter: @unchecked Sendable {
   }
 
   func attach(screenIndex: Int, sessionSalt: UInt64) {
-    lock.lock()
     self.screenIndex = screenIndex
     self.sessionSalt = sessionSalt
-    lock.unlock()
   }
 
   func layoutSnapshot() -> OceanLayoutSnapshot {
-    lock.lock()
-    defer { lock.unlock() }
-    return OceanLayoutSnapshot(
+    OceanLayoutSnapshot(
       screenIndex: screenIndex,
       size: bounds.size,
       groundTop: scenery?.groundTop ?? 0,
@@ -242,86 +214,44 @@ final class OceanPainter: @unchecked Sendable {
   }
 
   func setBounds(_ bounds: CGRect, scale: CGFloat) {
-    lock.lock()
     self.bounds = bounds
     self.contentsScale = scale
     var installed: OceanScenery?
     if scenery == nil, bounds.width > 8, bounds.height > 8 {
-      var rng = SplitMix64(seed: scenerySeedLocked())
+      var rng = SplitMix64(seed: scenerySeed())
       let generated = OceanScenery.generate(bounds: bounds.size, rng: &rng)
       scenery = generated
       installed = generated
     }
-    lock.unlock()
 
-    let farHost = farHost
-    let midHost = midHost
-    let groundHost = groundHost
-    let foregroundHost = foregroundHost
-    let fishHost = fishHost
-    let bubbleHost = bubbleHost
-    runOnMain {
-      CATransaction.begin()
-      CATransaction.setDisableActions(true)
-      farHost.contentsScale = scale
-      midHost.contentsScale = scale
-      groundHost.contentsScale = scale
-      foregroundHost.contentsScale = scale
-      fishHost.contentsScale = scale
-      bubbleHost.contentsScale = scale
-      farHost.frame = bounds
-      midHost.frame = bounds
-      groundHost.frame = bounds
-      foregroundHost.frame = bounds
-      fishHost.frame = bounds
-      bubbleHost.frame = bounds
-      CATransaction.commit()
-    }
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    farHost.contentsScale = scale
+    midHost.contentsScale = scale
+    groundHost.contentsScale = scale
+    foregroundHost.contentsScale = scale
+    fishHost.contentsScale = scale
+    bubbleHost.contentsScale = scale
+    farHost.frame = bounds
+    midHost.frame = bounds
+    groundHost.frame = bounds
+    foregroundHost.frame = bounds
+    fishHost.frame = bounds
+    bubbleHost.frame = bounds
+    CATransaction.commit()
     if let installed {
       installPropLayers(installed)
     }
   }
 
   func tick(dt: Double, fish: [OceanFish], removedIDs: [UInt64]) {
-    runOnMain { [weak self] in
-      self?.tickOnMain(dt: dt, fish: fish, removedIDs: removedIDs)
-    }
-  }
-
-  func spawnClickBubbles(at point: CGPoint, count: Int) {
-    let clamped = min(
-      Self.clickBubbles.upperBound,
-      max(Self.clickBubbles.lowerBound, count)
-    )
-    runOnMain { [weak self] in
-      guard let self else { return }
-      for _ in 0..<clamped {
-        self.addBubble(
-          at: CGPoint(
-            x: point.x + CGFloat.random(in: -10...10),
-            y: point.y + CGFloat.random(in: -8...8)
-          )
-        )
-      }
-    }
-  }
-
-  private func tickOnMain(dt: Double, fish: [OceanFish], removedIDs: [UInt64]) {
-    lock.lock()
-    let screenIndex = screenIndex
-    let scenery = scenery
-    let bounds = bounds
-    lock.unlock()
-
     CATransaction.begin()
     CATransaction.setDisableActions(true)
 
     if var scenery, bounds.width > 8 {
       scenery.scroll(cameraDelta: Self.cameraSpeed * dt, bounds: bounds.size)
-      lock.lock()
       self.scenery = scenery
       let layers = propLayers
-      lock.unlock()
       for (index, prop) in scenery.props.enumerated() where index < layers.count {
         layers[index].frame = frame(for: prop, scenery: scenery)
       }
@@ -378,6 +308,21 @@ final class OceanPainter: @unchecked Sendable {
 
     for layer in appeared {
       playAppearAnimation(on: layer)
+    }
+  }
+
+  func spawnClickBubbles(at point: CGPoint, count: Int) {
+    let clamped = min(
+      Self.clickBubbles.upperBound,
+      max(Self.clickBubbles.lowerBound, count)
+    )
+    for _ in 0..<clamped {
+      addBubble(
+        at: CGPoint(
+          x: point.x + CGFloat.random(in: -10...10),
+          y: point.y + CGFloat.random(in: -8...8)
+        )
+      )
     }
   }
 
@@ -453,30 +398,25 @@ final class OceanPainter: @unchecked Sendable {
   }
 
   private func installPropLayers(_ scenery: OceanScenery) {
-    runOnMain { [weak self] in
-      guard let self else { return }
-      CATransaction.begin()
-      CATransaction.setDisableActions(true)
-      for layer in self.propLayers {
-        layer.removeFromSuperlayer()
-      }
-      var layers: [CALayer] = []
-      layers.reserveCapacity(scenery.props.count)
-      for prop in scenery.props {
-        let layer = CALayer()
-        layer.contents = OceanSprite.cgImage(named: prop.kind.assetName)
-        layer.contentsGravity = Self.contentsGravity(for: prop)
-        layer.allowsEdgeAntialiasing = false
-        layer.zPosition = Self.zPosition(for: prop)
-        layer.frame = self.frame(for: prop, scenery: scenery)
-        self.host(for: prop.layer).addSublayer(layer)
-        layers.append(layer)
-      }
-      CATransaction.commit()
-      self.lock.lock()
-      self.propLayers = layers
-      self.lock.unlock()
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    for layer in propLayers {
+      layer.removeFromSuperlayer()
     }
+    var layers: [CALayer] = []
+    layers.reserveCapacity(scenery.props.count)
+    for prop in scenery.props {
+      let layer = CALayer()
+      layer.contents = OceanSprite.cgImage(named: prop.kind.assetName)
+      layer.contentsGravity = Self.contentsGravity(for: prop)
+      layer.allowsEdgeAntialiasing = false
+      layer.zPosition = Self.zPosition(for: prop)
+      layer.frame = frame(for: prop, scenery: scenery)
+      host(for: prop.layer).addSublayer(layer)
+      layers.append(layer)
+    }
+    CATransaction.commit()
+    propLayers = layers
   }
 
   private func host(for layer: OceanLayer) -> CALayer {
@@ -527,7 +467,7 @@ final class OceanPainter: @unchecked Sendable {
     return 0
   }
 
-  private func scenerySeedLocked() -> UInt64 {
+  private func scenerySeed() -> UInt64 {
     sessionSalt &+ UInt64(truncatingIfNeeded: screenIndex) &* 0x9E3779B97F4A7C15
   }
 }
@@ -599,17 +539,17 @@ final class OceanStageView: NSView {
     director.ensureInitialFish(for: painter)
   }
 
-  nonisolated override var acceptsFirstResponder: Bool { true }
-  nonisolated override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+  override var acceptsFirstResponder: Bool { true }
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-  nonisolated override func mouseDown(with event: NSEvent) {
+  override func mouseDown(with event: NSEvent) {
     painter.spawnClickBubbles(
       at: event.locationInWindow,
       count: Int.random(in: OceanPainter.clickBubbles)
     )
   }
 
-  nonisolated override func keyDown(with event: NSEvent) {
+  override func keyDown(with event: NSEvent) {
     let code = UInt16(event.keyCode)
     let isReturn = code == 0x24 || code == 0x4C
     let isEscape = code == 0x35
@@ -649,20 +589,5 @@ private struct SplitMix64: RandomNumberGenerator {
     z = (z ^ (z >> 30)) &* 0xBF58476D1CE4E5B9
     z = (z ^ (z >> 27)) &* 0x94D049BB133111EB
     return z ^ (z >> 31)
-  }
-}
-
-private struct MainHop: @unchecked Sendable {
-  let work: () -> Void
-}
-
-private func runOnMain(_ work: @escaping () -> Void) {
-  if Thread.isMainThread {
-    work()
-  } else {
-    let hop = MainHop(work: work)
-    DispatchQueue.main.async {
-      hop.work()
-    }
   }
 }
