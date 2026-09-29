@@ -143,14 +143,22 @@ final class SessionInputFilter: @unchecked Sendable {
       return filter.handleEvent(proxy: proxy, type: type, event: event)
     }
 
-    guard
-      let port = CGEvent.tapCreate(
+    let createTap: () -> CFMachPort? = {
+      CGEvent.tapCreate(
         tap: .cgSessionEventTap,
         place: .headInsertEventTap,
         options: .defaultTap,
         eventsOfInterest: mask,
         callback: callback,
         userInfo: Unmanaged.passUnretained(self).toOpaque()
+      )
+    }
+
+    guard
+      let port = AccessibilityTapCreation.createWithSingleTrustPrompt(
+        isProcessTrusted: { AXIsProcessTrusted() },
+        promptForTrust: Self.promptForAccessibilityTrust,
+        create: createTap
       )
     else {
       let reason = Self.creationFailureReason()
@@ -295,6 +303,11 @@ final class SessionInputFilter: @unchecked Sendable {
       .first
     guard let scalar, CharacterSet.letters.contains(scalar) else { return nil }
     return Character(scalar)
+  }
+
+  private static func promptForAccessibilityTrust() {
+    let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+    _ = AXIsProcessTrustedWithOptions(options)
   }
 
   private static func creationFailureReason() -> String {

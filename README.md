@@ -28,15 +28,14 @@ swift build --product BabyWorks
 .build/release/BabyWorks
 ```
 
-For a signed `.app` in `/Applications` (recommended so Accessibility remembers the same binary):
+For a signed `.app` in `/Applications` (recommended so Accessibility / TCC remembers a stable identity):
 
 ```bash
-# Optional: stable signing for TCC / Accessibility
-export BABYWORK_CODE_SIGN_IDENTITY="Apple Development: Your Name (TEAMID)"
-
-./scripts/build-app.sh
+BABYWORK_CODE_SIGN_IDENTITY="$(security find-identity -v -p codesigning | sed -n 's/.*"\(Apple Development:.*\)".*/\1/p' | head -1)" BABYWORK_APP_SANDBOX=0 ./scripts/build-app.sh
 open /Applications/BabyWorks.app
 ```
+
+Open **`/Applications/BabyWorks.app`**, not a `.build` binary. macOS keys Accessibility to the code-signing identity (CDHash). An **ad hoc** signature (`BABYWORK_CODE_SIGN_IDENTITY=-`, the script default) is debug-only: every rebuild is a new identity, so “BabyWorks” can look authorized while **Lancer session** still fails until you remove stale entries and re-grant **this** copy.
 
 Sandbox experiment (separate bundle ID):
 

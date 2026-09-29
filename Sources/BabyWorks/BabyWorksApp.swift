@@ -67,7 +67,10 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
   }
 
   private func presentActivationFailure(_ error: KioskSessionError) {
-    let spec = SessionActivationAlert.forFailedActivation(error)
+    let spec = SessionActivationAlert.forFailedActivation(
+      error,
+      runningBinaryURL: Bundle.main.bundleURL
+    )
     let alert = NSAlert()
     alert.alertStyle = .warning
     alert.messageText = spec.title

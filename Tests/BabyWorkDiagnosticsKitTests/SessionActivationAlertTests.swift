@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 
 @testable import BabyWorkDiagnosticsKit
@@ -25,6 +26,22 @@ func accessibilityFailureAlertOpensSystemSettings() {
       "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
     ]
   )
+}
+
+@Test("Un échec Accessibilité identifie le binaire courant et guide le re-grant TCC")
+func accessibilityFailureAlertIdentifiesRunningBinaryAndGuidesTCCRegrant() {
+  let binary = URL(fileURLWithPath: "/Applications/BabyWorks.app")
+  let alert = SessionActivationAlert.forFailedActivation(
+    .filterUnavailable("Accessibilité manquante"),
+    runningBinaryURL: binary
+  )
+
+  #expect(alert.informativeText.contains("/Applications/BabyWorks.app"))
+  #expect(alert.informativeText.contains("Retirez les anciennes entrées"))
+  #expect(alert.informativeText.contains("cette copie"))
+  #expect(alert.informativeText.contains("ad hoc"))
+  #expect(alert.informativeText.contains("rebuild"))
+  #expect(alert.actions.contains(.openAccessibilitySettings))
 }
 
 @Test("Un échec d’activation oriente vers Réglages, pas vers les outils parents")

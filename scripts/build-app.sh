@@ -71,3 +71,8 @@ fi
 print -r -- "$app_path"
 print -r -- "Signature: $signing_label"
 print -r -- "Sandbox: $sandbox_label"
+if [[ "$signing_identity" == "-" ]]; then
+    print -r -- "Rappel TCC : la signature ad hoc change l’identité Accessibilité à chaque rebuild."
+    print -r -- "Pour un TCC stable, voir README (Build & run) :"
+    print -r -- 'BABYWORK_CODE_SIGN_IDENTITY="$(security find-identity -v -p codesigning | sed -n '\''s/.*"\(Apple Development:.*\)".*/\1/p'\'' | head -1)" BABYWORK_APP_SANDBOX=0 ./scripts/build-app.sh'
+fi
