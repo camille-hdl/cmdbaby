@@ -73,6 +73,16 @@ func mandatoryEventsFormatToStableLines() {
   )
   #expect(LifecycleLogEvent.settingsShowRequest.category == .settings)
 
+  #expect(
+    LifecycleLogEvent.coversKey(isKey: true, outcome: .success, retry: 0).message
+      == "covers.key isKey=true outcome=success"
+  )
+  #expect(
+    LifecycleLogEvent.coversKey(isKey: false, outcome: .fail, retry: 1).message
+      == "covers.key isKey=false outcome=fail retry=1"
+  )
+  #expect(LifecycleLogEvent.coversKey(isKey: true, outcome: .success, retry: 0).category == .session)
+
   #expect(LifecycleLogEvent.terminateRequest.message == "terminate.request")
   #expect(
     LifecycleLogEvent.applicationShouldTerminate(reply: .now).message
@@ -288,7 +298,7 @@ private final class SequenceKioskServices: KioskSessionServices {
     ]
   }
 
-  func applyKioskPresentation() throws {}
+  func applyKioskPresentation() async throws {}
   func startInputFilter() async throws {}
   func restorePresentation(_ snapshot: PresentationOptionsSnapshot) {}
   func closeCoverWindows() {}

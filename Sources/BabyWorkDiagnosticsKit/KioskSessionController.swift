@@ -6,7 +6,7 @@ import Foundation
 public protocol KioskSessionServices: AnyObject {
   func capturePresentation() throws -> PresentationOptionsSnapshot
   func createCoverWindows() throws -> [ScreenDescriptor]
-  func applyKioskPresentation() throws
+  func applyKioskPresentation() async throws
   func startInputFilter() async throws
   func restorePresentation(_ snapshot: PresentationOptionsSnapshot)
   func closeCoverWindows()
@@ -114,7 +114,7 @@ public final class KioskSessionController {
       state.coveredScreens = screens
       try abortIfInjected(plannedFailure, .prepareWindows)
 
-      try services.applyKioskPresentation()
+      try await services.applyKioskPresentation()
       guard isActivationCurrent else { return state }
       try abortIfInjected(plannedFailure, .applyPresentation)
 
