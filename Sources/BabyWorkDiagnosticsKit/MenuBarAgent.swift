@@ -16,6 +16,8 @@ public enum MenuBarAgent {
   public enum ActivationPolicy: Equatable, Sendable {
     /// Correspond à `NSApplication.ActivationPolicy.accessory`.
     case accessory
+    /// Correspond à `NSApplication.ActivationPolicy.regular`.
+    case regular
   }
 
   public struct Item: Equatable, Sendable {

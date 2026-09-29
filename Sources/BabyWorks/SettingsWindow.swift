@@ -86,7 +86,7 @@ struct SettingsView: View {
 }
 
 @MainActor
-final class SettingsWindowController {
+final class SettingsWindowController: NSObject, NSWindowDelegate {
   private let store: BabyWorksConfigurationStore
   private let loginItem: any LoginItemRegistration
   private var window: NSWindow?
@@ -99,9 +99,10 @@ final class SettingsWindowController {
   ) {
     self.store = store
     self.loginItem = loginItem
+    super.init()
   }
 
-  func show() {
+  func show(fromStatusItemMenu: Bool = true) {
     let model = SettingsModeModel(choice: SettingsModeChoice(store: store))
     let launchAtLoginModel = SettingsLaunchAtLoginModel(
       choice: SettingsLaunchAtLogin(store: store, loginItem: loginItem)
@@ -112,16 +113,50 @@ final class SettingsWindowController {
     window.contentView = NSHostingView(
       rootView: SettingsView(model: model, launchAtLogin: launchAtLoginModel)
     )
-    window.makeKeyAndOrderFront(nil)
-    if #available(macOS 14, *) {
-      NSApp.activate()
-    } else {
-      NSApp.activate(ignoringOtherApps: true)
+    SettingsWindowPresentation.visibleActivationPolicy.apply(to: NSApp)
+    switch SettingsWindowPresentation.orderFrontTiming(fromStatusItemMenu: fromStatusItemMenu) {
+    case .afterStatusItemMenuDismisses:
+      DispatchQueue.main.async { [weak self] in
+        self?.orderFrontAndActivate()
+      }
+    case .immediate:
+      orderFrontAndActivate()
     }
   }
 
   func hide() {
     window?.orderOut(nil)
+    restoreActivationPolicy()
+  }
+
+  func windowShouldClose(_ sender: NSWindow) -> Bool {
+    hide()
+    return false
+  }
+
+  private func restoreActivationPolicy() {
+    SettingsWindowPresentation.activationPolicyAfterHiding(
+      otherParentUIVisible: isOtherParentUIVisible()
+    ).apply(to: NSApp)
+  }
+
+  private func isOtherParentUIVisible() -> Bool {
+    NSApp.windows.contains { candidate in
+      candidate !== window && candidate.isVisible && candidate.styleMask.contains(.titled)
+    }
+  }
+
+  private func orderFrontAndActivate() {
+    window?.makeKeyAndOrderFront(nil)
+    activateApp()
+  }
+
+  private func activateApp() {
+    if #available(macOS 14, *) {
+      NSApp.activate()
+    } else {
+      NSApp.activate(ignoringOtherApps: true)
+    }
   }
 
   private func existingOrMakeWindow() -> NSWindow {
@@ -137,6 +172,7 @@ final class SettingsWindowController {
     window.title = "Réglages"
     window.identifier = NSUserInterfaceItemIdentifier("fr.camille.babywork.settings")
     window.isReleasedWhenClosed = false
+    window.delegate = self
     window.center()
     self.window = window
     return window
