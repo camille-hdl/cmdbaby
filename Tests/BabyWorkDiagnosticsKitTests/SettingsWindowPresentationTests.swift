@@ -76,7 +76,7 @@ func failedFirstOrderFrontSchedulesRetry() {
         isVisible: true,
         isKeyWindow: false,
         outcome: .fail,
-        retry: false
+        retry: 0
       )
   )
   #expect(sequence.shouldOrderFront)
@@ -94,15 +94,15 @@ func successfulOrderFrontFinishesWithSuccess() {
         isVisible: true,
         isKeyWindow: true,
         outcome: .success,
-        retry: false
+        retry: 0
       )
   )
   #expect(!sequence.shouldOrderFront)
   #expect(sequence.finishedOutcome == .success)
 }
 
-@Test("Retry toujours pas key : échec journalisé, terminé")
-func failedRetryFinishesWithFail() {
+@Test("Deuxième orderFront pas key : encore un retry")
+func secondFailedOrderFrontStillRetries() {
   var sequence = SettingsShowSequence(fromStatusItemMenu: true)
   sequence.menuTrackingDidEnd()
   _ = sequence.recordOrderFront(isVisible: true, isKeyWindow: false)
@@ -113,17 +113,41 @@ func failedRetryFinishesWithFail() {
         isVisible: true,
         isKeyWindow: false,
         outcome: .fail,
-        retry: true
+        retry: 1
+      )
+  )
+  #expect(sequence.shouldOrderFront)
+  #expect(sequence.orderFrontIsRetry)
+  #expect(sequence.finishedOutcome == nil)
+}
+
+@Test("Après 5 retries toujours pas key : échec journalisé, terminé")
+func exhaustedRetriesFinishWithFail() {
+  var sequence = SettingsShowSequence(fromStatusItemMenu: true)
+  sequence.menuTrackingDidEnd()
+  for _ in 1...5 {
+    _ = sequence.recordOrderFront(isVisible: true, isKeyWindow: false)
+    #expect(sequence.shouldOrderFront)
+  }
+  let event = sequence.recordOrderFront(isVisible: true, isKeyWindow: false)
+  #expect(
+    event
+      == .settingsOrderFront(
+        isVisible: true,
+        isKeyWindow: false,
+        outcome: .fail,
+        retry: 5
       )
   )
   #expect(!sequence.shouldOrderFront)
   #expect(sequence.finishedOutcome == .fail)
 }
 
-@Test("Retry devenu key : succès journalisé retry=true")
+@Test("Retry devenu key : succès journalisé retry=N")
 func successfulRetryFinishesWithSuccess() {
   var sequence = SettingsShowSequence(fromStatusItemMenu: true)
   sequence.menuTrackingDidEnd()
+  _ = sequence.recordOrderFront(isVisible: true, isKeyWindow: false)
   _ = sequence.recordOrderFront(isVisible: true, isKeyWindow: false)
   let event = sequence.recordOrderFront(isVisible: true, isKeyWindow: true)
   #expect(
@@ -132,8 +156,14 @@ func successfulRetryFinishesWithSuccess() {
         isVisible: true,
         isKeyWindow: true,
         outcome: .success,
-        retry: true
+        retry: 2
       )
   )
   #expect(sequence.finishedOutcome == .success)
+}
+
+@Test("Le délai de retry reste dans 50–100 ms")
+func orderFrontRetryDelayIsBounded() {
+  #expect(SettingsWindowPresentation.orderFrontRetryDelay >= 0.05)
+  #expect(SettingsWindowPresentation.orderFrontRetryDelay <= 0.1)
 }

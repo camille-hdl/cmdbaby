@@ -105,7 +105,7 @@ public enum LifecycleLogEvent: Equatable, Sendable {
     isVisible: Bool,
     isKeyWindow: Bool,
     outcome: LifecycleLog.SettingsOrderFrontOutcome,
-    retry: Bool
+    retry: Int
   )
   case terminateRequest
   case applicationShouldTerminate(reply: LifecycleLog.TerminateReply)
@@ -158,7 +158,7 @@ public enum LifecycleLogEvent: Equatable, Sendable {
     case .settingsOrderFront(let isVisible, let isKeyWindow, let outcome, let retry):
       let base =
         "settings.orderFront isVisible=\(isVisible) isKeyWindow=\(isKeyWindow) outcome=\(outcome.rawValue)"
-      return retry ? "\(base) retry=true" : base
+      return retry > 0 ? "\(base) retry=\(retry)" : base
     case .terminateRequest:
       return "terminate.request"
     case .applicationShouldTerminate(let reply):

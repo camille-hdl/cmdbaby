@@ -1,6 +1,13 @@
+import Foundation
+
 /// Présentation de Réglages depuis l’agent idle (`.accessory`).
 /// L’activation `.regular` n’est que temporaire, le temps que la fenêtre soit visible.
 public enum SettingsWindowPresentation {
+  /// Tentatives `activate` + `makeKeyAndOrderFront` après un premier échec.
+  public static let maxOrderFrontRetries = 5
+  /// Pause entre deux tentatives tant que la fenêtre n’est pas key.
+  public static let orderFrontRetryDelay: TimeInterval = 0.075
+
   /// Pendant que Réglages est à l’écran, l’app peut devenir key.
   public static let visibleActivationPolicy = MenuBarAgent.ActivationPolicy.regular
 
@@ -32,6 +39,7 @@ public struct SettingsShowSequence: Equatable, Sendable {
   }
 
   public private(set) var phase: Phase
+  private var completedOrderFronts = 0
 
   public init(fromStatusItemMenu: Bool) {
     switch SettingsWindowPresentation.orderFrontTiming(fromStatusItemMenu: fromStatusItemMenu) {
@@ -47,7 +55,7 @@ public struct SettingsShowSequence: Equatable, Sendable {
     return false
   }
 
-  /// Y compris le retry : rétablir `.regular` si le premier essai n’a pas pris.
+  /// Y compris les retries : rétablir `.regular` si un essai n’a pas pris.
   public var shouldApplyVisibleActivationPolicy: Bool {
     shouldOrderFront
   }
@@ -81,21 +89,22 @@ public struct SettingsShowSequence: Equatable, Sendable {
     isVisible: Bool,
     isKeyWindow: Bool
   ) -> LifecycleLogEvent {
-    let isRetry = orderFrontIsRetry
+    let retry = completedOrderFronts
+    completedOrderFronts += 1
     let outcome: LifecycleLog.SettingsOrderFrontOutcome =
       (isVisible && isKeyWindow) ? .success : .fail
     if outcome == .success {
       phase = .finished(outcome: .success)
-    } else if isRetry {
-      phase = .finished(outcome: .fail)
-    } else {
+    } else if retry < SettingsWindowPresentation.maxOrderFrontRetries {
       phase = .retryingOrderFront
+    } else {
+      phase = .finished(outcome: .fail)
     }
     return .settingsOrderFront(
       isVisible: isVisible,
       isKeyWindow: isKeyWindow,
       outcome: outcome,
-      retry: isRetry
+      retry: retry
     )
   }
 }

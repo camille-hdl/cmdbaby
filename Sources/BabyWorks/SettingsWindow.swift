@@ -134,6 +134,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
   func hide() {
     cancelPendingShow()
+    restoreWindowAfterHiding()
     window?.orderOut(nil)
     restoreActivationPolicy()
   }
@@ -174,7 +175,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     if sequence.shouldOrderFront {
       orderFrontAndActivate()
-      performAfterCurrentTracking { [weak self] in
+      observeAfterOrderFront(isRetry: sequence.orderFrontIsRetry) { [weak self] in
         guard let self, self.showGeneration == generation else { return }
         guard var sequence = self.showSequence else { return }
         let visible = self.window?.isVisible == true
@@ -242,6 +243,30 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     waitingForMenuTracking = false
   }
 
+  private func observeAfterOrderFront(
+    isRetry: Bool,
+    then work: @escaping @MainActor () -> Void
+  ) {
+    if isRetry {
+      performAfterOrderFrontRetry(work)
+    } else {
+      performAfterCurrentTracking(work)
+    }
+  }
+
+  /// Entre deux tentatives : laisser à AppKit le temps de prendre le key.
+  private func performAfterOrderFrontRetry(_ work: @escaping @MainActor () -> Void) {
+    let generation = showGeneration
+    DispatchQueue.main.asyncAfter(
+      deadline: .now() + SettingsWindowPresentation.orderFrontRetryDelay
+    ) { [weak self] in
+      DispatchQueue.main.async {
+        guard let self, self.showGeneration == generation else { return }
+        work()
+      }
+    }
+  }
+
   /// Après le tracking menu : le mode par défaut ne tourne qu’une fois le run loop imbriqué fini.
   private func performAfterCurrentTracking(_ work: @escaping @MainActor () -> Void) {
     let generation = showGeneration
@@ -258,8 +283,15 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
   }
 
   private func orderFrontAndActivate() {
-    window?.makeKeyAndOrderFront(nil)
+    guard let window else { return }
+    window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+    window.level = .floating
     activateApp()
+    window.makeKeyAndOrderFront(nil)
+  }
+
+  private func restoreWindowAfterHiding() {
+    window?.level = .normal
   }
 
   private func activateApp() {
@@ -283,6 +315,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     window.title = "Réglages"
     window.identifier = NSUserInterfaceItemIdentifier("fr.camille.babywork.settings")
     window.isReleasedWhenClosed = false
+    window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
     window.delegate = self
     window.center()
     self.window = window

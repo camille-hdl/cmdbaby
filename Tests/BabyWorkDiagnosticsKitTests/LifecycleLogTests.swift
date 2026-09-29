@@ -58,7 +58,7 @@ func mandatoryEventsFormatToStableLines() {
       isVisible: true,
       isKeyWindow: false,
       outcome: .fail,
-      retry: false
+      retry: 0
     ).message
       == "settings.orderFront isVisible=true isKeyWindow=false outcome=fail"
   )
@@ -67,9 +67,9 @@ func mandatoryEventsFormatToStableLines() {
       isVisible: true,
       isKeyWindow: true,
       outcome: .success,
-      retry: true
+      retry: 2
     ).message
-      == "settings.orderFront isVisible=true isKeyWindow=true outcome=success retry=true"
+      == "settings.orderFront isVisible=true isKeyWindow=true outcome=success retry=2"
   )
   #expect(LifecycleLogEvent.settingsShowRequest.category == .settings)
 
