@@ -73,6 +73,10 @@ final class SessionInputFilter: @unchecked Sendable {
     resetCounts()
     exitRecognizer.reset()
 
+    if !AXIsProcessTrusted() {
+      Self.promptForAccessibilityTrust()
+    }
+
     let thread = Thread { [weak self] in
       self?.runTapThread()
     }
@@ -157,7 +161,8 @@ final class SessionInputFilter: @unchecked Sendable {
     guard
       let port = AccessibilityTapCreation.createWithSingleTrustPrompt(
         isProcessTrusted: { AXIsProcessTrusted() },
-        promptForTrust: Self.promptForAccessibilityTrust,
+        // Prompt déjà affiché dans `start()` sur le thread appelant (MainActor).
+        promptForTrust: {},
         create: createTap
       )
     else {

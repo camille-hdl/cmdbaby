@@ -35,7 +35,7 @@ BABYWORK_CODE_SIGN_IDENTITY="$(security find-identity -v -p codesigning | sed -n
 open /Applications/BabyWorks.app
 ```
 
-Open **`/Applications/BabyWorks.app`**, not a `.build` binary. macOS keys Accessibility to the code-signing identity (CDHash). An **ad hoc** signature (`BABYWORK_CODE_SIGN_IDENTITY=-`, the script default) is debug-only: every rebuild is a new identity, so “BabyWorks” can look authorized while **Lancer session** still fails until you remove stale entries and re-grant **this** copy.
+Open **`/Applications/BabyWorks.app`**, not a `.build` binary (the snippet above is tests/debug only). macOS keys Accessibility to the code-signing identity (CDHash). An **ad hoc** signature (`BABYWORK_CODE_SIGN_IDENTITY=-`, the script default) is debug-only: every rebuild is a new identity, so “BabyWorks” can look authorized while **Lancer session** still fails until you remove stale entries and re-grant **this** copy.
 
 Sandbox experiment (separate bundle ID):
 
