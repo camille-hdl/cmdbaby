@@ -146,9 +146,12 @@ final class CoverWindowStore: @unchecked Sendable {
   private var windows: [NSWindow] = []
   private var capturedPresentation: UInt = 0
 
+  private var didClose = false
+
   func replaceWindows(_ windows: [NSWindow]) {
     lock.lock()
     self.windows = windows
+    didClose = false
     lock.unlock()
   }
 
@@ -174,6 +177,7 @@ final class CoverWindowStore: @unchecked Sendable {
     lock.lock()
     let list = windows
     lock.unlock()
+    guard !list.isEmpty else { return 0 }
     return UnsafeAppKit.hideCoverWindows(stored: list)
   }
 
@@ -183,10 +187,20 @@ final class CoverWindowStore: @unchecked Sendable {
     lock.unlock()
   }
 
+  /// Ferme les couvertures une seule fois. Les appels suivants sont no-op.
   func closeAll() -> Int {
-    let hidden = hideAll()
-    drop()
-    return hidden
+    lock.lock()
+    if didClose {
+      windows = []
+      lock.unlock()
+      return 0
+    }
+    didClose = true
+    let list = windows
+    windows = []
+    lock.unlock()
+    guard !list.isEmpty else { return 0 }
+    return UnsafeAppKit.hideCoverWindows(stored: list)
   }
 }
 
@@ -242,25 +256,41 @@ final class TerminationGate: @unchecked Sendable {
 
 /// Démonte le kiosque. Une sortie adulte laisse le process vivant ;
 /// Quitter enchaîne `terminate:` après le même démontage (`should_quit`).
+/// ObjC masque (orderOut) tap/présentation/fenêtres une fois ; Swift ferme les fenêtres.
 final class KioskEmergencyExit: @unchecked Sendable {
   let store: CoverWindowStore
   var hud: KioskHUD?
   var tapHandles: (@Sendable () -> (port: CFMachPort?, loop: CFRunLoop?))?
   var reveal: (@Sendable () -> Void)?
   var unblock: (@Sendable () -> Void)?
+  var onBeginStop: (@Sendable (AdultExitKind) -> Void)?
   var syncModel: (@Sendable (AdultExitKind) -> Void)?
 
   private let lock = NSLock()
   private var didRun = false
+  private var inFlight = false
   private let log = LifecycleLogRecorder.shared
 
   init(store: CoverWindowStore) {
     self.store = store
   }
 
+  func isTeardownInFlight() -> Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return inFlight
+  }
+
+  func markTeardownFinished() {
+    lock.lock()
+    inFlight = false
+    lock.unlock()
+  }
+
   func arm() {
     lock.lock()
     didRun = false
+    inFlight = false
     lock.unlock()
     SessionInputKillSwitch.shared.reset()
   }
@@ -280,11 +310,16 @@ final class KioskEmergencyExit: @unchecked Sendable {
       return
     }
     didRun = true
+    inFlight = true
     lock.unlock()
 
     // Aucun appel AppKit Swift ici : ça deadlock / no-op hors de l’exécuteur MainActor.
     SessionInputKillSwitch.shared.engage()
     hud?.noteTeardown(hiddenWindows: -1)
+
+    if case .adultExit(let kind) = request {
+      onBeginStop?(kind)
+    }
 
     let windows = store.snapshot() as NSArray
     let raw = UInt64(store.capturedRaw())

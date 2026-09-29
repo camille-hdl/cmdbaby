@@ -28,7 +28,6 @@ static void BabyWorkHideWindow(NSWindow *window) {
   window.alphaValue = 0;
   window.level = NSNormalWindowLevel;
   [window orderOut:nil];
-  [window close];
 }
 
 static int32_t BabyWorkPerformTeardown(
@@ -114,11 +113,14 @@ void BabyWorkScheduleKioskTeardown(
     }
   });
 
-  __block BOOL notified = NO;
+  __block BOOL didWork = NO;
   void (^work)(void) = ^{
+    if (didWork) {
+      return;
+    }
+    didWork = YES;
     int32_t hidden = BabyWorkPerformTeardown(windowArray, presentation_raw, port, loop);
-    if (!notified && done != NULL) {
-      notified = YES;
+    if (done != NULL) {
       os_log_info(
         BabyWorkTeardownLog(),
         "teardown.done should_quit=%{public}s cover_count=%d caller=objc",
@@ -127,22 +129,21 @@ void BabyWorkScheduleKioskTeardown(
       );
       done(hidden, context);
     }
-    if (should_quit) {
-      [[NSApplication sharedApplication] terminate:nil];
-    }
-  };
-
-  dispatch_async(dispatch_get_main_queue(), work);
-  CFRunLoopPerformBlock(CFRunLoopGetMain(), kCFRunLoopCommonModes, work);
-  CFRunLoopWakeUp(CFRunLoopGetMain());
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)), dispatch_get_main_queue(), work);
-  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-    work();
     if (port != NULL) {
       CFRelease(port);
     }
     if (loop != NULL) {
       CFRelease(loop);
     }
-  });
+    if (should_quit) {
+      [[NSApplication sharedApplication] terminate:nil];
+    }
+  };
+
+  // Une seule exécution : `commonModes` couvre le tracking kiosque, le
+  // `dispatch_async` rattrape si la runloop n’est pas en tracking. Les
+  // `dispatch_after` répétés fermaient les couvertures de la session suivante.
+  CFRunLoopPerformBlock(CFRunLoopGetMain(), kCFRunLoopCommonModes, work);
+  CFRunLoopWakeUp(CFRunLoopGetMain());
+  dispatch_async(dispatch_get_main_queue(), work);
 }
