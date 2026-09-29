@@ -66,6 +66,42 @@ func adultExitPipelineFallbackIsNoOpOnceIdle() {
   #expect(forced.value == 0)
 }
 
+@Test("Le filet force .configuration via le store, sans rappeler perform")
+func fallbackForcesStoreIdleWithoutCallingPerform() {
+  let store = KioskSessionStore()
+  store.replace(KioskSessionState(phase: .active))
+  let performCount = Counter()
+  let scheduledWork = WorkBox()
+  let log = LifecycleLogRecorder()
+
+  AdultExitPipeline().complete(
+    perform: { performCount.value += 1 },
+    isIdle: { store.isIdle() },
+    forceIdle: {
+      _ = store.forceConfiguration(exitKind: .passphrase, log: log)
+    },
+    scheduleFallback: { work in scheduledWork.value = work }
+  )
+
+  #expect(!store.isIdle())
+  #expect(performCount.value == 1)
+
+  scheduledWork.value?()
+
+  #expect(store.isIdle())
+  #expect(store.current().phase == .configuration)
+  #expect(performCount.value == 1)
+}
+
+@Test("Le hop MainActor n’exécute pas en ligne")
+func mainActorHopDoesNotRunInline() {
+  let ran = IdleFlag()
+  MainActorHop.run {
+    ran.value = true
+  }
+  #expect(!ran.value)
+}
+
 private final class IdleFlag: @unchecked Sendable {
   var value = false
 }

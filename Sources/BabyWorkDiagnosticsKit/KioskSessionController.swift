@@ -36,9 +36,14 @@ public final class KioskExternalStop: @unchecked Sendable {
 /// Machine à états transactionnelle du prototype de confinement.
 @MainActor
 public final class KioskSessionController {
-  public private(set) var state = KioskSessionState()
+  nonisolated public let sessionStore = KioskSessionStore()
   public var injectedFailure: KioskPrepStep?
   public let externalStop = KioskExternalStop()
+
+  public private(set) var state: KioskSessionState {
+    get { sessionStore.current() }
+    set { sessionStore.replace(newValue) }
+  }
 
   private let services: any KioskSessionServices
   private let log: LifecycleLogRecorder
@@ -80,6 +85,7 @@ public final class KioskSessionController {
     }
 
     let plannedFailure = injectedFailure
+    sessionStore.resetSessionStopLog()
     state.lastError = nil
     state.lastExitKind = nil
     capturedPresentation = nil
@@ -128,6 +134,7 @@ public final class KioskSessionController {
       state.lastExitKind = exitKind
     }
     log.emit(.sessionStop(kind: .adultExit))
+    sessionStore.markSessionStopLogged()
     switch state.phase {
     case .configuration:
       break

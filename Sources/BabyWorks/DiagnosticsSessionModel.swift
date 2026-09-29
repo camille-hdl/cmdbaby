@@ -45,21 +45,31 @@ final class DiagnosticsSessionModel {
 
     let stopFlag = kioskController.externalStop
     let gate = environment.terminationGate
+    let sessionStore = kioskController.sessionStore
+    let ui = ui
+    let log = LifecycleLogRecorder.shared
     environment.emergency.onBeginStop = { [weak self] kind in
       stopFlag.mark(kind)
-      MainQueueHop.run {
-        MainActor.assumeIsolated {
-          self?.beginAdultExit(kind)
-        }
+      MainActorHop.run {
+        self?.beginAdultExit(kind)
       }
     }
     environment.emergency.syncModel = { [weak self] kind in
       stopFlag.mark(kind)
-      MainQueueHop.run {
-        MainActor.assumeIsolated {
-          self?.handleAdultExit(kind)
-        }
+      MainActorHop.run {
+        self?.handleAdultExit(kind)
       }
+    }
+    environment.emergency.isSessionIdle = {
+      sessionStore.isIdle()
+    }
+    environment.emergency.forceIdle = { [weak emergency = environment.emergency] kind in
+      let state = sessionStore.forceConfiguration(exitKind: kind, log: log)
+      ui.kioskState = state
+      ui.filterStatus = .inactive
+      gate.setBlocked(false)
+      emergency?.markTeardownFinished()
+      log.emit(.statusItemAlive(true))
     }
     environment.emergency.unblock = {
       gate.setBlocked(false)

@@ -243,9 +243,8 @@ final class CoverWindowCoordinator {
     let remaining = windows
     windows.removeAll(keepingCapacity: false)
     for window in remaining {
-      if window.contentView != nil {
-        window.contentView = nil
-      }
+      guard window.isVisible else { continue }
+      window.contentView = nil
     }
     _ = store.closeAll()
     inputBridge = nil

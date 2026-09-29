@@ -1,7 +1,7 @@
 import Foundation
 
 /// Garantit qu’une sortie adulte atteint l’idle : action immédiate, puis filet
-/// si `perform` n’aboutit pas (Task MainActor perdu, timeout).
+/// si `perform` n’aboutit pas (hop MainActor perdu, timeout).
 public struct AdultExitPipeline: Sendable {
   public static let fallbackDelay: TimeInterval = 0.4
 
@@ -30,13 +30,9 @@ public struct AdultExitPipeline: Sendable {
     delay: TimeInterval = Self.fallbackDelay
   ) {
     complete(
-      perform: {
-        MainQueueHop.run(perform)
-      },
+      perform: perform,
       isIdle: isIdle,
-      forceIdle: {
-        MainQueueHop.run(forceIdle)
-      },
+      forceIdle: forceIdle,
       scheduleFallback: { work in
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
       }
@@ -44,12 +40,12 @@ public struct AdultExitPipeline: Sendable {
   }
 }
 
-public enum MainQueueHop {
-  public static func run(_ work: @escaping @Sendable () -> Void) {
-    if Thread.isMainThread {
-      work()
-    } else {
-      DispatchQueue.main.async(execute: work)
+/// Enfile sur `DispatchQueue.main` (exécuteur MainActor), jamais en ligne
+/// depuis `Thread.isMainThread` / CFRunLoop.
+public enum MainActorHop {
+  public static func run(_ work: @escaping @MainActor @Sendable () -> Void) {
+    DispatchQueue.main.async {
+      MainActor.assumeIsolated(work)
     }
   }
 }

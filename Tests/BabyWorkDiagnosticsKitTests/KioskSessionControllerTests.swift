@@ -160,6 +160,33 @@ func deactivateFromIdleStillLogsSessionStopAndAllowsRelaunch() async {
 }
 
 @MainActor
+@Test("Forcer l’idle hors deactivate pose .configuration sans refermer les couvertures")
+func forceConfigurationLeavesIdleWithoutClosingCovers() async {
+  let sink = CapturingLifecycleLogSink()
+  let services = FakeKioskServices(screens: threeTargetScreens)
+  let controller = KioskSessionController(
+    services: services,
+    log: LifecycleLogRecorder(sinks: [sink])
+  )
+  _ = await controller.activate()
+  let closeCount = services.operations.filter { $0 == "closeCoverWindows" }.count
+
+  let idle = controller.sessionStore.forceConfiguration(
+    exitKind: .passphrase,
+    log: LifecycleLogRecorder(sinks: [sink])
+  )
+
+  #expect(idle.phase == .configuration)
+  #expect(controller.state.phase == .configuration)
+  #expect(controller.sessionStore.isIdle())
+  #expect(sink.messages.contains("session.stop kind=adultExit"))
+  #expect(services.operations.filter { $0 == "closeCoverWindows" }.count == closeCount)
+
+  let relaunched = await controller.activate()
+  #expect(relaunched.phase == .active)
+}
+
+@MainActor
 @Test("Les couvertures ne sont fermées qu’une fois pour un arrêt")
 func coverWindowsCloseOncePerStop() async {
   let services = FakeKioskServices(screens: threeTargetScreens)
