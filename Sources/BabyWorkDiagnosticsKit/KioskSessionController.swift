@@ -56,6 +56,17 @@ public final class KioskSessionController {
     externalStop.mark(exitKind)
   }
 
+  /// Passe en `.stopping` sans démonter : ignore « Lancer session » jusqu’à `deactivate`.
+  public func beginStopping(exitKind: AdultExitKind) {
+    state.lastExitKind = exitKind
+    switch state.phase {
+    case .configuration, .failed:
+      return
+    case .preparing, .activating, .active, .stopping:
+      setPhase(.stopping)
+    }
+  }
+
   /// Le filtre est armé **avant** les fenêtres, pour ne jamais recouvrir l’écran sans tap vivant.
   /// L’attente du filtre doit laisser tourner la boucle principale (async), jamais la bloquer.
   @discardableResult
@@ -168,11 +179,7 @@ public final class KioskSessionController {
 
   private func consumeExternalStop() {
     guard let stop = externalStop.take() else { return }
-    setPhase(.configuration)
-    state.lastExitKind = stop
-    state.lastError = nil
-    state.coveredScreens = []
-    capturedPresentation = nil
+    beginStopping(exitKind: stop)
   }
 
   private func setPhase(_ phase: KioskSessionPhase) {

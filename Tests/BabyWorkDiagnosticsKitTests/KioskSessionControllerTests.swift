@@ -91,6 +91,80 @@ func activationSucceedsAfterAdultExit() async {
 }
 
 @MainActor
+@Test("Lancer session est ignoré tant que l’arrêt n’est pas terminé")
+func activationIsIgnoredWhileStopping() async {
+  let services = FakeKioskServices(screens: threeTargetScreens)
+  let controller = KioskSessionController(services: services)
+  _ = await controller.activate()
+  let operationsAfterStart = services.operations
+
+  controller.beginStopping(exitKind: .passphrase)
+  let ignored = await controller.activate()
+
+  #expect(ignored.phase == .stopping)
+  #expect(ignored.lastExitKind == .passphrase)
+  #expect(services.operations == operationsAfterStart)
+  #expect(services.filterRunning)
+  #expect(!services.openWindows.isEmpty)
+}
+
+@MainActor
+@Test("Une sortie externe en cours empêche une nouvelle activation")
+func markedExternalStopPreventsActivationUntilDeactivated() async {
+  let services = FakeKioskServices(screens: threeTargetScreens)
+  let controller = KioskSessionController(services: services)
+  _ = await controller.activate()
+  let operationsAfterStart = services.operations
+
+  controller.markExternallyStopped(exitKind: .shiftEscape)
+  let ignored = await controller.activate()
+
+  #expect(ignored.phase == .stopping)
+  #expect(ignored.lastExitKind == .shiftEscape)
+  #expect(services.operations == operationsAfterStart)
+
+  let idle = controller.deactivate(exitKind: .shiftEscape)
+  #expect(idle.phase == .configuration)
+  assertIdleWithoutSessionResources(services)
+
+  let relaunched = await controller.activate()
+  #expect(relaunched.phase == .active)
+  #expect(services.openWindows.count == 3)
+}
+
+@MainActor
+@Test("Les couvertures ne sont fermées qu’une fois pour un arrêt")
+func coverWindowsCloseOncePerStop() async {
+  let services = FakeKioskServices(screens: threeTargetScreens)
+  let controller = KioskSessionController(services: services)
+  _ = await controller.activate()
+
+  controller.beginStopping(exitKind: .failsafeClick)
+  _ = controller.deactivate(exitKind: .failsafeClick)
+  #expect(services.operations.filter { $0 == "closeCoverWindows" } == ["closeCoverWindows"])
+
+  _ = controller.deactivate(exitKind: .failsafeClick)
+  #expect(services.operations.filter { $0 == "closeCoverWindows" } == ["closeCoverWindows"])
+}
+
+@MainActor
+@Test("Cinq cycles start-sortie-start laissent l’idle sans résidu")
+func fiveAdultExitCyclesLeaveIdleWithoutResidue() async {
+  let services = FakeKioskServices(screens: threeTargetScreens)
+  let controller = KioskSessionController(services: services)
+
+  for _ in 1...5 {
+    let active = await controller.activate()
+    #expect(active.phase == .active)
+    #expect(services.filterRunning)
+    controller.beginStopping(exitKind: .passphrase)
+    let idle = controller.deactivate(exitKind: .passphrase)
+    #expect(idle.phase == .configuration)
+    assertIdleWithoutSessionResources(services)
+  }
+}
+
+@MainActor
 @Test("L’arrêt restaure exactement les options de présentation mémorisées")
 func deactivationRestoresExactCapturedPresentation() async {
   let original = PresentationOptionsSnapshot(rawValue: 16)

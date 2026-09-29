@@ -45,6 +45,12 @@ final class DiagnosticsSessionModel {
 
     let stopFlag = kioskController.externalStop
     let gate = environment.terminationGate
+    environment.emergency.onBeginStop = { [weak self] kind in
+      stopFlag.mark(kind)
+      Task { @MainActor in
+        self?.beginAdultExit(kind)
+      }
+    }
     environment.emergency.syncModel = { [weak self] kind in
       stopFlag.mark(kind)
       Task { @MainActor in
@@ -70,6 +76,13 @@ final class DiagnosticsSessionModel {
 
   func startKiosk() {
     guard kioskTask == nil else { return }
+    guard !environment.emergency.isTeardownInFlight() else { return }
+    switch kioskController.state.phase {
+    case .configuration, .failed:
+      break
+    case .preparing, .activating, .active, .stopping:
+      return
+    }
     switch ui.kioskState.phase {
     case .configuration, .failed:
       break
@@ -84,12 +97,16 @@ final class DiagnosticsSessionModel {
 
     kioskTask = Task { [weak self] in
       guard let self else { return }
-      let state = await self.kioskController.activate()
+      _ = await self.kioskController.activate()
+      let state = self.kioskController.state
       self.ui.kioskState = state
       self.kioskTask = nil
-      if state.phase != .active {
+      switch state.phase {
+      case .configuration, .failed:
         self.environment.terminationGate.setBlocked(false)
         self.ui.filterStatus = .inactive
+      case .preparing, .activating, .active, .stopping:
+        break
       }
       if state.phase == .failed, let error = state.lastError {
         self.presentActivationFailure?(error)
@@ -101,6 +118,11 @@ final class DiagnosticsSessionModel {
     environment.emergency.quit()
   }
 
+  private func beginAdultExit(_ kind: AdultExitKind) {
+    kioskController.beginStopping(exitKind: kind)
+    ui.kioskState = kioskController.state
+  }
+
   func handleAdultExit(_ kind: AdultExitKind) {
     switch kioskController.state.phase {
     case .preparing, .activating, .active, .stopping:
@@ -110,6 +132,7 @@ final class DiagnosticsSessionModel {
     case .configuration, .failed:
       stopFilter()
     }
+    environment.emergency.markTeardownFinished()
     LifecycleLogRecorder.shared.emit(
       .statusItemAlive(terminationDelegate?.isStatusItemInstalled() ?? false)
     )

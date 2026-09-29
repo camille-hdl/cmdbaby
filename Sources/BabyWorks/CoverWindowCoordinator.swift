@@ -240,11 +240,12 @@ final class CoverWindowCoordinator {
 
   func closeCoverWindows() {
     stopOutlineClock()
-    for window in windows {
+    let remaining = windows
+    windows.removeAll(keepingCapacity: false)
+    for window in remaining {
       window.contentView = nil
     }
     _ = store.closeAll()
-    windows.removeAll(keepingCapacity: false)
     inputBridge = nil
     playSession?.reset()
     playSession = nil
@@ -474,8 +475,9 @@ private final class CoverWindow: NSWindow {
     acceptsMouseMovedEvents = true
     identifier = NSUserInterfaceItemIdentifier("fr.camille.babywork.cover.\(descriptor.id)")
     self.contentView = contentView
-    // Idle : la fenêtre ne doit pas survivre à `close()` (scène + calques).
-    isReleasedWhenClosed = true
+    // Swift (CoverWindowCoordinator / CoverWindowStore) ferme une seule fois.
+    // Un close répété avec `true` sur-relâche la fenêtre.
+    isReleasedWhenClosed = false
   }
 
   nonisolated override func flagsChanged(with event: NSEvent) {

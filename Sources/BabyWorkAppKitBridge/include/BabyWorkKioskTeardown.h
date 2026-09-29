@@ -9,7 +9,8 @@ extern "C" {
 
 typedef void (*BabyWorkTeardownDone)(int32_t hidden_count, void *context);
 
-/// Restaure la présentation et masque les couvertures.
+/// Coupe le tap, restaure la présentation et masque les couvertures (orderOut, pas close).
+/// Une seule exécution. Swift reste propriétaire de `close` / de la durée de vie des fenêtres.
 /// `should_quit` : si vrai, enchaîne `-[NSApplication terminate:]` après le démontage.
 /// Une sortie adulte passe faux : le process reste vivant.
 /// `windows` : NSArray * de NSWindow, +1 (cette fonction consomme le retain).
