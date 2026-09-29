@@ -47,9 +47,9 @@ public struct SettingsShowSequence: Equatable, Sendable {
     return false
   }
 
+  /// Y compris le retry : rétablir `.regular` si le premier essai n’a pas pris.
   public var shouldApplyVisibleActivationPolicy: Bool {
-    if case .applyingPolicyThenOrderFront = phase { return true }
-    return false
+    shouldOrderFront
   }
 
   public var shouldOrderFront: Bool {

@@ -157,7 +157,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
   private func continueShow() {
     let generation = showGeneration
-    guard var sequence = showSequence else { return }
+    guard let sequence = showSequence else { return }
 
     if sequence.shouldWaitForMenuTracking {
       waitForMenuTrackingToEnd { [weak self] in
@@ -174,14 +174,15 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     if sequence.shouldOrderFront {
       orderFrontAndActivate()
-      let visible = window?.isVisible == true
-      let key = window?.isKeyWindow == true
-      let event = sequence.recordOrderFront(isVisible: visible, isKeyWindow: key)
-      showSequence = sequence
-      log.emit(event)
-      if sequence.shouldOrderFront {
-        performAfterCurrentTracking { [weak self] in
-          guard let self, self.showGeneration == generation else { return }
+      performAfterCurrentTracking { [weak self] in
+        guard let self, self.showGeneration == generation else { return }
+        guard var sequence = self.showSequence else { return }
+        let visible = self.window?.isVisible == true
+        let key = self.window?.isKeyWindow == true
+        let event = sequence.recordOrderFront(isVisible: visible, isKeyWindow: key)
+        self.showSequence = sequence
+        self.log.emit(event)
+        if sequence.shouldOrderFront {
           self.continueShow()
         }
       }

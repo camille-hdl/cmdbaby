@@ -81,7 +81,7 @@ func failedFirstOrderFrontSchedulesRetry() {
   )
   #expect(sequence.shouldOrderFront)
   #expect(sequence.orderFrontIsRetry)
-  #expect(!sequence.shouldApplyVisibleActivationPolicy)
+  #expect(sequence.shouldApplyVisibleActivationPolicy)
 }
 
 @Test("OrderFront key : succès journalisé, terminé")
