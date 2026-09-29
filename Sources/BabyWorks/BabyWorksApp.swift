@@ -5,6 +5,7 @@ import BabyWorkDiagnosticsKit
 @main
 enum BabyWorksMain {
   static func main() {
+    LifecycleLogRecorder.shared.installStandardSinks()
     let app = NSApplication.shared
     let delegate = MainActor.assumeIsolated {
       MenuBarAgent.activationPolicy.apply(to: app)
@@ -48,11 +49,20 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
   }
 
   nonisolated func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-    terminationGate.isBlocked() ? .terminateCancel : .terminateNow
+    let blocked = terminationGate.isBlocked()
+    let reply: LifecycleLog.TerminateReply = blocked ? .cancel : .now
+    LifecycleLogRecorder.shared.emit(.applicationShouldTerminate(reply: reply))
+    if !blocked {
+      MainActor.assumeIsolated {
+        LifecycleLogRecorder.shared.emit(.statusItemAlive(statusItem != nil))
+      }
+    }
+    return blocked ? .terminateCancel : .terminateNow
   }
 
   /// Chemin Quitter explicite : même démontage que la sortie adulte, puis `terminate:`.
   @objc func quitApplication(_ sender: Any?) {
+    LifecycleLogRecorder.shared.emit(.terminateRequest)
     model.quit()
   }
 
@@ -145,6 +155,11 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     }
     item.menu = menu
     statusItem = item
+    LifecycleLogRecorder.shared.emit(.statusItemCreate)
+  }
+
+  func isStatusItemInstalled() -> Bool {
+    statusItem != nil
   }
 
   private func selector(for action: MenuBarAgent.Action) -> Selector {
@@ -162,11 +177,30 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
 extension MenuBarAgent.ActivationPolicy {
   @MainActor
   func apply(to app: NSApplication) {
+    let before = app.activationPolicy().lifecycleLogName
     switch self {
     case .accessory:
       app.setActivationPolicy(.accessory)
     case .regular:
       app.setActivationPolicy(.regular)
+    }
+    LifecycleLogRecorder.shared.emit(
+      .activationPolicy(before: before, after: app.activationPolicy().lifecycleLogName)
+    )
+  }
+}
+
+extension NSApplication.ActivationPolicy {
+  fileprivate var lifecycleLogName: String {
+    switch self {
+    case .regular:
+      "regular"
+    case .accessory:
+      "accessory"
+    case .prohibited:
+      "prohibited"
+    @unknown default:
+      "unknown"
     }
   }
 }

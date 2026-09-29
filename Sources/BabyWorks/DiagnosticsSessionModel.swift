@@ -110,6 +110,9 @@ final class DiagnosticsSessionModel {
     case .configuration, .failed:
       stopFilter()
     }
+    LifecycleLogRecorder.shared.emit(
+      .statusItemAlive(terminationDelegate?.isStatusItemInstalled() ?? false)
+    )
   }
 
   private func stopFilter() {

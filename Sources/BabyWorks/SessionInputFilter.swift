@@ -2,7 +2,6 @@ import ApplicationServices
 import BabyWorkDiagnosticsKit
 import CoreGraphics
 import Foundation
-import OSLog
 
 /// Coupure globale du tap, lisible depuis le callback sans hop MainActor.
 final class SessionInputKillSwitch: @unchecked Sendable {
@@ -32,10 +31,7 @@ final class SessionInputKillSwitch: @unchecked Sendable {
 
 /// Filtre de session Quartz : thread dédié, callback borné, aucune journalisation de frappe.
 final class SessionInputFilter: @unchecked Sendable {
-  private let logger = Logger(
-    subsystem: Bundle.main.bundleIdentifier ?? "fr.camille.babywork",
-    category: "InputFilter"
-  )
+  private let log = LifecycleLogRecorder.shared
 
   private let stateLock = NSLock()
   private var thread: Thread?
@@ -105,6 +101,7 @@ final class SessionInputFilter: @unchecked Sendable {
 
     if let port {
       CGEvent.tapEnable(tap: port, enable: false)
+      log.emit(.tapDisable(reason: "stop"))
     }
     if let loop {
       CFRunLoopStop(loop)
@@ -129,7 +126,7 @@ final class SessionInputFilter: @unchecked Sendable {
     if SessionInputKillSwitch.shared.isEngaged { return }
     CGEvent.tapEnable(tap: port, enable: true)
     onStatusChange(.active)
-    logger.info("Réactivation du filtre demandée après désactivation système")
+    log.emit(.tapReenable(reason: "requested"))
   }
 
   private func runTapThread() {
@@ -167,7 +164,7 @@ final class SessionInputFilter: @unchecked Sendable {
       )
     else {
       let reason = Self.creationFailureReason()
-      logger.error("Création du CGEventTap impossible")
+      log.emit(.tapFail(reason: "creation"))
       onStatusChange(.failed(reason))
       stateLock.lock()
       thread = nil
@@ -188,7 +185,8 @@ final class SessionInputFilter: @unchecked Sendable {
 
     onStatusChange(.active)
     hud?.noteTap("actif")
-    logger.info("Filtre de session actif")
+    log.emit(.tapCreate)
+    log.emit(.tapEnable)
     CFRunLoopRun()
 
     stateLock.lock()
@@ -212,7 +210,8 @@ final class SessionInputFilter: @unchecked Sendable {
     }
 
     if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-      logger.warning("Filtre désactivé (\(String(describing: type))), réactivation")
+      let reason = type == .tapDisabledByTimeout ? "timeout" : "userInput"
+      log.emit(.tapDisable(reason: reason))
       hud?.noteTap("désactivé → réactivation")
       stateLock.lock()
       let port = tapPort
@@ -222,6 +221,7 @@ final class SessionInputFilter: @unchecked Sendable {
       }
       hud?.noteTap("actif")
       onStatusChange(.active)
+      log.emit(.tapReenable(reason: reason))
       return Unmanaged.passUnretained(event)
     }
 

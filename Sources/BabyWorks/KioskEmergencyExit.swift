@@ -3,7 +3,6 @@ import BabyWorkAppKitBridge
 import BabyWorkDiagnosticsKit
 import CoreFoundation
 import ObjectiveC
-import OSLog
 
 /// Appels AppKit sans passer par l’isolation MainActor Swift.
 enum UnsafeAppKit {
@@ -253,10 +252,7 @@ final class KioskEmergencyExit: @unchecked Sendable {
 
   private let lock = NSLock()
   private var didRun = false
-  private let logger = Logger(
-    subsystem: Bundle.main.bundleIdentifier ?? "fr.camille.babywork",
-    category: "KioskExit"
-  )
+  private let log = LifecycleLogRecorder.shared
 
   init(store: CoverWindowStore) {
     self.store = store
@@ -299,10 +295,15 @@ final class KioskEmergencyExit: @unchecked Sendable {
       syncModel: syncModel
     )
     if request.terminatesProcess {
-      logger.info("Quitter : démontage ObjC puis terminate")
-    } else {
-      logger.info("Sortie adulte : démontage ObjC planifié")
+      log.emit(.sessionStop(kind: .explicitQuit))
     }
+    log.emit(
+      .teardownBegin(
+        shouldQuit: request.terminatesProcess,
+        coverCount: windows.count,
+        caller: .swift
+      )
+    )
     BabyWorkScheduleKioskTeardown(
       Unmanaged.passRetained(windows).toOpaque(),
       raw,
@@ -330,7 +331,14 @@ private final class TeardownDoneBox: @unchecked Sendable {
     self.syncModel = syncModel
   }
 
-  func finish(hidden _: Int) {
+  func finish(hidden: Int) {
+    LifecycleLogRecorder.shared.emit(
+      .teardownDone(
+        shouldQuit: request.terminatesProcess,
+        coverCount: hidden,
+        caller: .swift
+      )
+    )
     unblock?()
     if case .adultExit(let kind) = request {
       syncModel?(kind)

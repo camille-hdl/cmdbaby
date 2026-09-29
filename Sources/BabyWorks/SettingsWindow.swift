@@ -103,6 +103,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
   }
 
   func show(fromStatusItemMenu: Bool = true) {
+    LifecycleLogRecorder.shared.emit(.settingsShowRequest)
     let model = SettingsModeModel(choice: SettingsModeChoice(store: store))
     let launchAtLoginModel = SettingsLaunchAtLoginModel(
       choice: SettingsLaunchAtLogin(store: store, loginItem: loginItem)
@@ -149,6 +150,17 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
   private func orderFrontAndActivate() {
     window?.makeKeyAndOrderFront(nil)
     activateApp()
+    let visible = window?.isVisible == true
+    let key = window?.isKeyWindow == true
+    let outcome: LifecycleLog.SettingsOrderFrontOutcome = (visible && key) ? .success : .fail
+    LifecycleLogRecorder.shared.emit(
+      .settingsOrderFront(
+        isVisible: visible,
+        isKeyWindow: key,
+        outcome: outcome,
+        retry: false
+      )
+    )
   }
 
   private func activateApp() {
