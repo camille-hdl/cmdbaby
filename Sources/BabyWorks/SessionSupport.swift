@@ -30,22 +30,3 @@ final class FilterHolder: @unchecked Sendable {
     lock.unlock()
   }
 }
-
-/// Bloque `applicationShouldTerminate` tant qu’une session est en cours.
-/// Lu depuis ce callback, qui n’est pas isolé sur le MainActor.
-final class TerminationGate: @unchecked Sendable {
-  private let lock = NSLock()
-  private var blocked = false
-
-  func setBlocked(_ blocked: Bool) {
-    lock.lock()
-    self.blocked = blocked
-    lock.unlock()
-  }
-
-  func isBlocked() -> Bool {
-    lock.lock()
-    defer { lock.unlock() }
-    return blocked
-  }
-}

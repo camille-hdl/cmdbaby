@@ -20,15 +20,12 @@ enum BabyWorksMain {
 
 @MainActor
 final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
-  private let terminationGate: TerminationGate
   private let model: DiagnosticsSessionModel
   private var statusItem: NSStatusItem?
   private let settingsWindowController = SettingsWindowController()
 
   override init() {
-    let gate = TerminationGate()
-    terminationGate = gate
-    model = DiagnosticsSessionModel(terminationGate: gate)
+    model = DiagnosticsSessionModel()
     super.init()
   }
 
@@ -44,18 +41,16 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     )
   }
 
-  nonisolated func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+  func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
     false
   }
 
-  nonisolated func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-    let blocked = terminationGate.isBlocked()
+  func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+    let blocked = model.isTerminationBlocked
     let reply: LifecycleLog.TerminateReply = blocked ? .cancel : .now
     LifecycleLogRecorder.shared.emit(.applicationShouldTerminate(reply: reply))
     if !blocked {
-      MainActor.assumeIsolated {
-        LifecycleLogRecorder.shared.emit(.statusItemAlive(statusItem != nil))
-      }
+      LifecycleLogRecorder.shared.emit(.statusItemAlive(statusItem != nil))
     }
     return blocked ? .terminateCancel : .terminateNow
   }

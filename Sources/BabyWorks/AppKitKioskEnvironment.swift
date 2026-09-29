@@ -10,15 +10,12 @@ final class AppKitKioskEnvironment: KioskSessionServices {
   var onHideDiagnosticInterface: (() -> Void)?
   var onAdultExit: (@Sendable (AdultExitKind) -> Void)?
 
-  let terminationGate: TerminationGate
-
   private let presentation = KioskPresentationController()
   private let covers = CoverWindowCoordinator()
   private let hud = KioskHUD()
   private let filterHolder = FilterHolder()
 
-  init(terminationGate: TerminationGate = TerminationGate()) {
-    self.terminationGate = terminationGate
+  init() {
     covers.hud = hud
   }
 

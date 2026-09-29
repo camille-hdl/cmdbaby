@@ -17,13 +17,9 @@ public protocol KioskSessionServices: AnyObject {
 /// Machine à états transactionnelle du prototype de confinement.
 @MainActor
 public final class KioskSessionController {
-  private let sessionStore = KioskSessionStore()
   public var injectedFailure: KioskPrepStep?
 
-  public private(set) var state: KioskSessionState {
-    get { sessionStore.current() }
-    set { sessionStore.replace(newValue) }
-  }
+  public private(set) var state = KioskSessionState()
 
   private let services: any KioskSessionServices
   private let log: LifecycleLogRecorder
