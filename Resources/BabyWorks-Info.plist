@@ -28,6 +28,8 @@
     <string>public.app-category.education</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
+    <key>NSApplicationCrashOnExceptions</key>
+    <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSInputMonitoringUsageDescription</key>

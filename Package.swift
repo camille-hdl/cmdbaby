@@ -48,7 +48,7 @@ let package = Package(
     ),
     .testTarget(
       name: "BabyWorkDiagnosticsKitTests",
-      dependencies: ["BabyWorkDiagnosticsKit"]
+      dependencies: ["BabyWorkDiagnosticsKit", "BabyWorkAppKitBridge"]
     ),
   ],
   swiftLanguageModes: [.v6]

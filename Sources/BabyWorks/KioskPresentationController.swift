@@ -1,4 +1,5 @@
 import AppKit
+import BabyWorkAppKitBridge
 import BabyWorkDiagnosticsKit
 
 /// Applique et restaure `NSApplication.presentationOptions` sans substituer une valeur par défaut.
@@ -18,10 +19,12 @@ final class KioskPresentationController {
     } else {
       NSApp.activate(ignoringOtherApps: true)
     }
-    NSApp.presentationOptions = NSApplication.PresentationOptions(rawValue: snapshot.rawValue)
+    guard BabyWorkTrySetPresentationOptions(UInt64(snapshot.rawValue)) else {
+      throw KioskSessionError.presentationRejected
+    }
   }
 
   func restore(_ snapshot: PresentationOptionsSnapshot) {
-    NSApp.presentationOptions = NSApplication.PresentationOptions(rawValue: snapshot.rawValue)
+    _ = BabyWorkTrySetPresentationOptions(UInt64(snapshot.rawValue))
   }
 }
