@@ -36,9 +36,14 @@ public final class KioskExternalStop: @unchecked Sendable {
 /// Machine à états transactionnelle du prototype de confinement.
 @MainActor
 public final class KioskSessionController {
-  public private(set) var state = KioskSessionState()
+  nonisolated public let sessionStore = KioskSessionStore()
   public var injectedFailure: KioskPrepStep?
   public let externalStop = KioskExternalStop()
+
+  public private(set) var state: KioskSessionState {
+    get { sessionStore.current() }
+    set { sessionStore.replace(newValue) }
+  }
 
   private let services: any KioskSessionServices
   private let log: LifecycleLogRecorder
@@ -80,6 +85,7 @@ public final class KioskSessionController {
     }
 
     let plannedFailure = injectedFailure
+    sessionStore.resetSessionStopLog()
     state.lastError = nil
     state.lastExitKind = nil
     capturedPresentation = nil
@@ -124,22 +130,18 @@ public final class KioskSessionController {
 
   @discardableResult
   public func deactivate(exitKind: AdultExitKind? = nil) -> KioskSessionState {
-    switch state.phase {
-    case .configuration:
-      if let exitKind {
-        state.lastExitKind = exitKind
-      }
-      return state
-    case .failed, .preparing, .activating, .active, .stopping:
-      break
-    }
-
-    log.emit(.sessionStop(kind: .adultExit))
-    setPhase(.stopping)
     if let exitKind {
       state.lastExitKind = exitKind
     }
-    tearDown()
+    log.emit(.sessionStop(kind: .adultExit))
+    sessionStore.markSessionStopLogged()
+    switch state.phase {
+    case .configuration:
+      break
+    case .failed, .preparing, .activating, .active, .stopping:
+      setPhase(.stopping)
+      tearDown()
+    }
     setPhase(.configuration)
     state.lastError = nil
     return state

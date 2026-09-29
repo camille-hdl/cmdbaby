@@ -45,17 +45,31 @@ final class DiagnosticsSessionModel {
 
     let stopFlag = kioskController.externalStop
     let gate = environment.terminationGate
+    let sessionStore = kioskController.sessionStore
+    let ui = ui
+    let log = LifecycleLogRecorder.shared
     environment.emergency.onBeginStop = { [weak self] kind in
       stopFlag.mark(kind)
-      Task { @MainActor in
+      MainActorHop.run {
         self?.beginAdultExit(kind)
       }
     }
     environment.emergency.syncModel = { [weak self] kind in
       stopFlag.mark(kind)
-      Task { @MainActor in
+      MainActorHop.run {
         self?.handleAdultExit(kind)
       }
+    }
+    environment.emergency.isSessionIdle = {
+      sessionStore.isIdle()
+    }
+    environment.emergency.forceIdle = { [weak emergency = environment.emergency] kind in
+      let state = sessionStore.forceConfiguration(exitKind: kind, log: log)
+      ui.kioskState = state
+      ui.filterStatus = .inactive
+      gate.setBlocked(false)
+      emergency?.markTeardownFinished()
+      log.emit(.statusItemAlive(true))
     }
     environment.emergency.unblock = {
       gate.setBlocked(false)
@@ -124,22 +138,12 @@ final class DiagnosticsSessionModel {
   }
 
   func handleAdultExit(_ kind: AdultExitKind) {
-    switch kioskController.state.phase {
-    case .preparing, .activating, .active, .stopping:
-      ui.kioskState = kioskController.deactivate(exitKind: kind)
-      ui.filterStatus = .inactive
-      environment.terminationGate.setBlocked(false)
-    case .configuration, .failed:
-      stopFilter()
-    }
+    ui.kioskState = kioskController.deactivate(exitKind: kind)
+    ui.filterStatus = .inactive
+    environment.terminationGate.setBlocked(false)
     environment.emergency.markTeardownFinished()
     LifecycleLogRecorder.shared.emit(
       .statusItemAlive(terminationDelegate?.isStatusItemInstalled() ?? false)
     )
-  }
-
-  private func stopFilter() {
-    environment.stopInputFilter()
-    ui.filterStatus = .inactive
   }
 }
