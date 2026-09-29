@@ -97,7 +97,8 @@ final class DiagnosticsSessionModel {
 
     kioskTask = Task { [weak self] in
       guard let self else { return }
-      let state = await self.kioskController.activate()
+      _ = await self.kioskController.activate()
+      let state = self.kioskController.state
       self.ui.kioskState = state
       self.kioskTask = nil
       switch state.phase {
