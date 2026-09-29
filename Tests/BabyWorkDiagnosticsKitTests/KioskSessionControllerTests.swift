@@ -42,6 +42,20 @@ func filterStartsBeforeCoverWindows() async {
 }
 
 @MainActor
+@Test("Le filtre reste armé jusqu’à la phase active")
+func filterStaysArmedUntilActive() async throws {
+  let services = FakeKioskServices(screens: threeTargetScreens)
+  let controller = KioskSessionController(services: services)
+
+  let state = await controller.activate()
+
+  #expect(state.phase == .active)
+  #expect(services.filterRunning)
+  let startIndex = try #require(services.operations.firstIndex(of: "startInputFilter"))
+  #expect(!services.operations[startIndex...].contains("stopInputFilter"))
+}
+
+@MainActor
 @Test("Les clics de secours arrêtent le kiosque")
 func failsafeClickDeactivatesKiosk() async {
   let services = FakeKioskServices(screens: threeTargetScreens)
@@ -410,7 +424,7 @@ private final class FakeKioskServices: KioskSessionServices {
     return screens
   }
 
-  func applyKioskPresentation() throws {
+  func applyKioskPresentation() async throws {
     operations.append("applyKioskPresentation")
     currentPresentation = KioskPresentationPolicy.kiosk
   }

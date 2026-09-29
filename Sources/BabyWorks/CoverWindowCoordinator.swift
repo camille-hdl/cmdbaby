@@ -231,11 +231,37 @@ final class CoverWindowCoordinator {
   func refocus() {
     activateApp()
     guard let first = windows.first else { return }
-    first.makeKey()
+    first.makeKeyAndOrderFront(nil)
     let responder = first.contentView.flatMap { content in
       content.subviews.first { $0.acceptsFirstResponder } ?? content
     }
     first.makeFirstResponder(responder)
+  }
+
+  var primaryCoverIsKey: Bool {
+    windows.first?.isKeyWindow == true
+  }
+
+  /// Après la présentation kiosque, le key peut rater le premier tour : retry borné.
+  func ensurePrimaryCoverIsKey(log: LifecycleLogRecorder = .shared) async {
+    var sequence = CoverKeySequence()
+    while sequence.shouldMakeKey {
+      if sequence.makeKeyIsRetry {
+        try? await Task.sleep(for: .seconds(CoverKeyPresentation.makeKeyRetryDelay))
+      }
+      refocus()
+      await Self.yieldMainQueue()
+      let event = sequence.recordMakeKey(isKey: primaryCoverIsKey)
+      log.emit(event)
+    }
+  }
+
+  private static func yieldMainQueue() async {
+    await withCheckedContinuation { continuation in
+      DispatchQueue.main.async {
+        continuation.resume()
+      }
+    }
   }
 
   func closeCoverWindows() {

@@ -27,6 +27,11 @@ public enum LifecycleLog {
     case fail
   }
 
+  public enum CoverKeyOutcome: String, Sendable {
+    case success
+    case fail
+  }
+
   public enum TerminateReply: String, Sendable {
     case now
     case cancel
@@ -107,6 +112,11 @@ public enum LifecycleLogEvent: Equatable, Sendable {
     outcome: LifecycleLog.SettingsOrderFrontOutcome,
     retry: Int
   )
+  case coversKey(
+    isKey: Bool,
+    outcome: LifecycleLog.CoverKeyOutcome,
+    retry: Int
+  )
   case terminateRequest
   case applicationShouldTerminate(reply: LifecycleLog.TerminateReply)
   case statusItemAlive(Bool)
@@ -116,7 +126,7 @@ public enum LifecycleLogEvent: Equatable, Sendable {
     case .statusItemCreate, .activationPolicy, .terminateRequest, .applicationShouldTerminate,
       .statusItemAlive:
       .lifecycle
-    case .sessionStart, .sessionPhase, .sessionStop:
+    case .sessionStart, .sessionPhase, .sessionStop, .coversKey:
       .session
     case .tapCreate, .tapEnable, .tapDisable, .tapFail, .tapReenable:
       .inputFilter
@@ -158,6 +168,9 @@ public enum LifecycleLogEvent: Equatable, Sendable {
     case .settingsOrderFront(let isVisible, let isKeyWindow, let outcome, let retry):
       let base =
         "settings.orderFront isVisible=\(isVisible) isKeyWindow=\(isKeyWindow) outcome=\(outcome.rawValue)"
+      return retry > 0 ? "\(base) retry=\(retry)" : base
+    case .coversKey(let isKey, let outcome, let retry):
+      let base = "covers.key isKey=\(isKey) outcome=\(outcome.rawValue)"
       return retry > 0 ? "\(base) retry=\(retry)" : base
     case .terminateRequest:
       return "terminate.request"

@@ -49,9 +49,10 @@ final class AppKitKioskEnvironment: KioskSessionServices {
     return try covers.createCoverWindows()
   }
 
-  func applyKioskPresentation() throws {
+  func applyKioskPresentation() async throws {
     try presentation.applyKiosk()
-    covers.refocus()
+    // Le tap reste armé jusqu’à la sortie : on ne touche pas au filtre ici.
+    await covers.ensurePrimaryCoverIsKey()
   }
 
   func startInputFilter() async throws {
