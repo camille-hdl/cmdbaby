@@ -73,7 +73,11 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
 
   /// Réglages : fenêtre native avec le choix du mode.
   @objc func openSettings(_ sender: Any?) {
-    settingsWindowController.show(fromStatusItemMenu: sender is NSMenuItem)
+    if let item = sender as? NSMenuItem {
+      settingsWindowController.show(fromStatusItemMenu: true, trackingMenu: item.menu)
+    } else {
+      settingsWindowController.show(fromStatusItemMenu: false)
+    }
   }
 
   private func presentActivationFailure(_ error: KioskSessionError) {
