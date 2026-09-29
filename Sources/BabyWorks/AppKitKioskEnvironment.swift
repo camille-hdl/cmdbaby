@@ -8,43 +8,31 @@ final class AppKitKioskEnvironment: KioskSessionServices {
   var onFilterStatus: (@Sendable (InputFilterStatus) -> Void)?
   var onCountsChange: (@Sendable ([MonitoredShortcut: Int]) -> Void)?
   var onHideDiagnosticInterface: (() -> Void)?
+  var onAdultExit: (@Sendable (AdultExitKind) -> Void)?
 
-  let emergency: KioskEmergencyExit
   let terminationGate: TerminationGate
 
   private let presentation = KioskPresentationController()
   private let covers = CoverWindowCoordinator()
   private let hud = KioskHUD()
-  private let windowStore = CoverWindowStore()
   private let filterHolder = FilterHolder()
 
   init(terminationGate: TerminationGate = TerminationGate()) {
     self.terminationGate = terminationGate
-    emergency = KioskEmergencyExit(store: windowStore)
-    emergency.hud = hud
-    covers.store = windowStore
     covers.hud = hud
-    let holder = filterHolder
-    emergency.tapHandles = {
-      holder.tapHandles()
-    }
   }
 
   func capturePresentation() throws -> PresentationOptionsSnapshot {
-    let snapshot = presentation.capture()
-    windowStore.setCapturedPresentation(snapshot.rawValue)
-    return snapshot
+    presentation.capture()
   }
 
   func createCoverWindows() throws -> [ScreenDescriptor] {
-    emergency.arm()
     covers.hud = hud
-    covers.store = windowStore
-    let emergency = self.emergency
     let hud = self.hud
+    let onAdultExit = self.onAdultExit
     covers.onAdultExit = { kind in
       hud.noteExit(kind)
-      emergency.run(kind)
+      onAdultExit?(kind)
     }
     return try covers.createCoverWindows()
   }
@@ -59,7 +47,7 @@ final class AppKitKioskEnvironment: KioskSessionServices {
     stopInputFilter()
     let statusHandler = onFilterStatus
     let countsHandler = onCountsChange
-    let emergency = self.emergency
+    let exitHandler = onAdultExit
     let hud = self.hud
 
     do {
@@ -81,8 +69,7 @@ final class AppKitKioskEnvironment: KioskSessionServices {
             countsHandler?(counts)
           },
           onAdultExit: { kind in
-            hud.noteExit(kind)
-            emergency.run(kind)
+            exitHandler?(kind)
           },
           hud: hud
         )

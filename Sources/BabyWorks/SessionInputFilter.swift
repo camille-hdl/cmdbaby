@@ -86,12 +86,6 @@ final class SessionInputFilter: @unchecked Sendable {
     thread.start()
   }
 
-  func handles() -> (port: CFMachPort?, loop: CFRunLoop?) {
-    stateLock.lock()
-    defer { stateLock.unlock() }
-    return (tapPort, runLoop)
-  }
-
   func stop() {
     SessionInputKillSwitch.shared.engage()
     stateLock.lock()

@@ -35,8 +35,8 @@ func mandatoryEventsFormatToStableLines() {
       == "teardown.begin should_quit=false cover_count=2 caller=swift"
   )
   #expect(
-    LifecycleLogEvent.teardownDone(shouldQuit: true, coverCount: 0, caller: .objc).message
-      == "teardown.done should_quit=true cover_count=0 caller=objc"
+    LifecycleLogEvent.teardownDone(shouldQuit: true, coverCount: 0, caller: .swift).message
+      == "teardown.done should_quit=true cover_count=0 caller=swift"
   )
   #expect(
     LifecycleLogEvent.teardownBegin(shouldQuit: false, coverCount: 2, caller: .swift).category
@@ -206,7 +206,7 @@ func idleStartAdultExitStartEmitsSessionSequence() async {
   let controller = KioskSessionController(services: services, log: log)
 
   _ = await controller.activate()
-  _ = controller.deactivate(exitKind: .passphrase)
+  _ = controller.deactivate(.adultExit(.passphrase))
   _ = await controller.activate()
 
   #expect(
@@ -215,8 +215,10 @@ func idleStartAdultExitStartEmitsSessionSequence() async {
       "session.phase from=configuration to=preparing",
       "session.phase from=preparing to=activating",
       "session.phase from=activating to=active",
-      "session.stop kind=adultExit",
       "session.phase from=active to=stopping",
+      "teardown.begin should_quit=false cover_count=1 caller=swift",
+      "teardown.done should_quit=false cover_count=1 caller=swift",
+      "session.stop kind=adultExit",
       "session.phase from=stopping to=configuration",
       "session.start",
       "session.phase from=configuration to=preparing",

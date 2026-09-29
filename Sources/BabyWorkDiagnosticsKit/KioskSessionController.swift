@@ -14,31 +14,11 @@ public protocol KioskSessionServices: AnyObject {
   func hideDiagnosticInterface()
 }
 
-public final class KioskExternalStop: @unchecked Sendable {
-  private let lock = NSLock()
-  private var kind: AdultExitKind?
-
-  public func mark(_ kind: AdultExitKind) {
-    lock.lock()
-    self.kind = kind
-    lock.unlock()
-  }
-
-  public func take() -> AdultExitKind? {
-    lock.lock()
-    defer { lock.unlock() }
-    let value = kind
-    kind = nil
-    return value
-  }
-}
-
 /// Machine à états transactionnelle du prototype de confinement.
 @MainActor
 public final class KioskSessionController {
-  nonisolated public let sessionStore = KioskSessionStore()
+  private let sessionStore = KioskSessionStore()
   public var injectedFailure: KioskPrepStep?
-  public let externalStop = KioskExternalStop()
 
   public private(set) var state: KioskSessionState {
     get { sessionStore.current() }
@@ -57,13 +37,11 @@ public final class KioskSessionController {
     self.log = log
   }
 
-  nonisolated public func markExternallyStopped(exitKind: AdultExitKind) {
-    externalStop.mark(exitKind)
-  }
-
   /// Passe en `.stopping` sans démonter : ignore « Lancer session » jusqu’à `deactivate`.
-  public func beginStopping(exitKind: AdultExitKind) {
-    state.lastExitKind = exitKind
+  public func beginStopping(exitKind: AdultExitKind? = nil) {
+    if let exitKind {
+      state.lastExitKind = exitKind
+    }
     switch state.phase {
     case .configuration, .failed:
       return
@@ -76,7 +54,6 @@ public final class KioskSessionController {
   /// L’attente du filtre doit laisser tourner la boucle principale (async), jamais la bloquer.
   @discardableResult
   public func activate() async -> KioskSessionState {
-    consumeExternalStop()
     switch state.phase {
     case .configuration, .failed:
       break
@@ -85,7 +62,6 @@ public final class KioskSessionController {
     }
 
     let plannedFailure = injectedFailure
-    sessionStore.resetSessionStopLog()
     state.lastError = nil
     state.lastExitKind = nil
     capturedPresentation = nil
@@ -102,6 +78,7 @@ public final class KioskSessionController {
       services.hideDiagnosticInterface()
       // Laisse AppKit retirer les observateurs SwiftUI avant couverture / présentation.
       await Task.yield()
+      guard isActivationCurrent else { return state }
 
       setPhase(.activating)
       try await services.startInputFilter()
@@ -129,18 +106,26 @@ public final class KioskSessionController {
   }
 
   @discardableResult
-  public func deactivate(exitKind: AdultExitKind? = nil) -> KioskSessionState {
-    if let exitKind {
-      state.lastExitKind = exitKind
+  public func deactivate(_ request: KioskEndRequest) -> KioskSessionState {
+    if case .adultExit(let kind) = request {
+      state.lastExitKind = kind
     }
-    log.emit(.sessionStop(kind: .adultExit))
-    sessionStore.markSessionStopLogged()
+    let shouldQuit = request.terminatesProcess
+    let stopKind: LifecycleLog.SessionStopKind = shouldQuit ? .explicitQuit : .adultExit
+
     switch state.phase {
     case .configuration:
-      break
+      log.emit(.sessionStop(kind: stopKind))
+      if shouldQuit {
+        logTeardown(shouldQuit: true, coverCount: 0)
+      }
     case .failed, .preparing, .activating, .active, .stopping:
       setPhase(.stopping)
-      tearDown()
+      let coverCount = state.coveredScreens.count
+      logTeardown(shouldQuit: shouldQuit, coverCount: coverCount) {
+        tearDown()
+      }
+      log.emit(.sessionStop(kind: stopKind))
     }
     setPhase(.configuration)
     state.lastError = nil
@@ -179,9 +164,18 @@ public final class KioskSessionController {
     capturedPresentation = nil
   }
 
-  private func consumeExternalStop() {
-    guard let stop = externalStop.take() else { return }
-    beginStopping(exitKind: stop)
+  private func logTeardown(
+    shouldQuit: Bool,
+    coverCount: Int,
+    body: () -> Void = {}
+  ) {
+    log.emit(
+      .teardownBegin(shouldQuit: shouldQuit, coverCount: coverCount, caller: .swift)
+    )
+    body()
+    log.emit(
+      .teardownDone(shouldQuit: shouldQuit, coverCount: coverCount, caller: .swift)
+    )
   }
 
   private func setPhase(_ phase: KioskSessionPhase) {

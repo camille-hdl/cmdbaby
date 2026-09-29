@@ -3,8 +3,7 @@ import BabyWorkDiagnosticsKit
 import Carbon
 import Foundation
 
-/// État de session. Hors `@MainActor` : des observateurs AppKit peuvent le lire
-/// hors de l’exécuteur (`swift_task_isCurrentExecutor`).
+/// État de session publié vers l’interface.
 final class DiagnosticsPublishedState: @unchecked Sendable {
   var filterStatus: InputFilterStatus = .inactive
   var kioskState = KioskSessionState()
@@ -18,6 +17,7 @@ final class DiagnosticsSessionModel {
   private weak var terminationDelegate: BabyWorksAppDelegate?
   private var kioskTask: Task<Void, Never>?
   private var presentActivationFailure: ((KioskSessionError) -> Void)?
+  private var endRequest: KioskEndRequest?
 
   init(terminationGate: TerminationGate = TerminationGate()) {
     let environment = AppKitKioskEnvironment(terminationGate: terminationGate)
@@ -36,43 +36,14 @@ final class DiagnosticsSessionModel {
     }
 
     environment.onFilterStatus = { [weak self] status in
-      DispatchQueue.main.async {
-        MainActor.assumeIsolated {
-          self?.ui.filterStatus = status
-        }
+      Task { @MainActor in
+        self?.ui.filterStatus = status
       }
     }
-
-    let stopFlag = kioskController.externalStop
-    let gate = environment.terminationGate
-    let sessionStore = kioskController.sessionStore
-    let ui = ui
-    let log = LifecycleLogRecorder.shared
-    environment.emergency.onBeginStop = { [weak self] kind in
-      stopFlag.mark(kind)
-      MainActorHop.run {
-        self?.beginAdultExit(kind)
-      }
-    }
-    environment.emergency.syncModel = { [weak self] kind in
-      stopFlag.mark(kind)
-      MainActorHop.run {
+    environment.onAdultExit = { [weak self] kind in
+      Task { @MainActor in
         self?.handleAdultExit(kind)
       }
-    }
-    environment.emergency.isSessionIdle = {
-      sessionStore.isIdle()
-    }
-    environment.emergency.forceIdle = { [weak emergency = environment.emergency] kind in
-      let state = sessionStore.forceConfiguration(exitKind: kind, log: log)
-      ui.kioskState = state
-      ui.filterStatus = .inactive
-      gate.setBlocked(false)
-      emergency?.markTeardownFinished()
-      log.emit(.statusItemAlive(true))
-    }
-    environment.emergency.unblock = {
-      gate.setBlocked(false)
     }
   }
 
@@ -90,7 +61,6 @@ final class DiagnosticsSessionModel {
 
   func startKiosk() {
     guard kioskTask == nil else { return }
-    guard !environment.emergency.isTeardownInFlight() else { return }
     switch kioskController.state.phase {
     case .configuration, .failed:
       break
@@ -107,12 +77,16 @@ final class DiagnosticsSessionModel {
     KeyboardLayoutLetter.shared.refreshFromCurrentLayout()
     kioskController.injectedFailure = nil
     environment.terminationGate.setBlocked(true)
-    environment.emergency.arm()
+    endRequest = nil
 
     kioskTask = Task { [weak self] in
       guard let self else { return }
-      _ = await self.kioskController.activate()
-      let state = self.kioskController.state
+      let state = await self.kioskController.activate()
+      if state.phase == .stopping {
+        let request = self.endRequest ?? .adultExit(state.lastExitKind ?? .passphrase)
+        self.completeExit(request)
+        return
+      }
       self.ui.kioskState = state
       self.kioskTask = nil
       switch state.phase {
@@ -129,21 +103,42 @@ final class DiagnosticsSessionModel {
   }
 
   func quit() {
-    environment.emergency.quit()
-  }
-
-  private func beginAdultExit(_ kind: AdultExitKind) {
-    kioskController.beginStopping(exitKind: kind)
-    ui.kioskState = kioskController.state
+    switch kioskController.state.phase {
+    case .preparing, .activating:
+      endRequest = .explicitQuit
+      kioskController.beginStopping()
+      ui.kioskState = kioskController.state
+    case .stopping where kioskTask != nil:
+      endRequest = .explicitQuit
+    default:
+      completeExit(.explicitQuit)
+    }
   }
 
   func handleAdultExit(_ kind: AdultExitKind) {
-    ui.kioskState = kioskController.deactivate(exitKind: kind)
+    switch kioskController.state.phase {
+    case .configuration, .stopping:
+      return
+    case .preparing, .activating:
+      endRequest = .adultExit(kind)
+      kioskController.beginStopping(exitKind: kind)
+      ui.kioskState = kioskController.state
+    case .active, .failed:
+      completeExit(.adultExit(kind))
+    }
+  }
+
+  private func completeExit(_ request: KioskEndRequest) {
+    ui.kioskState = kioskController.deactivate(request)
     ui.filterStatus = .inactive
     environment.terminationGate.setBlocked(false)
-    environment.emergency.markTeardownFinished()
-    LifecycleLogRecorder.shared.emit(
-      .statusItemAlive(terminationDelegate?.isStatusItemInstalled() ?? false)
-    )
+    kioskTask = nil
+    if request.terminatesProcess {
+      NSApp.terminate(nil)
+    } else {
+      LifecycleLogRecorder.shared.emit(
+        .statusItemAlive(terminationDelegate?.isStatusItemInstalled() ?? false)
+      )
+    }
   }
 }

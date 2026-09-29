@@ -129,19 +129,6 @@ final class KioskHUD: @unchecked Sendable {
     publish(text, handlers: handlers)
   }
 
-  func noteTeardown(hiddenWindows: Int) {
-    lock.lock()
-    if hiddenWindows < 0 {
-      exit = "arrêt : filtre coupé, présentation restaurée"
-    } else {
-      exit = "démontage : \(hiddenWindows) fenêtre(s)"
-    }
-    let text = renderLocked()
-    let handlers = handlers
-    lock.unlock()
-    publish(text, handlers: handlers)
-  }
-
   private func renderLocked() -> String {
     """
     source     \(source)
@@ -174,7 +161,6 @@ final class KioskHUD: @unchecked Sendable {
 final class CoverWindowCoordinator {
   var onAdultExit: (@Sendable (AdultExitKind) -> Void)?
   var hud = KioskHUD()
-  var store = CoverWindowStore()
   private var windows: [NSWindow] = []
   private var inputBridge: KioskInputBridge?
   private var playSession: PlaySession?
@@ -222,7 +208,6 @@ final class CoverWindowCoordinator {
       descriptors.append(descriptor)
     }
     outlineViews = outlines
-    store.replaceWindows(windows)
     refocus()
     startOutlineClock()
     return descriptors
@@ -269,10 +254,12 @@ final class CoverWindowCoordinator {
     let remaining = windows
     windows.removeAll(keepingCapacity: false)
     for window in remaining {
-      guard window.isVisible else { continue }
       window.contentView = nil
+      window.ignoresMouseEvents = true
+      window.alphaValue = 0
+      window.orderOut(nil)
+      window.close()
     }
-    _ = store.closeAll()
     inputBridge = nil
     playSession?.reset()
     playSession = nil
@@ -502,8 +489,7 @@ private final class CoverWindow: NSWindow {
     acceptsMouseMovedEvents = true
     identifier = NSUserInterfaceItemIdentifier("fr.camille.babywork.cover.\(descriptor.id)")
     self.contentView = contentView
-    // Swift (CoverWindowCoordinator / CoverWindowStore) ferme une seule fois.
-    // Un close répété avec `true` sur-relâche la fenêtre.
+    // Une seule fermeture par fenêtre : un `close` répété avec `true` sur-relâche.
     isReleasedWhenClosed = false
   }
 

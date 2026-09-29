@@ -19,7 +19,6 @@ public enum LifecycleLog {
 
   public enum TeardownCaller: String, Sendable {
     case swift
-    case objc
   }
 
   public enum SettingsOrderFrontOutcome: String, Sendable {

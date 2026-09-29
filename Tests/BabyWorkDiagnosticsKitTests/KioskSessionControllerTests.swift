@@ -62,7 +62,7 @@ func failsafeClickDeactivatesKiosk() async {
   let controller = KioskSessionController(services: services)
   _ = await controller.activate()
 
-  let state = controller.deactivate(exitKind: .failsafeClick)
+  let state = controller.deactivate(.adultExit(.failsafeClick))
 
   #expect(state.phase == .configuration)
   #expect(state.lastExitKind == .failsafeClick)
@@ -78,7 +78,7 @@ func adultExitLeavesIdleWithoutSessionResources() async {
   #expect(services.playModeResourcesLoaded)
   #expect(services.filterHeld)
 
-  let state = controller.deactivate(exitKind: .passphrase)
+  let state = controller.deactivate(.adultExit(.passphrase))
 
   #expect(state.phase == .configuration)
   #expect(state.coveredScreens.isEmpty)
@@ -92,7 +92,7 @@ func activationSucceedsAfterAdultExit() async {
   let services = FakeKioskServices(screens: threeTargetScreens)
   let controller = KioskSessionController(services: services)
   _ = await controller.activate()
-  _ = controller.deactivate(exitKind: .timeLimit)
+  _ = controller.deactivate(.adultExit(.timeLimit))
 
   let state = await controller.activate()
 
@@ -124,27 +124,134 @@ func activationIsIgnoredWhileStopping() async {
 }
 
 @MainActor
-@Test("Une sortie externe en cours empêche une nouvelle activation")
-func markedExternalStopPreventsActivationUntilDeactivated() async {
+@Test("Une sortie pendant la préparation empêche le passage en activation")
+func exitDuringPreparingStaysStoppingAndSkipsTheFilter() async {
+  let services = FakeKioskServices(screens: threeTargetScreens)
+  let controller = KioskSessionController(services: services)
+  services.onHideDiagnosticInterface = {
+    controller.beginStopping(exitKind: .passphrase)
+  }
+
+  let stopping = await controller.activate()
+
+  #expect(stopping.phase == .stopping)
+  #expect(!services.operations.contains("startInputFilter"))
+  #expect(!services.operations.contains("createCoverWindows"))
+
+  let idle = controller.deactivate(.adultExit(.passphrase))
+  #expect(idle.phase == .configuration)
+  assertIdleWithoutSessionResources(services)
+}
+
+@MainActor
+@Test("Une sortie pendant l’activation s’arrête sans couvertures, puis deactivate revient à la configuration")
+func exitDuringActivatingReturnsStoppingWithoutCoversThenDeactivateReachesConfiguration() async {
+  let services = FakeKioskServices(screens: threeTargetScreens)
+  let controller = KioskSessionController(services: services)
+  services.onStartInputFilter = {
+    controller.beginStopping(exitKind: .shiftEscape)
+  }
+
+  let stopping = await controller.activate()
+
+  #expect(stopping.phase == .stopping)
+  #expect(stopping.lastExitKind == .shiftEscape)
+  #expect(!services.operations.contains("createCoverWindows"))
+  #expect(services.openWindows.isEmpty)
+
+  let idle = controller.deactivate(.adultExit(.shiftEscape))
+  #expect(idle.phase == .configuration)
+  assertIdleWithoutSessionResources(services)
+}
+
+@MainActor
+@Test("deactivate depuis l’actif démonte une fois et journalise teardown puis session.stop")
+func deactivateFromActiveRunsServicesOnceAndLogsTeardownBeforeSessionStop() async {
+  let sink = CapturingLifecycleLogSink()
+  let services = FakeKioskServices(screens: threeTargetScreens)
+  let controller = KioskSessionController(
+    services: services,
+    log: LifecycleLogRecorder(sinks: [sink])
+  )
+  _ = await controller.activate()
+  let operationsAfterStart = services.operations.count
+
+  let state = controller.deactivate(.adultExit(.passphrase))
+
+  #expect(state.phase == .configuration)
+  #expect(
+    Array(services.operations.dropFirst(operationsAfterStart)) == [
+      "stopInputFilter",
+      "restorePresentation",
+      "closeCoverWindows",
+    ]
+  )
+  #expect(
+    sink.messages.suffix(5) == [
+      "session.phase from=active to=stopping",
+      "teardown.begin should_quit=false cover_count=3 caller=swift",
+      "teardown.done should_quit=false cover_count=3 caller=swift",
+      "session.stop kind=adultExit",
+      "session.phase from=stopping to=configuration",
+    ]
+  )
+}
+
+@MainActor
+@Test("deactivate en quittant journalise explicitQuit et should_quit")
+func deactivateForExplicitQuitLogsQuitAndShouldQuit() async {
+  let activeSink = CapturingLifecycleLogSink()
+  let activeServices = FakeKioskServices(screens: threeTargetScreens)
+  let active = KioskSessionController(
+    services: activeServices,
+    log: LifecycleLogRecorder(sinks: [activeSink])
+  )
+  _ = await active.activate()
+
+  _ = active.deactivate(.explicitQuit)
+
+  #expect(activeSink.messages.contains("session.stop kind=explicitQuit"))
+  #expect(
+    activeSink.messages.contains(
+      "teardown.begin should_quit=true cover_count=3 caller=swift"
+    )
+  )
+  #expect(
+    activeSink.messages.contains(
+      "teardown.done should_quit=true cover_count=3 caller=swift"
+    )
+  )
+
+  let idleSink = CapturingLifecycleLogSink()
+  let idle = KioskSessionController(
+    services: FakeKioskServices(screens: threeTargetScreens),
+    log: LifecycleLogRecorder(sinks: [idleSink])
+  )
+
+  _ = idle.deactivate(.explicitQuit)
+
+  #expect(
+    idleSink.messages == [
+      "session.stop kind=explicitQuit",
+      "teardown.begin should_quit=true cover_count=0 caller=swift",
+      "teardown.done should_quit=true cover_count=0 caller=swift",
+    ]
+  )
+}
+
+@MainActor
+@Test("Deux sorties successives ne démontent qu’une fois")
+func twoSuccessiveDeactivationsTearDownOnce() async {
   let services = FakeKioskServices(screens: threeTargetScreens)
   let controller = KioskSessionController(services: services)
   _ = await controller.activate()
-  let operationsAfterStart = services.operations
 
-  controller.markExternallyStopped(exitKind: .shiftEscape)
-  let ignored = await controller.activate()
+  _ = controller.deactivate(.adultExit(.passphrase))
+  _ = controller.deactivate(.adultExit(.shiftEscape))
 
-  #expect(ignored.phase == .stopping)
-  #expect(ignored.lastExitKind == .shiftEscape)
-  #expect(services.operations == operationsAfterStart)
-
-  let idle = controller.deactivate(exitKind: .shiftEscape)
-  #expect(idle.phase == .configuration)
-  assertIdleWithoutSessionResources(services)
-
-  let relaunched = await controller.activate()
-  #expect(relaunched.phase == .active)
-  #expect(services.openWindows.count == 3)
+  #expect(services.operations.filter { $0 == "restorePresentation" } == ["restorePresentation"])
+  #expect(services.operations.filter { $0 == "closeCoverWindows" } == ["closeCoverWindows"])
+  #expect(services.operations.filter { $0 == "stopInputFilter" }.count == 2)
 }
 
 @MainActor
@@ -154,10 +261,10 @@ func deactivateFromIdleStillLogsSessionStopAndAllowsRelaunch() async {
   let services = FakeKioskServices(screens: threeTargetScreens)
   let controller = KioskSessionController(services: services, log: LifecycleLogRecorder(sinks: [sink]))
   _ = await controller.activate()
-  _ = controller.deactivate(exitKind: .passphrase)
+  _ = controller.deactivate(.adultExit(.passphrase))
   let closeCountAfterStop = services.operations.filter { $0 == "closeCoverWindows" }.count
 
-  let idle = controller.deactivate(exitKind: .passphrase)
+  let idle = controller.deactivate(.adultExit(.passphrase))
 
   #expect(idle.phase == .configuration)
   #expect(idle.lastExitKind == .passphrase)
@@ -174,33 +281,6 @@ func deactivateFromIdleStillLogsSessionStopAndAllowsRelaunch() async {
 }
 
 @MainActor
-@Test("Forcer l’idle hors deactivate pose .configuration sans refermer les couvertures")
-func forceConfigurationLeavesIdleWithoutClosingCovers() async {
-  let sink = CapturingLifecycleLogSink()
-  let services = FakeKioskServices(screens: threeTargetScreens)
-  let controller = KioskSessionController(
-    services: services,
-    log: LifecycleLogRecorder(sinks: [sink])
-  )
-  _ = await controller.activate()
-  let closeCount = services.operations.filter { $0 == "closeCoverWindows" }.count
-
-  let idle = controller.sessionStore.forceConfiguration(
-    exitKind: .passphrase,
-    log: LifecycleLogRecorder(sinks: [sink])
-  )
-
-  #expect(idle.phase == .configuration)
-  #expect(controller.state.phase == .configuration)
-  #expect(controller.sessionStore.isIdle())
-  #expect(sink.messages.contains("session.stop kind=adultExit"))
-  #expect(services.operations.filter { $0 == "closeCoverWindows" }.count == closeCount)
-
-  let relaunched = await controller.activate()
-  #expect(relaunched.phase == .active)
-}
-
-@MainActor
 @Test("Les couvertures ne sont fermées qu’une fois pour un arrêt")
 func coverWindowsCloseOncePerStop() async {
   let services = FakeKioskServices(screens: threeTargetScreens)
@@ -208,10 +288,10 @@ func coverWindowsCloseOncePerStop() async {
   _ = await controller.activate()
 
   controller.beginStopping(exitKind: .failsafeClick)
-  _ = controller.deactivate(exitKind: .failsafeClick)
+  _ = controller.deactivate(.adultExit(.failsafeClick))
   #expect(services.operations.filter { $0 == "closeCoverWindows" } == ["closeCoverWindows"])
 
-  _ = controller.deactivate(exitKind: .failsafeClick)
+  _ = controller.deactivate(.adultExit(.failsafeClick))
   #expect(services.operations.filter { $0 == "closeCoverWindows" } == ["closeCoverWindows"])
 }
 
@@ -226,7 +306,7 @@ func fiveAdultExitCyclesLeaveIdleWithoutResidue() async {
     #expect(active.phase == .active)
     #expect(services.filterRunning)
     controller.beginStopping(exitKind: .passphrase)
-    let idle = controller.deactivate(exitKind: .passphrase)
+    let idle = controller.deactivate(.adultExit(.passphrase))
     #expect(idle.phase == .configuration)
     assertIdleWithoutSessionResources(services)
   }
@@ -243,7 +323,7 @@ func deactivationRestoresExactCapturedPresentation() async {
   let controller = KioskSessionController(services: services)
 
   _ = await controller.activate()
-  let state = controller.deactivate(exitKind: .passphrase)
+  let state = controller.deactivate(.adultExit(.passphrase))
 
   #expect(state.phase == .configuration)
   #expect(state.lastExitKind == .passphrase)
@@ -401,6 +481,8 @@ private final class FakeKioskServices: KioskSessionServices {
   var playModeResourcesLoaded = false
   var restoredSnapshots: [PresentationOptionsSnapshot] = []
   var operations: [String] = []
+  var onStartInputFilter: (() -> Void)?
+  var onHideDiagnosticInterface: (() -> Void)?
 
   init(
     screens: [ScreenDescriptor],
@@ -431,6 +513,7 @@ private final class FakeKioskServices: KioskSessionServices {
 
   func startInputFilter() async throws {
     operations.append("startInputFilter")
+    onStartInputFilter?()
     filterRunning = true
     filterHeld = true
   }
@@ -455,5 +538,6 @@ private final class FakeKioskServices: KioskSessionServices {
 
   func hideDiagnosticInterface() {
     operations.append("hideDiagnosticInterface")
+    onHideDiagnosticInterface?()
   }
 }
