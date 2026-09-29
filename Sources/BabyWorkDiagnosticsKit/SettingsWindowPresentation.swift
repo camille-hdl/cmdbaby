@@ -21,3 +21,81 @@ public enum SettingsWindowPresentation {
     fromStatusItemMenu ? .afterStatusItemMenuDismisses : .immediate
   }
 }
+
+/// Séquence d’ouverture de Réglages : pas d’activation `.regular` tant que le menu track.
+public struct SettingsShowSequence: Equatable, Sendable {
+  public enum Phase: Equatable, Sendable {
+    case waitingForMenuTracking
+    case applyingPolicyThenOrderFront
+    case retryingOrderFront
+    case finished(outcome: LifecycleLog.SettingsOrderFrontOutcome)
+  }
+
+  public private(set) var phase: Phase
+
+  public init(fromStatusItemMenu: Bool) {
+    switch SettingsWindowPresentation.orderFrontTiming(fromStatusItemMenu: fromStatusItemMenu) {
+    case .afterStatusItemMenuDismisses:
+      phase = .waitingForMenuTracking
+    case .immediate:
+      phase = .applyingPolicyThenOrderFront
+    }
+  }
+
+  public var shouldWaitForMenuTracking: Bool {
+    if case .waitingForMenuTracking = phase { return true }
+    return false
+  }
+
+  public var shouldApplyVisibleActivationPolicy: Bool {
+    if case .applyingPolicyThenOrderFront = phase { return true }
+    return false
+  }
+
+  public var shouldOrderFront: Bool {
+    switch phase {
+    case .applyingPolicyThenOrderFront, .retryingOrderFront:
+      true
+    case .waitingForMenuTracking, .finished:
+      false
+    }
+  }
+
+  public var orderFrontIsRetry: Bool {
+    if case .retryingOrderFront = phase { return true }
+    return false
+  }
+
+  public var finishedOutcome: LifecycleLog.SettingsOrderFrontOutcome? {
+    if case .finished(let outcome) = phase { return outcome }
+    return nil
+  }
+
+  public mutating func menuTrackingDidEnd() {
+    guard case .waitingForMenuTracking = phase else { return }
+    phase = .applyingPolicyThenOrderFront
+  }
+
+  @discardableResult
+  public mutating func recordOrderFront(
+    isVisible: Bool,
+    isKeyWindow: Bool
+  ) -> LifecycleLogEvent {
+    let isRetry = orderFrontIsRetry
+    let outcome: LifecycleLog.SettingsOrderFrontOutcome =
+      (isVisible && isKeyWindow) ? .success : .fail
+    if outcome == .success {
+      phase = .finished(outcome: .success)
+    } else if isRetry {
+      phase = .finished(outcome: .fail)
+    } else {
+      phase = .retryingOrderFront
+    }
+    return .settingsOrderFront(
+      isVisible: isVisible,
+      isKeyWindow: isKeyWindow,
+      outcome: outcome,
+      retry: isRetry
+    )
+  }
+}

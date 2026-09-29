@@ -89,21 +89,34 @@ struct SettingsView: View {
 final class SettingsWindowController: NSObject, NSWindowDelegate {
   private let store: BabyWorksConfigurationStore
   private let loginItem: any LoginItemRegistration
+  private let log: LifecycleLogRecorder
   private var window: NSWindow?
   private var model: SettingsModeModel?
   private var launchAtLoginModel: SettingsLaunchAtLoginModel?
+  private var showSequence: SettingsShowSequence?
+  private var showGeneration = 0
+  private var trackingMenu: NSMenu?
+  private var waitingForMenuTracking = false
+  private var menuTrackingProceed: (@MainActor () -> Void)?
 
   init(
     store: BabyWorksConfigurationStore = BabyWorksConfigurationStore(),
-    loginItem: any LoginItemRegistration = SMAppServiceLoginItem()
+    loginItem: any LoginItemRegistration = SMAppServiceLoginItem(),
+    log: LifecycleLogRecorder = .shared
   ) {
     self.store = store
     self.loginItem = loginItem
+    self.log = log
     super.init()
   }
 
-  func show(fromStatusItemMenu: Bool = true) {
-    LifecycleLogRecorder.shared.emit(.settingsShowRequest)
+  deinit {
+    NotificationCenter.default.removeObserver(self)
+  }
+
+  func show(fromStatusItemMenu: Bool = true, trackingMenu: NSMenu? = nil) {
+    cancelPendingShow()
+    log.emit(.settingsShowRequest)
     let model = SettingsModeModel(choice: SettingsModeChoice(store: store))
     let launchAtLoginModel = SettingsLaunchAtLoginModel(
       choice: SettingsLaunchAtLogin(store: store, loginItem: loginItem)
@@ -114,18 +127,13 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     window.contentView = NSHostingView(
       rootView: SettingsView(model: model, launchAtLogin: launchAtLoginModel)
     )
-    SettingsWindowPresentation.visibleActivationPolicy.apply(to: NSApp)
-    switch SettingsWindowPresentation.orderFrontTiming(fromStatusItemMenu: fromStatusItemMenu) {
-    case .afterStatusItemMenuDismisses:
-      DispatchQueue.main.async { [weak self] in
-        self?.orderFrontAndActivate()
-      }
-    case .immediate:
-      orderFrontAndActivate()
-    }
+    self.trackingMenu = trackingMenu
+    showSequence = SettingsShowSequence(fromStatusItemMenu: fromStatusItemMenu)
+    continueShow()
   }
 
   func hide() {
+    cancelPendingShow()
     window?.orderOut(nil)
     restoreActivationPolicy()
   }
@@ -147,20 +155,110 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     }
   }
 
+  private func continueShow() {
+    let generation = showGeneration
+    guard var sequence = showSequence else { return }
+
+    if sequence.shouldWaitForMenuTracking {
+      waitForMenuTrackingToEnd { [weak self] in
+        guard let self, self.showGeneration == generation else { return }
+        self.mutateSequence { $0.menuTrackingDidEnd() }
+        self.continueShow()
+      }
+      return
+    }
+
+    if sequence.shouldApplyVisibleActivationPolicy {
+      SettingsWindowPresentation.visibleActivationPolicy.apply(to: NSApp)
+    }
+
+    if sequence.shouldOrderFront {
+      orderFrontAndActivate()
+      let visible = window?.isVisible == true
+      let key = window?.isKeyWindow == true
+      let event = sequence.recordOrderFront(isVisible: visible, isKeyWindow: key)
+      showSequence = sequence
+      log.emit(event)
+      if sequence.shouldOrderFront {
+        performAfterCurrentTracking { [weak self] in
+          guard let self, self.showGeneration == generation else { return }
+          self.continueShow()
+        }
+      }
+    }
+  }
+
+  @discardableResult
+  private func mutateSequence(_ body: (inout SettingsShowSequence) -> Void) -> SettingsShowSequence? {
+    guard var sequence = showSequence else { return nil }
+    body(&sequence)
+    showSequence = sequence
+    return sequence
+  }
+
+  private func cancelPendingShow() {
+    showGeneration += 1
+    stopObservingMenuTracking()
+    menuTrackingProceed = nil
+    trackingMenu = nil
+  }
+
+  private func waitForMenuTrackingToEnd(then proceed: @escaping @MainActor () -> Void) {
+    let generation = showGeneration
+    waitingForMenuTracking = true
+    menuTrackingProceed = proceed
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(handleMenuDidEndTracking(_:)),
+      name: NSMenu.didEndTrackingNotification,
+      object: trackingMenu
+    )
+    performAfterCurrentTracking { [weak self] in
+      guard let self, self.showGeneration == generation else { return }
+      self.finishWaitingForMenuTracking()
+    }
+  }
+
+  @objc private func handleMenuDidEndTracking(_ notification: Notification) {
+    finishWaitingForMenuTracking()
+  }
+
+  private func finishWaitingForMenuTracking() {
+    guard waitingForMenuTracking else { return }
+    let proceed = menuTrackingProceed
+    stopObservingMenuTracking()
+    menuTrackingProceed = nil
+    proceed?()
+  }
+
+  private func stopObservingMenuTracking() {
+    guard waitingForMenuTracking else { return }
+    NotificationCenter.default.removeObserver(
+      self,
+      name: NSMenu.didEndTrackingNotification,
+      object: trackingMenu
+    )
+    waitingForMenuTracking = false
+  }
+
+  /// Après le tracking menu : le mode par défaut ne tourne qu’une fois le run loop imbriqué fini.
+  private func performAfterCurrentTracking(_ work: @escaping @MainActor () -> Void) {
+    let generation = showGeneration
+    CFRunLoopPerformBlock(
+      CFRunLoopGetMain(),
+      CFRunLoopMode.defaultMode.rawValue as CFString
+    ) { [weak self] in
+      DispatchQueue.main.async {
+        guard let self, self.showGeneration == generation else { return }
+        work()
+      }
+    }
+    CFRunLoopWakeUp(CFRunLoopGetMain())
+  }
+
   private func orderFrontAndActivate() {
     window?.makeKeyAndOrderFront(nil)
     activateApp()
-    let visible = window?.isVisible == true
-    let key = window?.isKeyWindow == true
-    let outcome: LifecycleLog.SettingsOrderFrontOutcome = (visible && key) ? .success : .fail
-    LifecycleLogRecorder.shared.emit(
-      .settingsOrderFront(
-        isVisible: visible,
-        isKeyWindow: key,
-        outcome: outcome,
-        retry: false
-      )
-    )
   }
 
   private func activateApp() {
