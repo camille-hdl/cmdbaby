@@ -124,22 +124,17 @@ public final class KioskSessionController {
 
   @discardableResult
   public func deactivate(exitKind: AdultExitKind? = nil) -> KioskSessionState {
-    switch state.phase {
-    case .configuration:
-      if let exitKind {
-        state.lastExitKind = exitKind
-      }
-      return state
-    case .failed, .preparing, .activating, .active, .stopping:
-      break
-    }
-
-    log.emit(.sessionStop(kind: .adultExit))
-    setPhase(.stopping)
     if let exitKind {
       state.lastExitKind = exitKind
     }
-    tearDown()
+    log.emit(.sessionStop(kind: .adultExit))
+    switch state.phase {
+    case .configuration:
+      break
+    case .failed, .preparing, .activating, .active, .stopping:
+      setPhase(.stopping)
+      tearDown()
+    }
     setPhase(.configuration)
     state.lastError = nil
     return state

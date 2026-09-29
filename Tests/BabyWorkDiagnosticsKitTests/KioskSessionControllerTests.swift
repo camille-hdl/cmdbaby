@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 
 @testable import BabyWorkDiagnosticsKit
@@ -125,6 +126,32 @@ func markedExternalStopPreventsActivationUntilDeactivated() async {
 
   let idle = controller.deactivate(exitKind: .shiftEscape)
   #expect(idle.phase == .configuration)
+  assertIdleWithoutSessionResources(services)
+
+  let relaunched = await controller.activate()
+  #expect(relaunched.phase == .active)
+  #expect(services.openWindows.count == 3)
+}
+
+@MainActor
+@Test("Un deactivate déjà idle journalise encore session.stop et reste relançable")
+func deactivateFromIdleStillLogsSessionStopAndAllowsRelaunch() async {
+  let sink = CapturingLifecycleLogSink()
+  let services = FakeKioskServices(screens: threeTargetScreens)
+  let controller = KioskSessionController(services: services, log: LifecycleLogRecorder(sinks: [sink]))
+  _ = await controller.activate()
+  _ = controller.deactivate(exitKind: .passphrase)
+  let closeCountAfterStop = services.operations.filter { $0 == "closeCoverWindows" }.count
+
+  let idle = controller.deactivate(exitKind: .passphrase)
+
+  #expect(idle.phase == .configuration)
+  #expect(idle.lastExitKind == .passphrase)
+  #expect(sink.messages.filter { $0 == "session.stop kind=adultExit" } == [
+    "session.stop kind=adultExit",
+    "session.stop kind=adultExit",
+  ])
+  #expect(services.operations.filter { $0 == "closeCoverWindows" }.count == closeCountAfterStop)
   assertIdleWithoutSessionResources(services)
 
   let relaunched = await controller.activate()
@@ -270,6 +297,23 @@ private func assertIdleWithoutSessionResources(_ services: FakeKioskServices) {
   #expect(!services.filterRunning)
   #expect(!services.filterHeld)
   #expect(!services.playModeResourcesLoaded)
+}
+
+private final class CapturingLifecycleLogSink: LifecycleLogSink, @unchecked Sendable {
+  private let lock = NSLock()
+  private var collected: [String] = []
+
+  var messages: [String] {
+    lock.lock()
+    defer { lock.unlock() }
+    return collected
+  }
+
+  func write(_ event: LifecycleLogEvent) {
+    lock.lock()
+    collected.append(event.message)
+    lock.unlock()
+  }
 }
 
 private let threeTargetScreens = [

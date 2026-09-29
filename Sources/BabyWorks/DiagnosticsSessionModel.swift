@@ -47,14 +47,18 @@ final class DiagnosticsSessionModel {
     let gate = environment.terminationGate
     environment.emergency.onBeginStop = { [weak self] kind in
       stopFlag.mark(kind)
-      Task { @MainActor in
-        self?.beginAdultExit(kind)
+      MainQueueHop.run {
+        MainActor.assumeIsolated {
+          self?.beginAdultExit(kind)
+        }
       }
     }
     environment.emergency.syncModel = { [weak self] kind in
       stopFlag.mark(kind)
-      Task { @MainActor in
-        self?.handleAdultExit(kind)
+      MainQueueHop.run {
+        MainActor.assumeIsolated {
+          self?.handleAdultExit(kind)
+        }
       }
     }
     environment.emergency.unblock = {
@@ -124,22 +128,12 @@ final class DiagnosticsSessionModel {
   }
 
   func handleAdultExit(_ kind: AdultExitKind) {
-    switch kioskController.state.phase {
-    case .preparing, .activating, .active, .stopping:
-      ui.kioskState = kioskController.deactivate(exitKind: kind)
-      ui.filterStatus = .inactive
-      environment.terminationGate.setBlocked(false)
-    case .configuration, .failed:
-      stopFilter()
-    }
+    ui.kioskState = kioskController.deactivate(exitKind: kind)
+    ui.filterStatus = .inactive
+    environment.terminationGate.setBlocked(false)
     environment.emergency.markTeardownFinished()
     LifecycleLogRecorder.shared.emit(
       .statusItemAlive(terminationDelegate?.isStatusItemInstalled() ?? false)
     )
-  }
-
-  private func stopFilter() {
-    environment.stopInputFilter()
-    ui.filterStatus = .inactive
   }
 }

@@ -15,6 +15,8 @@ typedef void (*BabyWorkTeardownDone)(int32_t hidden_count, void *context);
 /// Une sortie adulte passe faux : le process reste vivant.
 /// `windows` : NSArray * de NSWindow, +1 (cette fonction consomme le retain).
 /// `tap_port` / `tap_loop` : non consommés.
+/// Les lignes `caller=objc` vont à Console (`subsystem == "fr.camille.babywork"`).
+/// Le fichier Application Support est alimenté côté Swift (`caller=swift`).
 void BabyWorkScheduleKioskTeardown(
   void *windows,
   uint64_t presentation_raw,

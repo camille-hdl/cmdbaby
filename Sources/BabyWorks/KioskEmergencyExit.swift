@@ -36,12 +36,25 @@ enum UnsafeAppKit {
   }
 
   private static func hideWindow(_ window: NSWindow) {
+    let shouldClose = isWindowVisible(window)
     invoke(window, NSSelectorFromString("setContentView:"), object: nil)
     setIgnoresMouseEvents(window, true)
     setAlpha(window, 0)
     setWindowLevel(window, 0)
     invoke(window, NSSelectorFromString("orderOut:"), object: nil)
-    invokeVoid(window, NSSelectorFromString("close"))
+    if shouldClose {
+      invokeVoid(window, NSSelectorFromString("close"))
+    }
+  }
+
+  private static func isWindowVisible(_ window: NSWindow) -> Bool {
+    typealias Getter = @convention(c) (AnyObject, Selector) -> ObjCBool
+    let selector = NSSelectorFromString("isVisible")
+    guard let method = instanceMethod(NSClassFromString("NSWindow"), selector) else {
+      return true
+    }
+    return unsafeBitCast(method_getImplementation(method), to: Getter.self)(window, selector)
+      .boolValue
   }
 
   private static func isCoverWindow(_ window: NSWindow) -> Bool {
@@ -327,7 +340,14 @@ final class KioskEmergencyExit: @unchecked Sendable {
     let box = TeardownDoneBox(
       request: request,
       unblock: unblock,
-      syncModel: syncModel
+      syncModel: syncModel,
+      isIdle: { [weak self] in
+        guard let self else { return true }
+        return !self.isTeardownInFlight()
+      },
+      markFinished: { [weak self] in
+        self?.markTeardownFinished()
+      }
     )
     if request.terminatesProcess {
       log.emit(.sessionStop(kind: .explicitQuit))
@@ -355,15 +375,21 @@ private final class TeardownDoneBox: @unchecked Sendable {
   let request: KioskEndRequest
   let unblock: (@Sendable () -> Void)?
   let syncModel: (@Sendable (AdultExitKind) -> Void)?
+  let isIdle: @Sendable () -> Bool
+  let markFinished: @Sendable () -> Void
 
   init(
     request: KioskEndRequest,
     unblock: (@Sendable () -> Void)?,
-    syncModel: (@Sendable (AdultExitKind) -> Void)?
+    syncModel: (@Sendable (AdultExitKind) -> Void)?,
+    isIdle: @escaping @Sendable () -> Bool,
+    markFinished: @escaping @Sendable () -> Void
   ) {
     self.request = request
     self.unblock = unblock
     self.syncModel = syncModel
+    self.isIdle = isIdle
+    self.markFinished = markFinished
   }
 
   func finish(hidden: Int) {
@@ -376,7 +402,20 @@ private final class TeardownDoneBox: @unchecked Sendable {
     )
     unblock?()
     if case .adultExit(let kind) = request {
-      syncModel?(kind)
+      let syncModel = syncModel
+      let markFinished = markFinished
+      let unblock = unblock
+      AdultExitPipeline().completeOnMain(
+        perform: {
+          syncModel?(kind)
+        },
+        isIdle: isIdle,
+        forceIdle: {
+          syncModel?(kind)
+          markFinished()
+          unblock?()
+        }
+      )
     }
   }
 }
