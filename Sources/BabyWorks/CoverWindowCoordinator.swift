@@ -271,8 +271,7 @@ final class CoverWindowCoordinator {
     let limit = SessionTimeLimit(startedAt: ProcessInfo.processInfo.systemUptime)
     timeLimit = limit
     let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
-      // Le timer du run loop est sur le fil principal, pas sur l’exécuteur MainActor.
-      Task { @MainActor in
+      MainActor.assumeIsolated {
         self?.advanceOutlineClock()
       }
     }
@@ -312,7 +311,8 @@ final class CoverWindowCoordinator {
   }
 }
 
-/// Reconnaissance des sorties depuis les callbacks AppKit (hors exécuteur MainActor).
+/// Pont clavier et clics des fenêtres et des scènes.
+/// Verrou temporaire : Océan et Galaxie appellent encore `noteKeyDown` hors isolation MainActor (#45).
 final class KioskInputBridge: @unchecked Sendable {
   private let lock = NSLock()
   private let recognizer = AdultExitRecognizer()
@@ -452,9 +452,8 @@ private final class PlayStageHost: NSView {
 private final class CoverWindow: NSWindow {
   private let inputBridge: KioskInputBridge
 
-  /// AppKit appelle ces accesseurs depuis la runloop, hors de l’exécuteur MainActor Swift.
-  nonisolated override var canBecomeKey: Bool { true }
-  nonisolated override var canBecomeMain: Bool { true }
+  override var canBecomeKey: Bool { true }
+  override var canBecomeMain: Bool { true }
 
   init(
     screen: NSScreen,
@@ -493,13 +492,13 @@ private final class CoverWindow: NSWindow {
     isReleasedWhenClosed = false
   }
 
-  nonisolated override func flagsChanged(with event: NSEvent) {
+  override func flagsChanged(with event: NSEvent) {
     let left = CGEventSource.keyState(.hidSystemState, key: CGKeyCode(0x38))
     let right = CGEventSource.keyState(.hidSystemState, key: CGKeyCode(0x3C))
     inputBridge.noteShifts(left: left, right: right)
   }
 
-  nonisolated override func performKeyEquivalent(with event: NSEvent) -> Bool {
+  override func performKeyEquivalent(with event: NSEvent) -> Bool {
     event.modifierFlags.contains(.command)
   }
 }
@@ -639,9 +638,9 @@ final class FailsafeClickView: NSView {
     fatalError("init(coder:) n’est pas supporté")
   }
 
-  nonisolated override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-  nonisolated override func mouseDown(with event: NSEvent) {
+  override func mouseDown(with event: NSEvent) {
     inputBridge.noteFailsafeClick()
   }
 }
