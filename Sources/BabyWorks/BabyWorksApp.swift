@@ -6,11 +6,10 @@ import BabyWorkDiagnosticsKit
 enum BabyWorksMain {
   static func main() {
     let app = NSApplication.shared
-    switch MenuBarAgent.activationPolicy {
-    case .accessory:
-      app.setActivationPolicy(.accessory)
+    let delegate = MainActor.assumeIsolated {
+      MenuBarAgent.activationPolicy.apply(to: app)
+      return BabyWorksAppDelegate()
     }
-    let delegate = MainActor.assumeIsolated { BabyWorksAppDelegate() }
     app.delegate = delegate
     withExtendedLifetime(delegate) {
       app.run()
@@ -64,7 +63,7 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
 
   /// Réglages : fenêtre native avec le choix du mode.
   @objc func openSettings(_ sender: Any?) {
-    settingsWindowController.show()
+    settingsWindowController.show(fromStatusItemMenu: sender is NSMenuItem)
   }
 
   private func presentActivationFailure(_ error: KioskSessionError) {
@@ -153,6 +152,18 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
       #selector(openSettings(_:))
     case .terminate:
       #selector(quitApplication(_:))
+    }
+  }
+}
+
+extension MenuBarAgent.ActivationPolicy {
+  @MainActor
+  func apply(to app: NSApplication) {
+    switch self {
+    case .accessory:
+      app.setActivationPolicy(.accessory)
+    case .regular:
+      app.setActivationPolicy(.regular)
     }
   }
 }
