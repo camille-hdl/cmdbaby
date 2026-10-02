@@ -5,9 +5,9 @@ import Foundation
 public struct BabyWorksConfiguration: Codable, Equatable, Sendable {
   public static let currentSchemaVersion = 1
 
-  public let schemaVersion: Int
-  public let mode: KioskPlayModeID
-  public let launchAtLogin: Bool
+  public var schemaVersion: Int
+  public var mode: KioskPlayModeID
+  public var launchAtLogin: Bool
 
   public init(
     schemaVersion: Int = currentSchemaVersion,

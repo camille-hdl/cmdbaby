@@ -6,66 +6,50 @@ import SwiftUI
 private let settingsLogger = Logger(subsystem: "fr.camille.babywork", category: "Settings")
 
 @MainActor
-final class SettingsModeModel: ObservableObject {
-  private let choice: SettingsModeChoice
-  @Published private(set) var selectedMode: KioskPlayModeID
-  let options: [KioskPlayModeID]
+final class SettingsModel: ObservableObject {
+  private let settings: BabyWorksSettings
+  @Published private(set) var configuration: BabyWorksConfiguration
+  @Published private(set) var lastError: String?
 
-  init(choice: SettingsModeChoice) {
-    self.choice = choice
-    self.options = choice.options
-    self.selectedMode = choice.selectedMode()
+  init(settings: BabyWorksSettings) {
+    self.settings = settings
+    self.configuration = settings.current()
   }
 
-  func select(_ mode: KioskPlayModeID) {
+  func apply(_ change: SettingsChange) {
     do {
-      try choice.select(mode)
-      selectedMode = mode
+      configuration = try settings.apply(change)
+      lastError = nil
     } catch {
-      settingsLogger.error(
-        "Impossible d’enregistrer le mode : \(error.localizedDescription, privacy: .public)"
-      )
-    }
-  }
-}
-
-@MainActor
-final class SettingsLaunchAtLoginModel: ObservableObject {
-  private let choice: SettingsLaunchAtLogin
-  @Published private(set) var isEnabled: Bool
-
-  init(choice: SettingsLaunchAtLogin) {
-    self.choice = choice
-    self.isEnabled = choice.isEnabled()
-  }
-
-  func setEnabled(_ enabled: Bool) {
-    do {
-      try choice.setEnabled(enabled)
-      isEnabled = choice.isEnabled()
-    } catch {
-      isEnabled = choice.isEnabled()
-      settingsLogger.error(
-        "Impossible d’enregistrer le démarrage automatique : \(error.localizedDescription, privacy: .public)"
-      )
+      switch change {
+      case .mode:
+        settingsLogger.error(
+          "Impossible d’enregistrer le mode : \(error.localizedDescription, privacy: .public)"
+        )
+      case .launchAtLogin:
+        settingsLogger.error(
+          "Impossible d’enregistrer le démarrage automatique : \(error.localizedDescription, privacy: .public)"
+        )
+      }
+      lastError = error.localizedDescription
+      configuration = settings.current()
     }
   }
 }
 
 struct SettingsView: View {
-  @ObservedObject var model: SettingsModeModel
-  @ObservedObject var launchAtLogin: SettingsLaunchAtLoginModel
+  @ObservedObject var model: SettingsModel
 
   var body: some View {
     Form {
       Picker(
         "Mode",
         selection: Binding(
-          get: { model.selectedMode },
-          set: { model.select($0) }
+          get: { model.configuration.mode },
+          set: { model.apply(.mode($0)) }
         )
       ) {
-        ForEach(model.options, id: \.self) { mode in
+        ForEach(KioskPlayModeCatalog.available, id: \.self) { mode in
           Text(KioskPlayModeCatalog.displayName(mode)).tag(mode)
         }
       }
@@ -74,8 +58,8 @@ struct SettingsView: View {
       Toggle(
         "Démarrage automatique",
         isOn: Binding(
-          get: { launchAtLogin.isEnabled },
-          set: { launchAtLogin.setEnabled($0) }
+          get: { model.configuration.launchAtLogin },
+          set: { model.apply(.launchAtLogin($0)) }
         )
       )
       .help("Ouvre BabyWorks dans la barre de menus au login, sans lancer de session.")
@@ -91,8 +75,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
   private let loginItem: any LoginItemRegistration
   private let log: LifecycleLogRecorder
   private var window: NSWindow?
-  private var model: SettingsModeModel?
-  private var launchAtLoginModel: SettingsLaunchAtLoginModel?
+  private var model: SettingsModel?
   private var showSequence: SettingsShowSequence?
   private var showGeneration = 0
   private var trackingMenu: NSMenu?
@@ -117,16 +100,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
   func show(fromStatusItemMenu: Bool = true, trackingMenu: NSMenu? = nil) {
     cancelPendingShow()
     log.emit(.settingsShowRequest)
-    let model = SettingsModeModel(choice: SettingsModeChoice(store: store))
-    let launchAtLoginModel = SettingsLaunchAtLoginModel(
-      choice: SettingsLaunchAtLogin(store: store, loginItem: loginItem)
+    let model = SettingsModel(
+      settings: BabyWorksSettings(store: store, loginItem: loginItem)
     )
     self.model = model
-    self.launchAtLoginModel = launchAtLoginModel
     let window = existingOrMakeWindow()
-    window.contentView = NSHostingView(
-      rootView: SettingsView(model: model, launchAtLogin: launchAtLoginModel)
-    )
+    window.contentView = NSHostingView(rootView: SettingsView(model: model))
     self.trackingMenu = trackingMenu
     showSequence = SettingsShowSequence(fromStatusItemMenu: fromStatusItemMenu)
     continueShow()

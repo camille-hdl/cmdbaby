@@ -11,6 +11,19 @@ func configurationDefaultsToOceanWithoutLaunchAtLogin() {
   #expect(configuration.launchAtLogin == false)
 }
 
+@Test("Un JSON v1 sans champ nouveau se relit à l’identique")
+func configurationVersionOneJSONDecodesIdentically() throws {
+  let decoded = try JSONDecoder().decode(
+    BabyWorksConfiguration.self,
+    from: Data(
+      #"""
+      {"schemaVersion":1,"mode":"galaxy","launchAtLogin":true}
+      """#.utf8
+    )
+  )
+  #expect(decoded == BabyWorksConfiguration(schemaVersion: 1, mode: .galaxy, launchAtLogin: true))
+}
+
 @Test("Une config encodée se relit à l’identique")
 func configurationRoundTripsThroughJSON() throws {
   let original = BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true)

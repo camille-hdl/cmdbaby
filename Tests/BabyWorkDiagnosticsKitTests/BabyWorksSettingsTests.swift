@@ -1,0 +1,134 @@
+import Foundation
+import Testing
+
+@testable import BabyWorkDiagnosticsKit
+
+@Test("Changer le mode écrit le mode et conserve le démarrage automatique")
+func changingModePersistsModeAndKeepsLaunchAtLogin() throws {
+  let file = TemporarySettingsFile()
+  defer { file.remove() }
+
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  try store.save(BabyWorksConfiguration(mode: .ocean, launchAtLogin: true))
+  let loginItem = FakeLoginItemRegistration()
+  loginItem.isRegistered = true
+
+  let settings = BabyWorksSettings(store: store, loginItem: loginItem)
+  #expect(settings.current() == BabyWorksConfiguration(mode: .ocean, launchAtLogin: true))
+
+  let saved = try settings.apply(.mode(.galaxy))
+
+  #expect(saved == BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true))
+  #expect(settings.current() == saved)
+}
+
+@Test("Activer le démarrage automatique enregistre le Login Item puis persiste")
+func enablingLaunchAtLoginRegistersLoginItemThenPersists() throws {
+  let file = TemporarySettingsFile()
+  defer { file.remove() }
+
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  try store.save(BabyWorksConfiguration(mode: .galaxy, launchAtLogin: false))
+  let loginItem = FakeLoginItemRegistration()
+
+  let settings = BabyWorksSettings(store: store, loginItem: loginItem)
+  #expect(settings.current() == BabyWorksConfiguration(mode: .galaxy, launchAtLogin: false))
+
+  let saved = try settings.apply(.launchAtLogin(true))
+
+  #expect(loginItem.isRegistered)
+  #expect(saved == BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true))
+  #expect(settings.current() == saved)
+}
+
+@Test("Désactiver le démarrage automatique désenregistre le Login Item puis persiste")
+func disablingLaunchAtLoginUnregistersLoginItemThenPersists() throws {
+  let file = TemporarySettingsFile()
+  defer { file.remove() }
+
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  try store.save(BabyWorksConfiguration(mode: .ocean, launchAtLogin: true))
+  let loginItem = FakeLoginItemRegistration()
+  loginItem.isRegistered = true
+
+  let settings = BabyWorksSettings(store: store, loginItem: loginItem)
+  let saved = try settings.apply(.launchAtLogin(false))
+
+  #expect(!loginItem.isRegistered)
+  #expect(saved == BabyWorksConfiguration(mode: .ocean, launchAtLogin: false))
+  #expect(settings.current() == saved)
+}
+
+@Test("Un échec d’enregistrement du Login Item laisse le fichier inchangé")
+func failedLoginItemRegistrationLeavesFileUnchanged() throws {
+  let file = TemporarySettingsFile()
+  defer { file.remove() }
+
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  try store.save(BabyWorksConfiguration(mode: .ocean, launchAtLogin: false))
+  let loginItem = FakeLoginItemRegistration()
+  loginItem.registerError = LoginItemFailure()
+
+  let settings = BabyWorksSettings(store: store, loginItem: loginItem)
+  #expect(throws: LoginItemFailure.self) {
+    try settings.apply(.launchAtLogin(true))
+  }
+
+  #expect(!loginItem.isRegistered)
+  #expect(store.load() == BabyWorksConfiguration(mode: .ocean, launchAtLogin: false))
+}
+
+@Test("La config lue suit le Login Item modifié hors de l’app")
+func currentReconcilesLaunchAtLoginChangedOutsideTheApp() throws {
+  let file = TemporarySettingsFile()
+  defer { file.remove() }
+
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  try store.save(BabyWorksConfiguration(mode: .galaxy, launchAtLogin: false))
+  let loginItem = FakeLoginItemRegistration()
+  loginItem.isRegistered = true
+
+  let settings = BabyWorksSettings(store: store, loginItem: loginItem)
+
+  #expect(settings.current() == BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true))
+  #expect(store.load() == BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true))
+
+  loginItem.isRegistered = false
+  #expect(settings.current() == BabyWorksConfiguration(mode: .galaxy, launchAtLogin: false))
+  #expect(store.load() == BabyWorksConfiguration(mode: .galaxy, launchAtLogin: false))
+}
+
+private struct LoginItemFailure: Error {}
+
+private struct TemporarySettingsFile {
+  let directory: URL
+  let fileURL: URL
+
+  init() {
+    directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+      "BabyWorksSettingsTests-\(UUID().uuidString)",
+      isDirectory: true
+    )
+    fileURL = directory.appendingPathComponent("config.json")
+  }
+
+  func remove() {
+    try? FileManager.default.removeItem(at: directory)
+  }
+}
+
+private final class FakeLoginItemRegistration: LoginItemRegistration, @unchecked Sendable {
+  var isRegistered = false
+  var registerError: (any Error)?
+
+  func register() throws {
+    if let registerError {
+      throw registerError
+    }
+    isRegistered = true
+  }
+
+  func unregister() throws {
+    isRegistered = false
+  }
+}
