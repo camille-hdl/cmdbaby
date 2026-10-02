@@ -10,6 +10,20 @@ func playModeCatalogDefaultsToOcean() {
   #expect(KioskPlayModeCatalog.displayName(.galaxy) == "Galaxie")
 }
 
+@Test("Les modes affichés suivent l’ordre des cas")
+func playModeCatalogAvailableMatchesAllCases() {
+  #expect(KioskPlayModeCatalog.available == Array(KioskPlayModeID.allCases))
+}
+
+@Test("Chaque mode a une phrase courte pour la carte de Réglages")
+func playModeCatalogTaglineIsPresentForEveryMode() {
+  #expect(KioskPlayModeCatalog.tagline(.ocean) == "Des poissons, du sable et des bulles à chaque touche.")
+  #expect(KioskPlayModeCatalog.tagline(.galaxy) == "Des lettres et des étoiles qui filent dans l’espace.")
+  for id in KioskPlayModeID.allCases {
+    #expect(!KioskPlayModeCatalog.tagline(id).isEmpty)
+  }
+}
+
 @Test("Le registre résout Océan et Galaxie par identifiant")
 func playModeCatalogResolvesRegisteredIDs() {
   #expect(KioskPlayModeCatalog.resolve("ocean") == .ocean)

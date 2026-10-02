@@ -472,6 +472,25 @@ final class OceanPainter {
   }
 }
 
+/// Enveloppe `OceanDirector` : fond marin, purge des sprites en fin de session.
+@MainActor
+final class OceanPlayMode: PlayMode {
+  private let director = OceanDirector()
+
+  func windowBackground(screenIndex: Int) -> NSColor {
+    OceanStageView.waterColor
+  }
+
+  func makeStage(inputBridge: KioskInputBridge, screenIndex: Int, scale: CGFloat) -> NSView {
+    OceanStageView(inputBridge: inputBridge, director: director, scale: scale)
+  }
+
+  func reset() {
+    director.reset()
+    OceanSprite.purge()
+  }
+}
+
 struct OceanLayoutSnapshot: Sendable {
   var screenIndex: Int
   var size: CGSize

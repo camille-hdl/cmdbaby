@@ -163,7 +163,7 @@ final class CoverWindowCoordinator {
   var hud = KioskHUD()
   private var windows: [NSWindow] = []
   private var inputBridge: KioskInputBridge?
-  private var playSession: PlaySession?
+  private var playMode: (any PlayMode)?
   private var timeLimit: SessionTimeLimit?
   private var outlineViews: [FailsafeClickView] = []
   private var outlineTimer: Timer?
@@ -177,13 +177,13 @@ final class CoverWindowCoordinator {
     let exitHandler = onAdultExit
     let hud = self.hud
     let configuration = BabyWorksConfigurationStore().load()
-    let session = PlaySession.make(configuration.mode)
+    let mode = PlayModeRegistry.make(configuration.mode)
     let bridge = KioskInputBridge(hud: hud) { kind in
       hud.noteExit(kind)
       exitHandler?(kind)
     }
     inputBridge = bridge
-    playSession = session
+    playMode = mode
 
     var descriptors: [ScreenDescriptor] = []
     var outlines: [FailsafeClickView] = []
@@ -191,17 +191,17 @@ final class CoverWindowCoordinator {
       let descriptor = ScreenDescriptor(nsScreen: screen)
       let failsafe = FailsafeClickView(inputBridge: bridge)
       outlines.append(failsafe)
+      let stage = mode.makeStage(
+        inputBridge: bridge,
+        screenIndex: index,
+        scale: screen.backingScaleFactor
+      )
       let window = CoverWindow(
         screen: screen,
         descriptor: descriptor,
-        background: session.windowBackground(colorIndex: index),
+        background: mode.windowBackground(screenIndex: index),
         inputBridge: bridge,
-        contentView: session.makeContentView(
-          inputBridge: bridge,
-          colorIndex: index,
-          scale: screen.backingScaleFactor,
-          failsafe: failsafe
-        )
+        contentView: PlayStageHost(stage: stage, failsafe: failsafe)
       )
       windows.append(window)
       window.orderFrontRegardless()
@@ -261,9 +261,8 @@ final class CoverWindowCoordinator {
       window.close()
     }
     inputBridge = nil
-    playSession?.reset()
-    playSession = nil
-    OceanSprite.purge()
+    playMode?.reset()
+    playMode = nil
     hud.resetHandlers()
   }
 
@@ -362,60 +361,6 @@ final class KioskInputBridge {
   }
 }
 
-@MainActor
-private enum PlaySession {
-  case ocean(OceanDirector)
-  case galaxy(GalaxyDirector)
-
-  static func make(_ mode: KioskPlayModeID) -> PlaySession {
-    switch mode {
-    case .ocean:
-      .ocean(OceanDirector())
-    case .galaxy:
-      .galaxy(GalaxyDirector())
-    }
-  }
-
-  func reset() {
-    switch self {
-    case .ocean(let director):
-      director.reset()
-    case .galaxy(let director):
-      director.reset()
-    }
-  }
-
-  func windowBackground(colorIndex: Int) -> NSColor {
-    switch self {
-    case .ocean:
-      OceanStageView.waterColor
-    case .galaxy:
-      CoverPalette.color(at: colorIndex)
-    }
-  }
-
-  func makeContentView(
-    inputBridge: KioskInputBridge,
-    colorIndex: Int,
-    scale: CGFloat,
-    failsafe: FailsafeClickView
-  ) -> NSView {
-    let stage: NSView
-    switch self {
-    case .ocean(let director):
-      stage = OceanStageView(inputBridge: inputBridge, director: director, scale: scale)
-    case .galaxy(let director):
-      stage = GalaxyStageView(
-        background: CoverPalette.color(at: colorIndex),
-        inputBridge: inputBridge,
-        director: director,
-        scale: scale
-      )
-    }
-    return PlayStageHost(stage: stage, failsafe: failsafe)
-  }
-}
-
 /// Scène de jeu en dessous, carré de secours au-dessus. Les calques du mode (sol, poissons, glyphes) restent dans la scène.
 private final class PlayStageHost: NSView {
   init(stage: NSView, failsafe: FailsafeClickView) {
@@ -497,18 +442,6 @@ private final class CoverWindow: NSWindow {
 
   override func performKeyEquivalent(with event: NSEvent) -> Bool {
     event.modifierFlags.contains(.command)
-  }
-}
-
-private enum CoverPalette {
-  private static let colors: [NSColor] = [
-    NSColor(calibratedRed: 0.05, green: 0.07, blue: 0.18, alpha: 1),
-    NSColor(calibratedRed: 0.12, green: 0.04, blue: 0.20, alpha: 1),
-    NSColor(calibratedRed: 0.03, green: 0.14, blue: 0.18, alpha: 1),
-  ]
-
-  static func color(at index: Int) -> NSColor {
-    colors[index % colors.count]
   }
 }
 

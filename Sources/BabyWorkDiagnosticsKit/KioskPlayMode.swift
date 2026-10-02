@@ -9,7 +9,8 @@ public enum KioskPlayModeID: String, Codable, Sendable, CaseIterable, Equatable 
 }
 
 public enum KioskPlayModeCatalog: Sendable {
-  public static var available: [KioskPlayModeID] { [.ocean, .galaxy] }
+  /// Ordre d’affichage = ordre des cas de `KioskPlayModeID`.
+  public static var available: [KioskPlayModeID] { KioskPlayModeID.allCases }
 
   public static var `default`: KioskPlayModeID { .ocean }
 
@@ -19,6 +20,16 @@ public enum KioskPlayModeCatalog: Sendable {
       "Océan"
     case .galaxy:
       "Galaxie"
+    }
+  }
+
+  /// Phrase courte pour la carte de Réglages.
+  public static func tagline(_ id: KioskPlayModeID) -> String {
+    switch id {
+    case .ocean:
+      "Des poissons, du sable et des bulles à chaque touche."
+    case .galaxy:
+      "Des lettres et des étoiles qui filent dans l’espace."
     }
   }
 
