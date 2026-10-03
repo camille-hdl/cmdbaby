@@ -74,6 +74,7 @@ final class DiagnosticsSessionModel {
     kioskController.injectedFailure = nil
     isTerminationBlocked = true
     endRequest = nil
+    environment.prepareSession(BabyWorksConfigurationStore().load())
 
     kioskTask = Task { [weak self] in
       guard let self else { return }

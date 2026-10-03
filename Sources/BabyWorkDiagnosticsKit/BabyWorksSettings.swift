@@ -7,9 +7,14 @@ public protocol LoginItemRegistration: Sendable {
   func unregister() throws
 }
 
+public enum SettingsError: Error, Equatable, Sendable {
+  case timeLimitOutOfRange
+}
+
 public enum SettingsChange: Equatable, Sendable {
   case mode(KioskPlayModeID)
   case launchAtLogin(Bool)
+  case timeLimitMinutes(Int)
 }
 
 /// Lecture, validation et enregistrement des réglages.
@@ -51,6 +56,11 @@ public struct BabyWorksSettings: Sendable {
         try loginItem.unregister()
       }
       configuration.launchAtLogin = enabled
+    case .timeLimitMinutes(let minutes):
+      guard AdultExitSettings.timeLimitRange.contains(minutes) else {
+        throw SettingsError.timeLimitOutOfRange
+      }
+      configuration.exits.timeLimitMinutes = minutes
     }
     try store.save(configuration)
     return configuration

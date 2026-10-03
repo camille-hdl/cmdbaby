@@ -22,6 +22,47 @@ func changingModePersistsModeAndKeepsLaunchAtLogin() throws {
   #expect(settings.current() == saved)
 }
 
+@Test("Régler le minuteur à 45 minutes persiste et conserve le mode et le démarrage")
+func settingTimeLimitPersistsAndKeepsModeAndLaunchAtLogin() throws {
+  let file = TemporarySettingsFile()
+  defer { file.remove() }
+
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  try store.save(BabyWorksConfiguration(mode: .ocean, launchAtLogin: true))
+  let loginItem = FakeLoginItemRegistration()
+  loginItem.isRegistered = true
+
+  let settings = BabyWorksSettings(store: store, loginItem: loginItem)
+  let saved = try settings.apply(.timeLimitMinutes(45))
+
+  let expected = BabyWorksConfiguration(
+    mode: .ocean,
+    launchAtLogin: true,
+    exits: AdultExitSettings(timeLimitMinutes: 45)
+  )
+  #expect(saved == expected)
+  #expect(settings.current() == expected)
+  #expect(store.load() == expected)
+}
+
+@Test("Un minuteur hors bornes est refusé et n’écrit rien")
+func timeLimitOutOfRangeLeavesFileUnchanged() throws {
+  let file = TemporarySettingsFile()
+  defer { file.remove() }
+
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  let original = BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true)
+  try store.save(original)
+  let loginItem = FakeLoginItemRegistration()
+  loginItem.isRegistered = true
+
+  let settings = BabyWorksSettings(store: store, loginItem: loginItem)
+  #expect(throws: SettingsError.timeLimitOutOfRange) {
+    try settings.apply(.timeLimitMinutes(0))
+  }
+  #expect(store.load() == original)
+}
+
 @Test("Activer le démarrage automatique enregistre le Login Item puis persiste")
 func enablingLaunchAtLoginRegistersLoginItemThenPersists() throws {
   let file = TemporarySettingsFile()

@@ -164,9 +164,17 @@ final class CoverWindowCoordinator {
   private var windows: [NSWindow] = []
   private var inputBridge: KioskInputBridge?
   private var playMode: (any PlayMode)?
+  private var sessionMode: KioskPlayModeID = KioskPlayModeCatalog.default
+  private var exits = AdultExitSettings()
   private var timeLimit: SessionTimeLimit?
   private var outlineViews: [FailsafeClickView] = []
   private var outlineTimer: Timer?
+
+  /// Mémorise le mode et les sorties de la session qui va démarrer.
+  func prepare(mode: KioskPlayModeID, exits: AdultExitSettings) {
+    sessionMode = mode
+    self.exits = exits
+  }
 
   func createCoverWindows() throws -> [ScreenDescriptor] {
     closeCoverWindows()
@@ -176,8 +184,7 @@ final class CoverWindowCoordinator {
     activateApp()
     let exitHandler = onAdultExit
     let hud = self.hud
-    let configuration = BabyWorksConfigurationStore().load()
-    let mode = PlayModeRegistry.make(configuration.mode)
+    let mode = PlayModeRegistry.make(sessionMode)
     let bridge = KioskInputBridge(hud: hud) { kind in
       hud.noteExit(kind)
       exitHandler?(kind)
@@ -267,7 +274,10 @@ final class CoverWindowCoordinator {
   }
 
   private func startOutlineClock() {
-    let limit = SessionTimeLimit(startedAt: ProcessInfo.processInfo.systemUptime)
+    let limit = SessionTimeLimit(
+      startedAt: ProcessInfo.processInfo.systemUptime,
+      settings: exits
+    )
     timeLimit = limit
     let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
       MainActor.assumeIsolated {

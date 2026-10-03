@@ -19,6 +19,10 @@ final class AppKitKioskEnvironment: KioskSessionServices {
     covers.hud = hud
   }
 
+  func prepareSession(_ configuration: BabyWorksConfiguration) {
+    covers.prepare(mode: configuration.mode, exits: configuration.exits)
+  }
+
   func capturePresentation() throws -> PresentationOptionsSnapshot {
     presentation.capture()
   }

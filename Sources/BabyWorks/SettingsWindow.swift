@@ -30,6 +30,10 @@ final class SettingsModel: ObservableObject {
         settingsLogger.error(
           "Impossible d’enregistrer le démarrage automatique : \(error.localizedDescription, privacy: .public)"
         )
+      case .timeLimitMinutes:
+        settingsLogger.error(
+          "Impossible d’enregistrer le minuteur : \(error.localizedDescription, privacy: .public)"
+        )
       }
       lastError = error.localizedDescription
       configuration = settings.current()
@@ -51,6 +55,7 @@ private struct SettingsSectionCopy {
 
 private enum SettingsSection: CaseIterable, Identifiable {
   case mode
+  case exits
   case general
 
   var id: Self { self }
@@ -63,6 +68,12 @@ private enum SettingsSection: CaseIterable, Identifiable {
         subtitle: "Choisis ce que l’enfant voit pendant la session.",
         symbolName: "sparkles"
       )
+    case .exits:
+      SettingsSectionCopy(
+        title: "Sorties",
+        subtitle: "Ce qui met fin à une session.",
+        symbolName: "door.left.hand.open"
+      )
     case .general:
       SettingsSectionCopy(
         title: "Général",
@@ -72,6 +83,12 @@ private enum SettingsSection: CaseIterable, Identifiable {
     }
   }
 }
+
+private let timeLimitHelp =
+  "Le contour du carré de secours se remplit pendant la session ; la session s’arrête quand il est complet."
+
+private let timeLimitRejectionMessage =
+  "Indique une durée entre \(AdultExitSettings.timeLimitRange.lowerBound) et \(AdultExitSettings.timeLimitRange.upperBound) minutes."
 
 private let launchAtLoginHelp =
   "Ouvre BabyWorks dans la barre de menus au login, sans lancer de session."
@@ -83,6 +100,9 @@ struct SettingsView: View {
   @State private var hoveredSection: SettingsSection?
   @FocusState private var focusedSection: SettingsSection?
   @FocusState private var focusedMode: KioskPlayModeID?
+  @FocusState private var timeLimitFieldFocused: Bool
+  @State private var timeLimitDraft = ""
+  @State private var timeLimitRejection: String?
 
   var body: some View {
     HStack(spacing: 0) {
@@ -197,6 +217,8 @@ struct SettingsView: View {
     switch section {
     case .mode:
       modeGrid
+    case .exits:
+      exitSettings
     case .general:
       generalSettings
     }
@@ -269,6 +291,94 @@ struct SettingsView: View {
     .accessibilityLabel(name)
     .accessibilityAddTraits(selected ? .isSelected : [])
     .accessibilityRemoveTraits(selected ? [] : .isSelected)
+  }
+
+  private var exitSettings: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Minuteur")
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundStyle(color(SettingsPalette.ink))
+      HStack(spacing: 8) {
+        Text("Fin de session après")
+          .foregroundStyle(color(SettingsPalette.ink))
+        TextField("minutes", text: $timeLimitDraft)
+          .textFieldStyle(.roundedBorder)
+          .multilineTextAlignment(.trailing)
+          .frame(width: 64)
+          .foregroundStyle(color(SettingsPalette.ink))
+          .focused($timeLimitFieldFocused)
+          .onSubmit(commitTimeLimitDraft)
+          .onChange(of: timeLimitDraft) { draft in
+            acceptTimeLimitDraft(draft, reportIncomplete: false)
+          }
+          .accessibilityLabel("Fin de session après, en minutes")
+        Text("minutes")
+          .foregroundStyle(color(SettingsPalette.ink))
+        Stepper(
+          "",
+          value: timeLimitStepper,
+          in: AdultExitSettings.timeLimitRange,
+          step: 5
+        )
+        .labelsHidden()
+        .accessibilityLabel("Durée de la session")
+      }
+      .onAppear(perform: seedTimeLimitDraft)
+      .onChange(of: timeLimitFieldFocused) { focused in
+        if !focused {
+          commitTimeLimitDraft()
+        }
+      }
+      if let timeLimitRejection {
+        Text(timeLimitRejection)
+          .font(.system(size: 12))
+          .foregroundStyle(color(SettingsPalette.crimson))
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      Text(timeLimitHelp)
+        .font(.system(size: 12))
+        .foregroundStyle(color(SettingsPalette.inkMuted))
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  private var timeLimitStepper: Binding<Int> {
+    Binding(
+      get: { model.configuration.exits.timeLimitMinutes },
+      set: { minutes in
+        timeLimitDraft = String(minutes)
+        timeLimitRejection = nil
+        model.apply(.timeLimitMinutes(minutes))
+      }
+    )
+  }
+
+  private func seedTimeLimitDraft() {
+    guard timeLimitDraft.isEmpty, timeLimitRejection == nil else { return }
+    timeLimitDraft = String(model.configuration.exits.timeLimitMinutes)
+  }
+
+  private func commitTimeLimitDraft() {
+    acceptTimeLimitDraft(timeLimitDraft, reportIncomplete: true)
+  }
+
+  /// Une durée lisible et dans les bornes est enregistrée tout de suite.
+  /// Un texte incomplet ne s’affiche en erreur qu’au moment de valider.
+  private func acceptTimeLimitDraft(_ draft: String, reportIncomplete: Bool) {
+    let trimmed = draft.trimmingCharacters(in: .whitespaces)
+    guard let minutes = Int(trimmed) else {
+      if reportIncomplete {
+        timeLimitRejection = timeLimitRejectionMessage
+      }
+      return
+    }
+    guard AdultExitSettings.timeLimitRange.contains(minutes) else {
+      timeLimitRejection = timeLimitRejectionMessage
+      return
+    }
+    timeLimitRejection = nil
+    guard minutes != model.configuration.exits.timeLimitMinutes else { return }
+    model.apply(.timeLimitMinutes(minutes))
   }
 
   private var generalSettings: some View {

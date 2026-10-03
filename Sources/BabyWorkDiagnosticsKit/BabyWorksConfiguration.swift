@@ -1,6 +1,6 @@
 import Foundation
 
-/// Configuration JSON de BabyWorks : mode de jeu et lancement à l’ouverture.
+/// Configuration JSON de BabyWorks : mode de jeu, lancement à l’ouverture et sorties.
 /// Schéma versionné ; l’I/O disque n’est pas dans ce type.
 public struct BabyWorksConfiguration: Codable, Equatable, Sendable {
   public static let currentSchemaVersion = 1
@@ -8,21 +8,25 @@ public struct BabyWorksConfiguration: Codable, Equatable, Sendable {
   public var schemaVersion: Int
   public var mode: KioskPlayModeID
   public var launchAtLogin: Bool
+  public var exits: AdultExitSettings
 
   public init(
     schemaVersion: Int = currentSchemaVersion,
     mode: KioskPlayModeID = KioskPlayModeCatalog.default,
-    launchAtLogin: Bool = false
+    launchAtLogin: Bool = false,
+    exits: AdultExitSettings = AdultExitSettings()
   ) {
     self.schemaVersion = schemaVersion
     self.mode = mode
     self.launchAtLogin = launchAtLogin
+    self.exits = exits
   }
 
   private enum CodingKeys: String, CodingKey {
     case schemaVersion
     case mode
     case launchAtLogin
+    case exits
   }
 
   public init(from decoder: Decoder) throws {
@@ -34,7 +38,16 @@ public struct BabyWorksConfiguration: Codable, Equatable, Sendable {
         ?? defaults.schemaVersion,
       mode: rawMode.map(KioskPlayModeCatalog.sessionMode(fromRawID:)) ?? defaults.mode,
       launchAtLogin: try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin)
-        ?? defaults.launchAtLogin
+        ?? defaults.launchAtLogin,
+      exits: Self.decodeExits(from: container) ?? defaults.exits
     )
+  }
+
+  /// Objet absent ou illisible : les sorties par défaut, sans faire échouer le reste.
+  private static func decodeExits(
+    from container: KeyedDecodingContainer<CodingKeys>
+  ) -> AdultExitSettings? {
+    guard container.contains(.exits) else { return nil }
+    return try? container.decode(AdultExitSettings.self, forKey: .exits)
   }
 }

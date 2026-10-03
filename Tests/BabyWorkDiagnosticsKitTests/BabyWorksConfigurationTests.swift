@@ -11,6 +11,44 @@ func configurationDefaultsToOceanWithoutLaunchAtLogin() {
   #expect(configuration.launchAtLogin == false)
 }
 
+@Test("Un JSON v1 sans exits donne un minuteur de 20 minutes")
+func configurationVersionOneWithoutExitsDefaultsTimeLimitToTwentyMinutes() throws {
+  let decoded = try JSONDecoder().decode(
+    BabyWorksConfiguration.self,
+    from: Data(
+      #"""
+      {"schemaVersion":1,"mode":"galaxy","launchAtLogin":true}
+      """#.utf8
+    )
+  )
+  #expect(decoded.exits.timeLimitMinutes == 20)
+  #expect(decoded == BabyWorksConfiguration(schemaVersion: 1, mode: .galaxy, launchAtLogin: true))
+}
+
+@Test("Un minuteur hors bornes relu sur disque est ramené entre 1 et 120")
+func configurationOutOfRangeTimeLimitIsClamped() throws {
+  let tooLow = try JSONDecoder().decode(
+    BabyWorksConfiguration.self,
+    from: Data(#"{"exits":{"timeLimitMinutes":0}}"#.utf8)
+  )
+  let tooHigh = try JSONDecoder().decode(
+    BabyWorksConfiguration.self,
+    from: Data(#"{"exits":{"timeLimitMinutes":500}}"#.utf8)
+  )
+  #expect(tooLow.exits.timeLimitMinutes == 1)
+  #expect(tooHigh.exits.timeLimitMinutes == 120)
+}
+
+@Test("Un champ de minuteur illisible reprend 20 minutes et conserve le mode")
+func configurationInvalidTimeLimitFieldDecodesToTwentyMinutes() throws {
+  let decoded = try JSONDecoder().decode(
+    BabyWorksConfiguration.self,
+    from: Data(#"{"mode":"galaxy","exits":{"timeLimitMinutes":"long"}}"#.utf8)
+  )
+  #expect(decoded.exits.timeLimitMinutes == 20)
+  #expect(decoded.mode == .galaxy)
+}
+
 @Test("Un JSON v1 sans champ nouveau se relit à l’identique")
 func configurationVersionOneJSONDecodesIdentically() throws {
   let decoded = try JSONDecoder().decode(

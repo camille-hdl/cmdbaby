@@ -2,14 +2,19 @@ import Foundation
 
 /// Durée maximale d’une session de jeu. Au-delà, la sortie de secours se déclenche.
 public struct SessionTimeLimit: Equatable, Sendable {
-  public static let defaultDuration: TimeInterval = 20 * 60
-
   public let startedAt: TimeInterval
   public let duration: TimeInterval
 
-  public init(startedAt: TimeInterval, duration: TimeInterval = defaultDuration) {
+  public init(startedAt: TimeInterval, duration: TimeInterval) {
     self.startedAt = startedAt
     self.duration = duration
+  }
+
+  public init(startedAt: TimeInterval, settings: AdultExitSettings) {
+    self.init(
+      startedAt: startedAt,
+      duration: TimeInterval(settings.timeLimitMinutes) * 60
+    )
   }
 
   /// Portion du contour déjà parcourue, de 0 à 1.
