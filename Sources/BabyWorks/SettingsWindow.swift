@@ -37,35 +37,281 @@ final class SettingsModel: ObservableObject {
   }
 }
 
+private enum SettingsWindowMetrics {
+  static let width: CGFloat = 760
+  static let height: CGFloat = 540
+  static let sidebarWidth: CGFloat = 190
+}
+
+private struct SettingsSectionCopy {
+  var title: String
+  var subtitle: String
+  var symbolName: String
+}
+
+private enum SettingsSection: CaseIterable, Identifiable {
+  case mode
+  case general
+
+  var id: Self { self }
+
+  var copy: SettingsSectionCopy {
+    switch self {
+    case .mode:
+      SettingsSectionCopy(
+        title: "Mode de jeu",
+        subtitle: "Choisis ce que l’enfant voit pendant la session.",
+        symbolName: "sparkles"
+      )
+    case .general:
+      SettingsSectionCopy(
+        title: "Général",
+        subtitle: "Réglages qui s’appliquent en dehors d’une session.",
+        symbolName: "gearshape"
+      )
+    }
+  }
+}
+
+private let launchAtLoginHelp =
+  "Ouvre BabyWorks dans la barre de menus au login, sans lancer de session."
+
 struct SettingsView: View {
   @ObservedObject var model: SettingsModel
+  @Environment(\.colorScheme) private var colorScheme
+  @State private var section: SettingsSection = .mode
+  @State private var hoveredSection: SettingsSection?
+  @FocusState private var focusedSection: SettingsSection?
+  @FocusState private var focusedMode: KioskPlayModeID?
 
   var body: some View {
-    Form {
-      Picker(
-        "Mode",
-        selection: Binding(
-          get: { model.configuration.mode },
-          set: { model.apply(.mode($0)) }
+    HStack(spacing: 0) {
+      sidebar
+      Rectangle()
+        .fill(color(SettingsPalette.rule))
+        .frame(width: 1)
+      panel
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(color(SettingsPalette.paper))
+    .tint(color(SettingsPalette.claret))
+  }
+
+  private var sidebar: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Text("BabyWorks")
+        .font(.system(size: 22, weight: .bold, design: .serif))
+        .foregroundStyle(color(SettingsPalette.ink))
+        .padding(.horizontal, 10)
+        .padding(.bottom, 16)
+      ForEach(SettingsSection.allCases) { item in
+        sidebarRow(item)
+      }
+      Spacer(minLength: 0)
+    }
+    .padding(.horizontal, 12)
+    .padding(.top, 40)
+    .padding(.bottom, 16)
+    .frame(width: SettingsWindowMetrics.sidebarWidth, alignment: .topLeading)
+    .frame(maxHeight: .infinity, alignment: .top)
+    .background(color(SettingsPalette.surface1))
+  }
+
+  private func sidebarRow(_ item: SettingsSection) -> some View {
+    let selected = section == item
+    return Button {
+      section = item
+    } label: {
+      HStack(spacing: 8) {
+        Image(systemName: item.copy.symbolName)
+          .font(.system(size: 14, weight: .medium))
+          .frame(width: 20)
+        Text(item.copy.title)
+          .font(.system(size: 13, weight: selected ? .semibold : .regular))
+        Spacer(minLength: 0)
+      }
+      .foregroundStyle(color(selected ? SettingsPalette.ink : SettingsPalette.ink2))
+      .padding(.horizontal, 10)
+      .padding(.vertical, 8)
+      .background(
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+          .fill(sidebarFill(selected: selected, hovered: hoveredSection == item))
+      )
+    }
+    .buttonStyle(.plain)
+    .focused($focusedSection, equals: item)
+    .overlay(
+      RoundedRectangle(cornerRadius: 8, style: .continuous)
+        .strokeBorder(
+          color(SettingsPalette.oxford),
+          lineWidth: focusedSection == item ? 2 : 0
         )
-      ) {
-        ForEach(KioskPlayModeCatalog.available, id: \.self) { mode in
-          Text(KioskPlayModeCatalog.displayName(mode)).tag(mode)
+    )
+    .accessibilityAddTraits(selected ? .isSelected : [])
+    .accessibilityRemoveTraits(selected ? [] : .isSelected)
+    .onHover { hovering in
+      if hovering {
+        hoveredSection = item
+      } else if hoveredSection == item {
+        hoveredSection = nil
+      }
+    }
+  }
+
+  private func sidebarFill(selected: Bool, hovered: Bool) -> Color {
+    if selected { return color(SettingsPalette.surface3) }
+    if hovered { return color(SettingsPalette.surface2) }
+    return Color.clear
+  }
+
+  private var panel: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      if let lastError = model.lastError {
+        errorBanner(lastError)
+          .padding(.bottom, 16)
+      }
+      Text(section.copy.title)
+        .font(.system(size: 26, weight: .bold, design: .serif))
+        .foregroundStyle(color(SettingsPalette.ink))
+      Text(section.copy.subtitle)
+        .font(.system(size: 13))
+        .foregroundStyle(color(SettingsPalette.inkMuted))
+        .padding(.top, 4)
+      ScrollView {
+        sectionContent
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.top, 4)
+          .padding(.bottom, 8)
+      }
+      .padding(.top, 20)
+    }
+    .padding(.horizontal, 28)
+    .padding(.top, 40)
+    .padding(.bottom, 20)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    .background(color(SettingsPalette.paper))
+  }
+
+  @ViewBuilder
+  private var sectionContent: some View {
+    switch section {
+    case .mode:
+      modeGrid
+    case .general:
+      generalSettings
+    }
+  }
+
+  private var modeGrid: some View {
+    LazyVGrid(
+      columns: [GridItem(.adaptive(minimum: 220), spacing: 16)],
+      spacing: 16
+    ) {
+      ForEach(KioskPlayModeCatalog.available, id: \.self) { mode in
+        modeCard(mode)
+      }
+    }
+    .padding(3)
+  }
+
+  private func modeCard(_ mode: KioskPlayModeID) -> some View {
+    let selected = model.configuration.mode == mode
+    let name = KioskPlayModeCatalog.displayName(mode)
+    return Button {
+      model.apply(.mode(mode))
+    } label: {
+      VStack(alignment: .leading, spacing: 8) {
+        PlayModeRegistry.preview(mode)
+        Text(name)
+          .font(.system(size: 15, weight: .semibold))
+          .foregroundStyle(color(SettingsPalette.ink))
+        Text(KioskPlayModeCatalog.tagline(mode))
+          .font(.system(size: 12))
+          .foregroundStyle(color(SettingsPalette.inkMuted))
+          .lineLimit(2)
+          .multilineTextAlignment(.leading)
+          .frame(maxWidth: .infinity, minHeight: 32, alignment: .topLeading)
+      }
+      .padding(12)
+      .background(
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+          .fill(color(SettingsPalette.paperRaised))
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+          .strokeBorder(
+            color(selected ? SettingsPalette.claret : SettingsPalette.rule),
+            lineWidth: selected ? 3 : 1
+          )
+      )
+      .overlay(alignment: .topTrailing) {
+        if selected {
+          Image(systemName: "checkmark")
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(color(SettingsPalette.paper))
+            .frame(width: 20, height: 20)
+            .background(Circle().fill(color(SettingsPalette.claret)))
+            .padding(10)
+            .accessibilityHidden(true)
         }
       }
-      .pickerStyle(.radioGroup)
-
-      Toggle(
-        "Démarrage automatique",
-        isOn: Binding(
-          get: { model.configuration.launchAtLogin },
-          set: { model.apply(.launchAtLogin($0)) }
-        )
-      )
-      .help("Ouvre BabyWorks dans la barre de menus au login, sans lancer de session.")
     }
-    .padding(20)
-    .frame(minWidth: 280, minHeight: 120)
+    .buttonStyle(.plain)
+    .focused($focusedMode, equals: mode)
+    .overlay(
+      RoundedRectangle(cornerRadius: 14, style: .continuous)
+        .strokeBorder(
+          color(SettingsPalette.oxford),
+          lineWidth: focusedMode == mode ? 2 : 0
+        )
+        .padding(1)
+    )
+    .accessibilityLabel(name)
+    .accessibilityAddTraits(selected ? .isSelected : [])
+    .accessibilityRemoveTraits(selected ? [] : .isSelected)
+  }
+
+  private var generalSettings: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Toggle(isOn: launchAtLogin) {
+        Text("Démarrage automatique")
+          .foregroundStyle(color(SettingsPalette.ink))
+      }
+      .toggleStyle(.switch)
+      .tint(color(SettingsPalette.claret))
+      .help(launchAtLoginHelp)
+      Text(launchAtLoginHelp)
+        .font(.system(size: 12))
+        .foregroundStyle(color(SettingsPalette.inkMuted))
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  private var launchAtLogin: Binding<Bool> {
+    Binding(
+      get: { model.configuration.launchAtLogin },
+      set: { model.apply(.launchAtLogin($0)) }
+    )
+  }
+
+  private func errorBanner(_ message: String) -> some View {
+    Text(message)
+      .font(.system(size: 13))
+      .foregroundStyle(color(SettingsPalette.ink))
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(12)
+      .background(
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+          .fill(color(SettingsPalette.crimsonWash))
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+          .strokeBorder(color(SettingsPalette.crimson), lineWidth: 1)
+      )
+  }
+
+  private func color(_ swatch: SettingsPalette.Swatch) -> Color {
+    swatch.resolve(colorScheme)
   }
 }
 
@@ -105,7 +351,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     )
     self.model = model
     let window = existingOrMakeWindow()
-    window.contentView = NSHostingView(rootView: SettingsView(model: model))
+    let hosting = NSHostingView(rootView: SettingsView(model: model))
+    hosting.sizingOptions = []
+    window.contentView = hosting
     self.trackingMenu = trackingMenu
     showSequence = SettingsShowSequence(fromStatusItemMenu: fromStatusItemMenu)
     continueShow()
@@ -286,14 +534,22 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
       return window
     }
     let window = NSWindow(
-      contentRect: NSRect(x: 0, y: 0, width: 320, height: 180),
-      styleMask: [.titled, .closable],
+      contentRect: NSRect(
+        x: 0,
+        y: 0,
+        width: SettingsWindowMetrics.width,
+        height: SettingsWindowMetrics.height
+      ),
+      styleMask: [.titled, .closable, .fullSizeContentView],
       backing: .buffered,
       defer: false
     )
     window.title = "Réglages"
     window.identifier = NSUserInterfaceItemIdentifier("fr.camille.babywork.settings")
     window.isReleasedWhenClosed = false
+    window.titlebarAppearsTransparent = true
+    window.titlebarSeparatorStyle = .none
+    window.backgroundColor = SettingsPalette.paper.nsColor
     window.delegate = self
     window.center()
     self.window = window

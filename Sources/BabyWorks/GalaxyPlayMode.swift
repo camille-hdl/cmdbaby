@@ -342,7 +342,7 @@ final class GalaxyPlayMode: PlayMode {
   private let director = GalaxyDirector()
 
   func windowBackground(screenIndex: Int) -> NSColor {
-    CoverPalette.color(at: screenIndex)
+    GalaxyBackdrop.color(at: screenIndex)
   }
 
   func makeStage(inputBridge: KioskInputBridge, screenIndex: Int, scale: CGFloat) -> NSView {
@@ -359,7 +359,8 @@ final class GalaxyPlayMode: PlayMode {
   }
 }
 
-private enum CoverPalette {
+/// Fonds des couvertures Galaxie. L’aperçu Réglages utilise la première couleur.
+enum GalaxyBackdrop {
   private static let colors: [NSColor] = [
     NSColor(calibratedRed: 0.05, green: 0.07, blue: 0.18, alpha: 1),
     NSColor(calibratedRed: 0.12, green: 0.04, blue: 0.20, alpha: 1),

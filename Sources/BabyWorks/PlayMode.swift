@@ -1,5 +1,6 @@
 import AppKit
 import BabyWorkDiagnosticsKit
+import SwiftUI
 
 /// Port entre les couvertures et la scène.
 @MainActor
@@ -14,7 +15,7 @@ protocol PlayMode: AnyObject {
 
 @MainActor
 enum PlayModeRegistry {
-  /// Seul `switch` de l’app sur les modes de jeu.
+  /// Instancie le mode. L’autre `switch` sur les modes est `preview`.
   static func make(_ id: KioskPlayModeID) -> any PlayMode {
     switch id {
     case .ocean:
@@ -22,5 +23,26 @@ enum PlayModeRegistry {
     case .galaxy:
       GalaxyPlayMode()
     }
+  }
+
+  /// Aperçu statique de la carte de Réglages. Seul autre `switch` sur les modes.
+  @ViewBuilder
+  static func preview(_ id: KioskPlayModeID) -> some View {
+    switch id {
+    case .ocean:
+      OceanModePreview()
+    case .galaxy:
+      GalaxyModePreview()
+    }
+  }
+}
+
+extension View {
+  /// Cadre commun des aperçus de carte : 16:10, coins de 10 pt.
+  func playModePreviewFrame<Overlay: View>(@ViewBuilder overlay: () -> Overlay) -> some View {
+    aspectRatio(16.0 / 10.0, contentMode: .fit)
+      .overlay { overlay() }
+      .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+      .accessibilityHidden(true)
   }
 }
