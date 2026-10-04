@@ -22,6 +22,8 @@ enum PlayModeRegistry {
       OceanPlayMode()
     case .galaxy:
       GalaxyPlayMode()
+    case .terminal:
+      TerminalPlayMode()
     }
   }
 
@@ -33,6 +35,8 @@ enum PlayModeRegistry {
       OceanModePreview()
     case .galaxy:
       GalaxyModePreview()
+    case .terminal:
+      TerminalModePreview()
     }
   }
 }

@@ -6,6 +6,7 @@ import Foundation
 public enum KioskPlayModeID: String, Codable, Sendable, CaseIterable, Equatable {
   case ocean
   case galaxy
+  case terminal
 }
 
 public enum KioskPlayModeCatalog: Sendable {
@@ -20,6 +21,8 @@ public enum KioskPlayModeCatalog: Sendable {
       "Océan"
     case .galaxy:
       "Galaxie"
+    case .terminal:
+      "Terminal"
     }
   }
 
@@ -30,6 +33,8 @@ public enum KioskPlayModeCatalog: Sendable {
       "Des poissons, du sable et des bulles à chaque touche."
     case .galaxy:
       "Des lettres et des étoiles qui filent dans l’espace."
+    case .terminal:
+      "Tape au clavier et fais pleuvoir le code vert."
     }
   }
 

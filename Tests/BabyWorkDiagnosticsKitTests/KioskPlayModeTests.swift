@@ -4,10 +4,11 @@ import Testing
 
 @Test("Le catalogue expose le mode océan par défaut")
 func playModeCatalogDefaultsToOcean() {
-  #expect(KioskPlayModeCatalog.available == [.ocean, .galaxy])
+  #expect(KioskPlayModeCatalog.available == [.ocean, .galaxy, .terminal])
   #expect(KioskPlayModeCatalog.default == .ocean)
   #expect(KioskPlayModeCatalog.displayName(.ocean) == "Océan")
   #expect(KioskPlayModeCatalog.displayName(.galaxy) == "Galaxie")
+  #expect(KioskPlayModeCatalog.displayName(.terminal) == "Terminal")
 }
 
 @Test("Les modes affichés suivent l’ordre des cas")
@@ -19,15 +20,17 @@ func playModeCatalogAvailableMatchesAllCases() {
 func playModeCatalogTaglineIsPresentForEveryMode() {
   #expect(KioskPlayModeCatalog.tagline(.ocean) == "Des poissons, du sable et des bulles à chaque touche.")
   #expect(KioskPlayModeCatalog.tagline(.galaxy) == "Des lettres et des étoiles qui filent dans l’espace.")
+  #expect(KioskPlayModeCatalog.tagline(.terminal) == "Tape au clavier et fais pleuvoir le code vert.")
   for id in KioskPlayModeID.allCases {
     #expect(!KioskPlayModeCatalog.tagline(id).isEmpty)
   }
 }
 
-@Test("Le registre résout Océan et Galaxie par identifiant")
+@Test("Le registre résout Océan, Galaxie et Terminal par identifiant")
 func playModeCatalogResolvesRegisteredIDs() {
   #expect(KioskPlayModeCatalog.resolve("ocean") == .ocean)
   #expect(KioskPlayModeCatalog.resolve("galaxy") == .galaxy)
+  #expect(KioskPlayModeCatalog.resolve("terminal") == .terminal)
 }
 
 @Test("Un identifiant de mode inconnu n’est pas résolu")
@@ -40,6 +43,7 @@ func playModeCatalogRejectsUnknownID() {
 func playModeCatalogSessionModeFallsBackToOcean() {
   #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "ocean") == .ocean)
   #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "galaxy") == .galaxy)
+  #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "terminal") == .terminal)
   #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "leaf") == .ocean)
   #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "") == .ocean)
 }
