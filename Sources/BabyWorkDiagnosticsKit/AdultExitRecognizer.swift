@@ -31,12 +31,22 @@ public enum AdultExitKind: Equatable, Sendable {
 public final class AdultExitRecognizer: @unchecked Sendable {
   public static let passphraseWindow: TimeInterval = 5
 
+  private let settings: AdultExitSettings
   private let clock: any MonotonicClock
   private let target: [Character] = Array("parent")
   private var buffer: [Character] = []
   private var bufferStartedAt: TimeInterval?
+  private var failsafeCount = 0
+  private var failsafeWindowStart: TimeInterval?
 
-  public init(clock: any MonotonicClock = SystemMonotonicClock()) {
+  private static let failsafeClickCount = 5
+  private static let failsafeClickWindow: TimeInterval = 3
+
+  public init(
+    settings: AdultExitSettings = AdultExitSettings(),
+    clock: any MonotonicClock = SystemMonotonicClock()
+  ) {
+    self.settings = settings
     self.clock = clock
   }
 
@@ -46,7 +56,24 @@ public final class AdultExitRecognizer: @unchecked Sendable {
   }
 
   public var prefixLength: Int { buffer.count }
-  public var prefixTarget: Int { target.count }
+  public var prefixTarget: Int {
+    settings.enabledMethods.contains(.passphrase) ? target.count : 0
+  }
+
+  public func handleFailsafeClick() -> (count: Int, exit: AdultExitKind?) {
+    guard settings.enabledMethods.contains(.failsafeClick) else {
+      return (0, nil)
+    }
+    let now = clock.now
+    if let start = failsafeWindowStart, now - start <= Self.failsafeClickWindow {
+      failsafeCount += 1
+    } else {
+      failsafeWindowStart = now
+      failsafeCount = 1
+    }
+    let exit: AdultExitKind? = failsafeCount >= Self.failsafeClickCount ? .failsafeClick : nil
+    return (failsafeCount, exit)
+  }
 
   public func handleKeyDown(
     letter: Character?,
@@ -56,10 +83,14 @@ public final class AdultExitRecognizer: @unchecked Sendable {
   ) -> AdultExitKind? {
     if isEscape && shiftDown {
       clearBuffer()
-      return .shiftEscape
+      return settings.enabledMethods.contains(.shiftEscape) ? .shiftEscape : nil
     }
     if isEscape {
       clearBuffer()
+      return nil
+    }
+
+    guard settings.enabledMethods.contains(.passphrase) else {
       return nil
     }
 

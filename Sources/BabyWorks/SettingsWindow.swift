@@ -34,6 +34,10 @@ final class SettingsModel: ObservableObject {
         settingsLogger.error(
           "Impossible d’enregistrer le minuteur : \(error.localizedDescription, privacy: .public)"
         )
+      case .exitMethod:
+        settingsLogger.error(
+          "Impossible d’enregistrer la sortie : \(error.localizedDescription, privacy: .public)"
+        )
       }
       lastError = error.localizedDescription
       configuration = settings.current()
@@ -83,6 +87,34 @@ private enum SettingsSection: CaseIterable, Identifiable {
     }
   }
 }
+
+private struct ManualExitCopy: Identifiable {
+  var method: AdultExitMethod
+  var label: String
+  var help: String
+
+  var id: AdultExitMethod { method }
+}
+
+private let manualExitCopies: [ManualExitCopy] = [
+  ManualExitCopy(
+    method: .passphrase,
+    label: "Phrase + Entrée",
+    help: "Taper la phrase de sortie puis Entrée"
+  ),
+  ManualExitCopy(
+    method: .shiftEscape,
+    label: "Maj-Échap",
+    help: "Majuscule + Échap"
+  ),
+  ManualExitCopy(
+    method: .failsafeClick,
+    label: "Clics de secours",
+    help: "5 clics rapides sur le carré en bas à droite"
+  ),
+]
+
+private let keepOneManualExitHelp = "Gardez au moins une sortie active."
 
 private let timeLimitHelp =
   "Le contour du carré de secours se remplit pendant la session ; la session s’arrête quand il est complet."
@@ -294,6 +326,55 @@ struct SettingsView: View {
   }
 
   private var exitSettings: some View {
+    VStack(alignment: .leading, spacing: 22) {
+      parentExits
+      timerSettings
+    }
+  }
+
+  private var parentExits: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      Text("Sorties parent")
+        .font(.system(size: 13, weight: .semibold))
+        .foregroundStyle(color(SettingsPalette.ink))
+      ForEach(manualExitCopies) { copy in
+        manualExitToggle(copy)
+      }
+    }
+  }
+
+  private func manualExitToggle(_ copy: ManualExitCopy) -> some View {
+    let isLast = isLastEnabledManualExit(copy.method)
+    let help = isLast ? keepOneManualExitHelp : copy.help
+    return VStack(alignment: .leading, spacing: 4) {
+      Toggle(isOn: manualExitEnabled(copy.method)) {
+        Text(copy.label)
+          .foregroundStyle(color(SettingsPalette.ink))
+      }
+      .toggleStyle(.switch)
+      .tint(color(SettingsPalette.claret))
+      .disabled(isLast)
+      .help(help)
+      Text(help)
+        .font(.system(size: 12))
+        .foregroundStyle(color(SettingsPalette.inkMuted))
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  private func manualExitEnabled(_ method: AdultExitMethod) -> Binding<Bool> {
+    Binding(
+      get: { model.configuration.exits.enabledMethods.contains(method) },
+      set: { model.apply(.exitMethod(method, enabled: $0)) }
+    )
+  }
+
+  private func isLastEnabledManualExit(_ method: AdultExitMethod) -> Bool {
+    let enabled = model.configuration.exits.enabledMethods
+    return enabled.count == 1 && enabled.contains(method)
+  }
+
+  private var timerSettings: some View {
     VStack(alignment: .leading, spacing: 8) {
       Text("Minuteur")
         .font(.system(size: 13, weight: .semibold))

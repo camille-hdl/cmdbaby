@@ -45,6 +45,52 @@ func settingTimeLimitPersistsAndKeepsModeAndLaunchAtLogin() throws {
   #expect(store.load() == expected)
 }
 
+@Test("Désactiver Maj-Échap persiste et conserve le reste")
+func disablingShiftEscapePersistsAndKeepsTheRest() throws {
+  let file = TemporarySettingsFile()
+  defer { file.remove() }
+
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  try store.save(BabyWorksConfiguration(mode: .ocean, launchAtLogin: true))
+  let loginItem = FakeLoginItemRegistration()
+  loginItem.isRegistered = true
+
+  let settings = BabyWorksSettings(store: store, loginItem: loginItem)
+  let saved = try settings.apply(.exitMethod(.shiftEscape, enabled: false))
+
+  let expected = BabyWorksConfiguration(
+    mode: .ocean,
+    launchAtLogin: true,
+    exits: AdultExitSettings(
+      enabledMethods: [.passphrase, .failsafeClick]
+    )
+  )
+  #expect(saved == expected)
+  #expect(settings.current() == expected)
+  #expect(store.load() == expected)
+}
+
+@Test("Désactiver la troisième sortie manuelle est refusé et n’écrit rien")
+func disablingTheLastManualExitLeavesFileUnchanged() throws {
+  let file = TemporarySettingsFile()
+  defer { file.remove() }
+
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  try store.save(BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true))
+  let loginItem = FakeLoginItemRegistration()
+  loginItem.isRegistered = true
+
+  let settings = BabyWorksSettings(store: store, loginItem: loginItem)
+  _ = try settings.apply(.exitMethod(.shiftEscape, enabled: false))
+  let remaining = try settings.apply(.exitMethod(.failsafeClick, enabled: false))
+  #expect(remaining.exits.enabledMethods == [.passphrase])
+
+  #expect(throws: SettingsError.lastManualExit) {
+    try settings.apply(.exitMethod(.passphrase, enabled: false))
+  }
+  #expect(store.load() == remaining)
+}
+
 @Test("Un minuteur hors bornes est refusé et n’écrit rien")
 func timeLimitOutOfRangeLeavesFileUnchanged() throws {
   let file = TemporarySettingsFile()

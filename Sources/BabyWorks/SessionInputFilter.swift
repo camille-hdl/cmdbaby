@@ -39,7 +39,7 @@ final class SessionInputFilter: @unchecked Sendable {
   private var tapPort: CFMachPort?
   private var runLoopSource: CFRunLoopSource?
   private var suppressedCounts: [MonitoredShortcut: Int] = [:]
-  private let exitRecognizer = AdultExitRecognizer()
+  private let exitRecognizer: AdultExitRecognizer
 
   private let onStatusChange: @Sendable (InputFilterStatus) -> Void
   private let onCountsChange: @Sendable ([MonitoredShortcut: Int]) -> Void
@@ -50,8 +50,10 @@ final class SessionInputFilter: @unchecked Sendable {
     onStatusChange: @escaping @Sendable (InputFilterStatus) -> Void,
     onCountsChange: @escaping @Sendable ([MonitoredShortcut: Int]) -> Void,
     onAdultExit: @escaping @Sendable (AdultExitKind) -> Void,
+    exits: AdultExitSettings,
     hud: KioskHUD? = nil
   ) {
+    self.exitRecognizer = AdultExitRecognizer(settings: exits)
     self.onStatusChange = onStatusChange
     self.onCountsChange = onCountsChange
     self.onAdultExit = onAdultExit

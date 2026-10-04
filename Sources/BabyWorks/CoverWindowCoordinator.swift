@@ -13,6 +13,9 @@ final class KioskHUD: @unchecked Sendable {
   private var shifts = "—"
   private var tap = "—"
   private var exit = "—"
+  private var passphraseEnabled = true
+  private var shiftEscapeEnabled = true
+  private var failsafeEnabled = true
   private var handlers: [@Sendable (String) -> Void] = []
 
   func resetHandlers() {
@@ -27,6 +30,17 @@ final class KioskHUD: @unchecked Sendable {
     let text = renderLocked()
     lock.unlock()
     publish(text, handlers: [handler])
+  }
+
+  func noteSessionExits(_ exits: AdultExitSettings) {
+    lock.lock()
+    passphraseEnabled = exits.enabledMethods.contains(.passphrase)
+    shiftEscapeEnabled = exits.enabledMethods.contains(.shiftEscape)
+    failsafeEnabled = exits.enabledMethods.contains(.failsafeClick)
+    let text = renderLocked()
+    let handlers = handlers
+    lock.unlock()
+    publish(text, handlers: handlers)
   }
 
   func noteWindowKey(letter: Character?, isReturn: Bool, isEscape: Bool = false, filled: Int, target: Int) {
@@ -130,13 +144,16 @@ final class KioskHUD: @unchecked Sendable {
   }
 
   private func renderLocked() -> String {
-    """
+    let sequenceLine = passphraseEnabled ? sequence : "désactivé"
+    let clickLine = failsafeEnabled ? failsafeClicks : "désactivé"
+    let shiftLine = shiftEscapeEnabled ? shifts : "désactivé"
+    return """
     source     \(source)
     touche     \(lastKey)
-    séquence   \(sequence)
-    clics      \(failsafeClicks)
+    séquence   \(sequenceLine)
+    clics      \(clickLine)
     souris     \(mouseSeen)
-    maj        \(shifts)
+    maj        \(shiftLine)
     tap        \(tap)
     sortie     \(exit)
     """
@@ -185,7 +202,7 @@ final class CoverWindowCoordinator {
     let exitHandler = onAdultExit
     let hud = self.hud
     let mode = PlayModeRegistry.make(sessionMode)
-    let bridge = KioskInputBridge(hud: hud) { kind in
+    let bridge = KioskInputBridge(hud: hud, exits: exits) { kind in
       hud.noteExit(kind)
       exitHandler?(kind)
     }
@@ -196,7 +213,10 @@ final class CoverWindowCoordinator {
     var outlines: [FailsafeClickView] = []
     for (index, screen) in screens.enumerated() {
       let descriptor = ScreenDescriptor(nsScreen: screen)
-      let failsafe = FailsafeClickView(inputBridge: bridge)
+      let failsafe = FailsafeClickView(
+        inputBridge: bridge,
+        acceptsClicks: exits.enabledMethods.contains(.failsafeClick)
+      )
       outlines.append(failsafe)
       let stage = mode.makeStage(
         inputBridge: bridge,
@@ -323,12 +343,16 @@ final class CoverWindowCoordinator {
 /// Pont clavier et clics des fenêtres et des scènes.
 @MainActor
 final class KioskInputBridge {
-  private let recognizer = AdultExitRecognizer()
-  private let clickCounter = FailsafeClickCounter()
+  private let recognizer: AdultExitRecognizer
   private let hud: KioskHUD
   private let onExit: @Sendable (AdultExitKind) -> Void
 
-  init(hud: KioskHUD, onExit: @escaping @Sendable (AdultExitKind) -> Void) {
+  init(
+    hud: KioskHUD,
+    exits: AdultExitSettings,
+    onExit: @escaping @Sendable (AdultExitKind) -> Void
+  ) {
+    self.recognizer = AdultExitRecognizer(settings: exits)
     self.hud = hud
     self.onExit = onExit
   }
@@ -359,10 +383,10 @@ final class KioskInputBridge {
   }
 
   func noteFailsafeClick() {
-    let result = clickCounter.register()
+    let result = recognizer.handleFailsafeClick()
     hud.noteFailsafeClick(count: result.count)
-    if result.triggered {
-      onExit(.failsafeClick)
+    if let exit = result.exit {
+      onExit(exit)
     }
   }
 
@@ -455,26 +479,6 @@ private final class CoverWindow: NSWindow {
   }
 }
 
-/// Cinq clics dans une fenêtre de 3 s, sans journaliser le rythme.
-private final class FailsafeClickCounter: @unchecked Sendable {
-  private let lock = NSLock()
-  private var count = 0
-  private var windowStart: TimeInterval?
-
-  func register() -> (count: Int, triggered: Bool) {
-    lock.lock()
-    defer { lock.unlock() }
-    let now = ProcessInfo.processInfo.systemUptime
-    if let start = windowStart, now - start <= 3 {
-      count += 1
-    } else {
-      windowStart = now
-      count = 1
-    }
-    return (count, count >= 5)
-  }
-}
-
 final class FailsafeClickView: NSView {
   /// Au-dessus des hôtes de jeu (océan : bulles à 5, galaxie : glyphes à 2).
   static let abovePlayContent: CGFloat = 1_000
@@ -485,11 +489,13 @@ final class FailsafeClickView: NSView {
   static var side: CGFloat { buttonSide + outlineGutter * 2 }
 
   private let inputBridge: KioskInputBridge
+  private let acceptsClicks: Bool
   private let fillLayer = CALayer()
   private let progressLayer = CAShapeLayer()
 
-  init(inputBridge: KioskInputBridge) {
+  init(inputBridge: KioskInputBridge, acceptsClicks: Bool) {
     self.inputBridge = inputBridge
+    self.acceptsClicks = acceptsClicks
     super.init(frame: .zero)
     wantsLayer = true
     layer?.zPosition = Self.abovePlayContent
@@ -509,8 +515,18 @@ final class FailsafeClickView: NSView {
     progressLayer.isHidden = true
     layer?.addSublayer(progressLayer)
 
-    setAccessibilityLabel("Sortie de secours")
-    setAccessibilityRole(.button)
+    if acceptsClicks {
+      setAccessibilityLabel("Sortie de secours")
+      setAccessibilityRole(.button)
+    } else {
+      setAccessibilityLabel("Minuteur de session")
+      setAccessibilityRole(.staticText)
+    }
+  }
+
+  override func hitTest(_ point: NSPoint) -> NSView? {
+    guard acceptsClicks else { return nil }
+    return super.hitTest(point)
   }
 
   func setOutlineProgress(_ progress: Double) {

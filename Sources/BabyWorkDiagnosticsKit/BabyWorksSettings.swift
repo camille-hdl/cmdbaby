@@ -9,12 +9,14 @@ public protocol LoginItemRegistration: Sendable {
 
 public enum SettingsError: Error, Equatable, Sendable {
   case timeLimitOutOfRange
+  case lastManualExit
 }
 
 public enum SettingsChange: Equatable, Sendable {
   case mode(KioskPlayModeID)
   case launchAtLogin(Bool)
   case timeLimitMinutes(Int)
+  case exitMethod(AdultExitMethod, enabled: Bool)
 }
 
 /// Lecture, validation et enregistrement des réglages.
@@ -61,6 +63,17 @@ public struct BabyWorksSettings: Sendable {
         throw SettingsError.timeLimitOutOfRange
       }
       configuration.exits.timeLimitMinutes = minutes
+    case .exitMethod(let method, let enabled):
+      if enabled {
+        configuration.exits.enabledMethods.insert(method)
+      } else {
+        var remaining = configuration.exits.enabledMethods
+        remaining.remove(method)
+        guard !remaining.isEmpty else {
+          throw SettingsError.lastManualExit
+        }
+        configuration.exits.enabledMethods = remaining
+      }
     }
     try store.save(configuration)
     return configuration

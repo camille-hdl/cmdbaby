@@ -25,6 +25,29 @@ func configurationVersionOneWithoutExitsDefaultsTimeLimitToTwentyMinutes() throw
   #expect(decoded == BabyWorksConfiguration(schemaVersion: 1, mode: .galaxy, launchAtLogin: true))
 }
 
+@Test("Une méthode inconnue est ignorée et les méthodes connues restent")
+func configurationUnknownExitMethodIsIgnored() throws {
+  let decoded = try JSONDecoder().decode(
+    BabyWorksConfiguration.self,
+    from: Data(#"{"exits":{"enabledMethods":["shiftEscape","inconnu"]}}"#.utf8)
+  )
+  #expect(decoded.exits.enabledMethods == [.shiftEscape])
+}
+
+@Test("enabledMethods absent ou vide active les trois sorties manuelles")
+func configurationMissingOrEmptyEnabledMethodsEnablesAllManualExits() throws {
+  let absent = try JSONDecoder().decode(
+    BabyWorksConfiguration.self,
+    from: Data(#"{"exits":{"timeLimitMinutes":20}}"#.utf8)
+  )
+  let empty = try JSONDecoder().decode(
+    BabyWorksConfiguration.self,
+    from: Data(#"{"exits":{"enabledMethods":[]}}"#.utf8)
+  )
+  #expect(absent.exits.enabledMethods == AdultExitSettings.defaultEnabledMethods)
+  #expect(empty.exits.enabledMethods == AdultExitSettings.defaultEnabledMethods)
+}
+
 @Test("Un minuteur hors bornes relu sur disque est ramené entre 1 et 120")
 func configurationOutOfRangeTimeLimitIsClamped() throws {
   let tooLow = try JSONDecoder().decode(

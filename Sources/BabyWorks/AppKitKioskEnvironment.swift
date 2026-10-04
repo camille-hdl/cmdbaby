@@ -14,13 +14,16 @@ final class AppKitKioskEnvironment: KioskSessionServices {
   private let covers = CoverWindowCoordinator()
   private let hud = KioskHUD()
   private let filterHolder = FilterHolder()
+  private var sessionExits = AdultExitSettings()
 
   init() {
     covers.hud = hud
   }
 
   func prepareSession(_ configuration: BabyWorksConfiguration) {
+    sessionExits = configuration.exits
     covers.prepare(mode: configuration.mode, exits: configuration.exits)
+    hud.noteSessionExits(configuration.exits)
   }
 
   func capturePresentation() throws -> PresentationOptionsSnapshot {
@@ -72,7 +75,8 @@ final class AppKitKioskEnvironment: KioskSessionServices {
           onAdultExit: { kind in
             exitHandler?(kind)
           },
-          hud: hud
+          hud: hud,
+          exits: sessionExits
         )
         filterHolder.set(engine)
         engine.start()

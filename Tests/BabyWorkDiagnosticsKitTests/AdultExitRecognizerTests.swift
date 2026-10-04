@@ -5,7 +5,7 @@ import Testing
 @Test("parent puis Entrée dans la fenêtre arrête la session")
 func passphraseThenReturnWithinWindowExits() {
   let clock = ManualClock(now: 10)
-  let recognizer = AdultExitRecognizer(clock: clock)
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: clock)
 
   for character in Array("parent") {
     #expect(recognizer.handleKeyDown(letter: character, isReturn: false) == nil)
@@ -15,7 +15,7 @@ func passphraseThenReturnWithinWindowExits() {
 
 @Test("Une frappe hors préfixe réinitialise le tampon")
 func wrongLetterResetsPassphraseBuffer() {
-  let recognizer = AdultExitRecognizer(clock: ManualClock(now: 0))
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: ManualClock(now: 0))
   #expect(recognizer.handleKeyDown(letter: "p", isReturn: false) == nil)
   #expect(recognizer.handleKeyDown(letter: "x", isReturn: false) == nil)
   for character in Array("parent") {
@@ -27,7 +27,7 @@ func wrongLetterResetsPassphraseBuffer() {
 @Test("L’expiration de la fenêtre empêche la sortie")
 func passphraseWindowExpirationPreventsExit() {
   let clock = ManualClock(now: 0)
-  let recognizer = AdultExitRecognizer(clock: clock)
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: clock)
   #expect(recognizer.handleKeyDown(letter: "p", isReturn: false) == nil)
   clock.now = 6
   #expect(recognizer.handleKeyDown(letter: "a", isReturn: false) == nil)
@@ -40,7 +40,7 @@ func passphraseWindowExpirationPreventsExit() {
 
 @Test("Majuscule-Échap produit la sortie de secours")
 func shiftEscapeExitsImmediately() {
-  let recognizer = AdultExitRecognizer(clock: ManualClock(now: 0))
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: ManualClock(now: 0))
   #expect(
     recognizer.handleKeyDown(letter: nil, isReturn: false, isEscape: true, shiftDown: true)
       == .shiftEscape
@@ -49,7 +49,7 @@ func shiftEscapeExitsImmediately() {
 
 @Test("Échap sans Majuscule n’est pas une sortie")
 func escapeWithoutShiftIsNotAnExit() {
-  let recognizer = AdultExitRecognizer(clock: ManualClock(now: 0))
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: ManualClock(now: 0))
   #expect(
     recognizer.handleKeyDown(letter: nil, isReturn: false, isEscape: true, shiftDown: false) == nil
   )
@@ -57,7 +57,7 @@ func escapeWithoutShiftIsNotAnExit() {
 
 @Test("Commande-Q n’est pas une sortie adulte")
 func commandQIsNotAnAdultExit() {
-  let recognizer = AdultExitRecognizer(clock: ManualClock())
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: ManualClock())
   #expect(
     ShortcutSuppressionPolicy.decision(
       keyCode: MacVirtualKeyCode.ansiQ,
@@ -66,4 +66,70 @@ func commandQIsNotAnAdultExit() {
     ) == .suppress(.commandQ)
   )
   #expect(recognizer.handleKeyDown(letter: "q", isReturn: false) == nil)
+}
+
+@Test("Maj-Échap inactif ne sort pas")
+func shiftEscapeWhenDisabledDoesNotExit() {
+  let recognizer = AdultExitRecognizer(
+    settings: AdultExitSettings(enabledMethods: [.passphrase, .failsafeClick]),
+    clock: ManualClock(now: 0)
+  )
+  #expect(
+    recognizer.handleKeyDown(letter: nil, isReturn: false, isEscape: true, shiftDown: true) == nil
+  )
+}
+
+@Test("Une phrase inactive ne se tamponne pas et Entrée ne sort pas")
+func passphraseWhenDisabledDoesNotExit() {
+  let recognizer = AdultExitRecognizer(
+    settings: AdultExitSettings(enabledMethods: [.shiftEscape, .failsafeClick]),
+    clock: ManualClock(now: 0)
+  )
+  for character in Array("parent") {
+    #expect(recognizer.handleKeyDown(letter: character, isReturn: false) == nil)
+    #expect(recognizer.prefixLength == 0)
+  }
+  #expect(recognizer.handleKeyDown(letter: nil, isReturn: true) == nil)
+  #expect(recognizer.prefixTarget == 0)
+}
+
+@Test("Cinq clics en moins de trois secondes sortent")
+func fiveFailsafeClicksWithinThreeSecondsExit() {
+  let clock = ManualClock(now: 0)
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: clock)
+  var exit: AdultExitKind?
+  for step in 0..<5 {
+    clock.now = Double(step) * 0.5
+    exit = recognizer.handleFailsafeClick().exit
+  }
+  #expect(exit == .failsafeClick)
+}
+
+@Test("Quatre clics, une pause de plus de trois secondes, puis un clic ne sortent pas")
+func failsafeClicksResetAfterThreeSeconds() {
+  let clock = ManualClock(now: 0)
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: clock)
+  for _ in 0..<4 {
+    let result = recognizer.handleFailsafeClick()
+    #expect(result.exit == nil)
+  }
+  clock.now = 3.1
+  let last = recognizer.handleFailsafeClick()
+  #expect(last.count == 1)
+  #expect(last.exit == nil)
+}
+
+@Test("Des clics de secours inactifs ne comptent jamais")
+func failsafeClicksWhenDisabledNeverCount() {
+  let clock = ManualClock(now: 0)
+  let recognizer = AdultExitRecognizer(
+    settings: AdultExitSettings(enabledMethods: [.passphrase, .shiftEscape]),
+    clock: clock
+  )
+  for step in 0..<6 {
+    clock.now = Double(step) * 0.4
+    let result = recognizer.handleFailsafeClick()
+    #expect(result.count == 0)
+    #expect(result.exit == nil)
+  }
 }
