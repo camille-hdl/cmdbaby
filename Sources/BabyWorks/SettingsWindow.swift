@@ -112,31 +112,120 @@ private enum SettingsSection: CaseIterable, Identifiable {
   }
 }
 
-private struct ManualExitCopy: Identifiable {
-  var method: AdultExitMethod
-  var label: String
-  var help: String
-
-  var id: AdultExitMethod { method }
+private enum SettingsFormMetrics {
+  static let groupCornerRadius: CGFloat = 10
+  static let groupRuleOpacity = 0.45
+  static let rowHorizontalPadding: CGFloat = 12
+  static let rowVerticalPadding: CGFloat = 10
+  static let passphraseFieldWidth: CGFloat = 160
+  static let timeLimitFieldWidth: CGFloat = 56
+  static let scrollTrailingMargin: CGFloat = 16
+  static let controlGap: CGFloat = 12
 }
 
-private let manualExitCopies: [ManualExitCopy] = [
-  ManualExitCopy(
-    method: .passphrase,
-    label: "Phrase + Entrée",
-    help: "Taper la phrase de sortie puis Entrée"
-  ),
-  ManualExitCopy(
-    method: .shiftEscape,
-    label: "Maj-Échap",
-    help: "Majuscule + Échap"
-  ),
-  ManualExitCopy(
-    method: .failsafeClick,
-    label: "Clics de secours",
-    help: "5 clics rapides sur le carré en bas à droite"
-  ),
-]
+private func settingsColor(_ swatch: SettingsPalette.Swatch, _ scheme: ColorScheme) -> Color {
+  swatch.resolve(scheme)
+}
+
+/// Groupe arrondi : titre facultatif, fond `paperRaised`, filet `rule`.
+private struct SettingsGroup<Content: View>: View {
+  var title: String?
+  var content: Content
+  @Environment(\.colorScheme) private var colorScheme
+
+  init(title: String? = nil, @ViewBuilder content: () -> Content) {
+    self.title = title
+    self.content = content()
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      if let title {
+        Text(title)
+          .font(.system(size: 13, weight: .semibold))
+          .foregroundStyle(settingsColor(SettingsPalette.ink2, colorScheme))
+      }
+      VStack(spacing: 0) {
+        content
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background {
+        RoundedRectangle(cornerRadius: SettingsFormMetrics.groupCornerRadius, style: .continuous)
+          .fill(settingsColor(SettingsPalette.paperRaised, colorScheme))
+      }
+      .overlay {
+        RoundedRectangle(cornerRadius: SettingsFormMetrics.groupCornerRadius, style: .continuous)
+          .strokeBorder(
+            settingsColor(SettingsPalette.rule, colorScheme)
+              .opacity(SettingsFormMetrics.groupRuleOpacity),
+            lineWidth: 1
+          )
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+}
+
+/// Une ligne : libellé (et aide, rejet) à gauche, contrôle en bout de ligne.
+private struct SettingsRow<Control: View>: View {
+  var label: String
+  var help: String?
+  var rejection: String?
+  var control: Control
+  @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.isEnabled) private var isEnabled
+
+  init(
+    label: String,
+    help: String? = nil,
+    rejection: String? = nil,
+    @ViewBuilder control: () -> Control
+  ) {
+    self.label = label
+    self.help = help
+    self.rejection = rejection
+    self.control = control()
+  }
+
+  var body: some View {
+    HStack(alignment: .center, spacing: 0) {
+      VStack(alignment: .leading, spacing: 2) {
+        Text(label)
+          .font(.system(size: 13))
+          .foregroundStyle(settingsColor(SettingsPalette.ink, colorScheme))
+        if let help {
+          Text(help)
+            .font(.system(size: 12))
+            .foregroundStyle(settingsColor(SettingsPalette.inkMuted, colorScheme))
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        if let rejection {
+          Text(rejection)
+            .font(.system(size: 12))
+            .foregroundStyle(settingsColor(SettingsPalette.crimson, colorScheme))
+            .fixedSize(horizontal: false, vertical: true)
+        }
+      }
+      Spacer(minLength: SettingsFormMetrics.controlGap)
+      control
+    }
+    .padding(.horizontal, SettingsFormMetrics.rowHorizontalPadding)
+    .padding(.vertical, SettingsFormMetrics.rowVerticalPadding)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .opacity(isEnabled ? 1 : 0.45)
+  }
+}
+
+/// Séparateur de ligne, calé sur le libellé plutôt que sur le bord du groupe.
+private struct SettingsGroupDivider: View {
+  @Environment(\.colorScheme) private var colorScheme
+
+  var body: some View {
+    Divider()
+      .overlay(settingsColor(SettingsPalette.rule, colorScheme))
+      .padding(.leading, SettingsFormMetrics.rowHorizontalPadding)
+  }
+}
 
 private let keepOneManualExitHelp = "Gardez au moins une sortie active."
 
@@ -311,7 +400,7 @@ struct SettingsView: View {
     case .mode:
       focusedMode = KioskPlayModeCatalog.available.first
     case .exits:
-      focusedExit = manualExitCopies.first?.method
+      focusedExit = .passphrase
     case .general:
       launchAtLoginFocused = true
     }
@@ -348,6 +437,7 @@ struct SettingsView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
           .padding(.top, 4)
           .padding(.bottom, 8)
+          .padding(.trailing, SettingsFormMetrics.scrollTrailingMargin)
       }
       .padding(.top, 20)
     }
@@ -447,69 +537,64 @@ struct SettingsView: View {
   }
 
   private var parentExits: some View {
-    VStack(alignment: .leading, spacing: 14) {
-      Text("Sorties parent")
-        .font(.system(size: 13, weight: .semibold))
-        .foregroundStyle(color(SettingsPalette.ink))
-      ForEach(manualExitCopies) { copy in
-        manualExitToggle(copy)
-      }
+    SettingsGroup(title: "Sorties parent") {
+      exitToggleRow(method: .passphrase, label: "Phrase + Entrée", help: nil)
+      SettingsGroupDivider()
+      passphraseRow
+      SettingsGroupDivider()
+      exitToggleRow(method: .shiftEscape, label: "Maj-Échap", help: "Majuscule + Échap")
+      SettingsGroupDivider()
+      exitToggleRow(
+        method: .failsafeClick,
+        label: "Clics de secours",
+        help: "5 clics rapides sur le carré en bas à droite"
+      )
     }
   }
 
-  private func manualExitToggle(_ copy: ManualExitCopy) -> some View {
-    let isLast = isLastEnabledManualExit(copy.method)
-    let help = isLast ? keepOneManualExitHelp : copy.help
-    return VStack(alignment: .leading, spacing: 4) {
-      Toggle(isOn: manualExitEnabled(copy.method)) {
-        Text(copy.label)
-          .foregroundStyle(color(SettingsPalette.ink))
-      }
-      .toggleStyle(.switch)
-      .tint(color(SettingsPalette.claret))
-      .focused($focusedExit, equals: copy.method)
-      .disabled(isLast)
-      .help(help)
-      Text(help)
-        .font(.system(size: 12))
-        .foregroundStyle(color(SettingsPalette.inkMuted))
-        .fixedSize(horizontal: false, vertical: true)
-      if copy.method == .passphrase {
-        passphraseEditor
-      }
+  private func exitToggleRow(method: AdultExitMethod, label: String, help: String?) -> some View {
+    let isLast = isLastEnabledManualExit(method)
+    return SettingsRow(label: label, help: isLast ? keepOneManualExitHelp : help) {
+      settingsSwitch(label, isOn: manualExitEnabled(method))
+        .focused($focusedExit, equals: method)
+        .disabled(isLast)
     }
   }
 
-  private var passphraseEditor: some View {
+  private var passphraseRow: some View {
     let enabled = model.configuration.exits.enabledMethods.contains(.passphrase)
-    return VStack(alignment: .leading, spacing: 4) {
-      Text("Phrase de sortie")
-        .foregroundStyle(color(SettingsPalette.ink))
+    return SettingsRow(
+      label: "Phrase de sortie",
+      help: passphraseHelp,
+      rejection: passphraseRejection
+    ) {
       TextField("Phrase de sortie", text: $passphraseDraft)
         .textFieldStyle(.roundedBorder)
+        .controlSize(.small)
+        .frame(width: SettingsFormMetrics.passphraseFieldWidth)
         .foregroundStyle(color(SettingsPalette.ink))
         .focused($passphraseFieldFocused)
-        .disabled(!enabled)
         .onSubmit(commitPassphraseDraft)
         .accessibilityLabel("Phrase de sortie")
-      if let passphraseRejection {
-        Text(passphraseRejection)
-          .font(.system(size: 12))
-          .foregroundStyle(color(SettingsPalette.crimson))
-          .fixedSize(horizontal: false, vertical: true)
-      }
-      Text(passphraseHelp)
-        .font(.system(size: 12))
-        .foregroundStyle(color(SettingsPalette.inkMuted))
-        .fixedSize(horizontal: false, vertical: true)
     }
-    .padding(.top, 4)
+    .disabled(!enabled)
     .onAppear(perform: seedPassphraseDraft)
     .onChange(of: passphraseFieldFocused) { focused in
       if !focused {
         commitPassphraseDraft()
       }
     }
+  }
+
+  private func settingsSwitch(_ label: String, isOn: Binding<Bool>) -> some View {
+    Toggle(isOn: isOn) {
+      Text(label)
+    }
+    .labelsHidden()
+    .toggleStyle(.switch)
+    .controlSize(.small)
+    .tint(color(SettingsPalette.claret))
+    .accessibilityLabel(label)
   }
 
   private func seedPassphraseDraft() {
@@ -544,51 +629,45 @@ struct SettingsView: View {
   }
 
   private var timerSettings: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text("Minuteur")
-        .font(.system(size: 13, weight: .semibold))
-        .foregroundStyle(color(SettingsPalette.ink))
-      HStack(spacing: 8) {
-        Text("Fin de session après")
-          .foregroundStyle(color(SettingsPalette.ink))
-        TextField("minutes", text: $timeLimitDraft)
-          .textFieldStyle(.roundedBorder)
-          .multilineTextAlignment(.trailing)
-          .frame(width: 64)
-          .foregroundStyle(color(SettingsPalette.ink))
-          .focused($timeLimitFieldFocused)
-          .onSubmit(commitTimeLimitDraft)
-          .onChange(of: timeLimitDraft) { draft in
-            acceptTimeLimitDraft(draft, reportIncomplete: false)
+    SettingsGroup(title: "Minuteur") {
+      SettingsRow(
+        label: "Fin de session après",
+        help: timeLimitHelp,
+        rejection: timeLimitRejection
+      ) {
+        HStack(spacing: 6) {
+          TextField("minutes", text: $timeLimitDraft)
+            .textFieldStyle(.roundedBorder)
+            .controlSize(.small)
+            .multilineTextAlignment(.trailing)
+            .frame(width: SettingsFormMetrics.timeLimitFieldWidth)
+            .foregroundStyle(color(SettingsPalette.ink))
+            .focused($timeLimitFieldFocused)
+            .onSubmit(commitTimeLimitDraft)
+            .onChange(of: timeLimitDraft) { draft in
+              acceptTimeLimitDraft(draft, reportIncomplete: false)
+            }
+            .accessibilityLabel("Fin de session après, en minutes")
+          Text("min")
+            .font(.system(size: 13))
+            .foregroundStyle(color(SettingsPalette.ink))
+          Stepper(
+            "",
+            value: timeLimitStepper,
+            in: AdultExitSettings.timeLimitRange,
+            step: 5
+          )
+          .controlSize(.small)
+          .labelsHidden()
+          .accessibilityLabel("Durée de la session")
+        }
+        .onAppear(perform: seedTimeLimitDraft)
+        .onChange(of: timeLimitFieldFocused) { focused in
+          if !focused {
+            commitTimeLimitDraft()
           }
-          .accessibilityLabel("Fin de session après, en minutes")
-        Text("minutes")
-          .foregroundStyle(color(SettingsPalette.ink))
-        Stepper(
-          "",
-          value: timeLimitStepper,
-          in: AdultExitSettings.timeLimitRange,
-          step: 5
-        )
-        .labelsHidden()
-        .accessibilityLabel("Durée de la session")
-      }
-      .onAppear(perform: seedTimeLimitDraft)
-      .onChange(of: timeLimitFieldFocused) { focused in
-        if !focused {
-          commitTimeLimitDraft()
         }
       }
-      if let timeLimitRejection {
-        Text(timeLimitRejection)
-          .font(.system(size: 12))
-          .foregroundStyle(color(SettingsPalette.crimson))
-          .fixedSize(horizontal: false, vertical: true)
-      }
-      Text(timeLimitHelp)
-        .font(.system(size: 12))
-        .foregroundStyle(color(SettingsPalette.inkMuted))
-        .fixedSize(horizontal: false, vertical: true)
     }
   }
 
@@ -632,19 +711,11 @@ struct SettingsView: View {
   }
 
   private var generalSettings: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      Toggle(isOn: launchAtLogin) {
-        Text("Démarrage automatique")
-          .foregroundStyle(color(SettingsPalette.ink))
+    SettingsGroup {
+      SettingsRow(label: "Démarrage automatique", help: launchAtLoginHelp) {
+        settingsSwitch("Démarrage automatique", isOn: launchAtLogin)
+          .focused($launchAtLoginFocused)
       }
-      .toggleStyle(.switch)
-      .tint(color(SettingsPalette.claret))
-      .focused($launchAtLoginFocused)
-      .help(launchAtLoginHelp)
-      Text(launchAtLoginHelp)
-        .font(.system(size: 12))
-        .foregroundStyle(color(SettingsPalette.inkMuted))
-        .fixedSize(horizontal: false, vertical: true)
     }
   }
 
@@ -672,7 +743,7 @@ struct SettingsView: View {
   }
 
   private func color(_ swatch: SettingsPalette.Swatch) -> Color {
-    swatch.resolve(colorScheme)
+    settingsColor(swatch, colorScheme)
   }
 }
 
