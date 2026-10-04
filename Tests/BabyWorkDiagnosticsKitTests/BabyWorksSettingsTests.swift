@@ -91,6 +91,66 @@ func disablingTheLastManualExitLeavesFileUnchanged() throws {
   #expect(store.load() == remaining)
 }
 
+@Test("Une phrase trop courte, trop longue ou mêlée d’autre chose est refusée et n’écrit rien")
+func invalidPassphraseLeavesFileUnchanged() throws {
+  let file = TemporarySettingsFile()
+  defer { file.remove() }
+
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  let original = BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true)
+  try store.save(original)
+  let loginItem = FakeLoginItemRegistration()
+  loginItem.isRegistered = true
+  let settings = BabyWorksSettings(store: store, loginItem: loginItem)
+
+  #expect(SettingsError.passphraseTooShort.errorDescription == "Au moins 3 lettres.")
+  #expect(SettingsError.passphraseTooLong.errorDescription == "12 lettres au maximum.")
+  #expect(
+    SettingsError.passphraseInvalidCharacters.errorDescription
+      == "Uniquement des lettres, sans espace ni chiffre."
+  )
+
+  #expect(throws: SettingsError.passphraseTooShort) {
+    try settings.apply(.passphrase("ab"))
+  }
+  #expect(store.load() == original)
+
+  #expect(throws: SettingsError.passphraseTooLong) {
+    try settings.apply(.passphrase("abcdefghijklm"))
+  }
+  #expect(store.load() == original)
+
+  #expect(throws: SettingsError.passphraseInvalidCharacters) {
+    try settings.apply(.passphrase("papa 2"))
+  }
+  #expect(store.load() == original)
+
+  #expect(throws: SettingsError.passphraseInvalidCharacters) {
+    try settings.apply(.passphrase("pa-pa"))
+  }
+  #expect(store.load() == original)
+}
+
+@Test("Une phrase valide est enregistrée sous sa forme normalisée")
+func validPassphrasePersistsNormalizedForm() throws {
+  let file = TemporarySettingsFile()
+  defer { file.remove() }
+
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  try store.save(BabyWorksConfiguration(mode: .ocean, launchAtLogin: true))
+  let loginItem = FakeLoginItemRegistration()
+  loginItem.isRegistered = true
+
+  let settings = BabyWorksSettings(store: store, loginItem: loginItem)
+  let saved = try settings.apply(.passphrase("  Maman "))
+
+  #expect(saved.exits.passphrase.value == "maman")
+  #expect(settings.current().exits.passphrase.value == "maman")
+  #expect(store.load().exits.passphrase.value == "maman")
+  #expect(saved.mode == .ocean)
+  #expect(saved.launchAtLogin == true)
+}
+
 @Test("Un minuteur hors bornes est refusé et n’écrit rien")
 func timeLimitOutOfRangeLeavesFileUnchanged() throws {
   let file = TemporarySettingsFile()

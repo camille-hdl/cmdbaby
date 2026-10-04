@@ -10,6 +10,24 @@ public protocol LoginItemRegistration: Sendable {
 public enum SettingsError: Error, Equatable, Sendable {
   case timeLimitOutOfRange
   case lastManualExit
+  case passphraseTooShort
+  case passphraseTooLong
+  case passphraseInvalidCharacters
+}
+
+extension SettingsError: LocalizedError {
+  public var errorDescription: String? {
+    switch self {
+    case .passphraseTooShort:
+      "Au moins 3 lettres."
+    case .passphraseTooLong:
+      "12 lettres au maximum."
+    case .passphraseInvalidCharacters:
+      "Uniquement des lettres, sans espace ni chiffre."
+    case .timeLimitOutOfRange, .lastManualExit:
+      nil
+    }
+  }
 }
 
 public enum SettingsChange: Equatable, Sendable {
@@ -17,6 +35,7 @@ public enum SettingsChange: Equatable, Sendable {
   case launchAtLogin(Bool)
   case timeLimitMinutes(Int)
   case exitMethod(AdultExitMethod, enabled: Bool)
+  case passphrase(String)
 }
 
 /// Lecture, validation et enregistrement des réglages.
@@ -74,6 +93,8 @@ public struct BabyWorksSettings: Sendable {
         }
         configuration.exits.enabledMethods = remaining
       }
+    case .passphrase(let raw):
+      configuration.exits.passphrase = try ExitPassphrase.parse(raw)
     }
     try store.save(configuration)
     return configuration

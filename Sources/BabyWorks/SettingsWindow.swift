@@ -38,6 +38,10 @@ final class SettingsModel: ObservableObject {
         settingsLogger.error(
           "Impossible d’enregistrer la sortie : \(error.localizedDescription, privacy: .public)"
         )
+      case .passphrase:
+        settingsLogger.error(
+          "Impossible d’enregistrer la phrase de sortie : \(error.localizedDescription, privacy: .public)"
+        )
       }
       lastError = error.localizedDescription
       configuration = settings.current()
@@ -116,6 +120,9 @@ private let manualExitCopies: [ManualExitCopy] = [
 
 private let keepOneManualExitHelp = "Gardez au moins une sortie active."
 
+private let passphraseHelp =
+  "3 à 12 lettres, à taper en moins de 5 secondes puis Entrée."
+
 private let timeLimitHelp =
   "Le contour du carré de secours se remplit pendant la session ; la session s’arrête quand il est complet."
 
@@ -133,8 +140,11 @@ struct SettingsView: View {
   @FocusState private var focusedSection: SettingsSection?
   @FocusState private var focusedMode: KioskPlayModeID?
   @FocusState private var timeLimitFieldFocused: Bool
+  @FocusState private var passphraseFieldFocused: Bool
   @State private var timeLimitDraft = ""
   @State private var timeLimitRejection: String?
+  @State private var passphraseDraft = ""
+  @State private var passphraseRejection: String?
 
   var body: some View {
     HStack(spacing: 0) {
@@ -359,6 +369,60 @@ struct SettingsView: View {
         .font(.system(size: 12))
         .foregroundStyle(color(SettingsPalette.inkMuted))
         .fixedSize(horizontal: false, vertical: true)
+      if copy.method == .passphrase {
+        passphraseEditor
+      }
+    }
+  }
+
+  private var passphraseEditor: some View {
+    let enabled = model.configuration.exits.enabledMethods.contains(.passphrase)
+    return VStack(alignment: .leading, spacing: 4) {
+      Text("Phrase de sortie")
+        .foregroundStyle(color(SettingsPalette.ink))
+      TextField("Phrase de sortie", text: $passphraseDraft)
+        .textFieldStyle(.roundedBorder)
+        .foregroundStyle(color(SettingsPalette.ink))
+        .focused($passphraseFieldFocused)
+        .disabled(!enabled)
+        .onSubmit(commitPassphraseDraft)
+        .accessibilityLabel("Phrase de sortie")
+      if let passphraseRejection {
+        Text(passphraseRejection)
+          .font(.system(size: 12))
+          .foregroundStyle(color(SettingsPalette.crimson))
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      Text(passphraseHelp)
+        .font(.system(size: 12))
+        .foregroundStyle(color(SettingsPalette.inkMuted))
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .padding(.top, 4)
+    .onAppear(perform: seedPassphraseDraft)
+    .onChange(of: passphraseFieldFocused) { focused in
+      if !focused {
+        commitPassphraseDraft()
+      }
+    }
+  }
+
+  private func seedPassphraseDraft() {
+    guard passphraseDraft.isEmpty, passphraseRejection == nil else { return }
+    passphraseDraft = model.configuration.exits.passphrase.value
+  }
+
+  private func commitPassphraseDraft() {
+    do {
+      let parsed = try ExitPassphrase.parse(passphraseDraft)
+      passphraseRejection = nil
+      passphraseDraft = parsed.value
+      guard parsed != model.configuration.exits.passphrase else { return }
+      model.apply(.passphrase(parsed.value))
+    } catch let error as SettingsError {
+      passphraseRejection = error.errorDescription
+    } catch {
+      passphraseRejection = SettingsError.passphraseInvalidCharacters.errorDescription
     }
   }
 

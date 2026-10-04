@@ -7,7 +7,7 @@ final class KioskHUD: @unchecked Sendable {
   private let lock = NSLock()
   private var source = "—"
   private var lastKey = "—"
-  private var sequence = "0/6"
+  private var sequence = "—"
   private var failsafeClicks = "0/5"
   private var mouseSeen = 0
   private var shifts = "—"
@@ -37,6 +37,7 @@ final class KioskHUD: @unchecked Sendable {
     passphraseEnabled = exits.enabledMethods.contains(.passphrase)
     shiftEscapeEnabled = exits.enabledMethods.contains(.shiftEscape)
     failsafeEnabled = exits.enabledMethods.contains(.failsafeClick)
+    sequence = "—"
     let text = renderLocked()
     let handlers = handlers
     lock.unlock()
@@ -129,7 +130,7 @@ final class KioskHUD: @unchecked Sendable {
     lock.lock()
     switch kind {
     case .passphrase:
-      exit = "demandée : parent+Entrée"
+      exit = "demandée : phrase+Entrée"
     case .shiftEscape:
       exit = "demandée : Majuscule-Échap"
     case .failsafeClick:

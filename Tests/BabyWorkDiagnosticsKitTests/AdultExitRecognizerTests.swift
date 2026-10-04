@@ -68,6 +68,25 @@ func commandQIsNotAnAdultExit() {
   #expect(recognizer.handleKeyDown(letter: "q", isReturn: false) == nil)
 }
 
+@Test("maman puis Entrée sort, parent puis Entrée ne sort pas")
+func customPassphraseMatchesOnlyThatPhrase() throws {
+  let recognizer = AdultExitRecognizer(
+    settings: AdultExitSettings(passphrase: try ExitPassphrase.parse("maman")),
+    clock: ManualClock(now: 0)
+  )
+  #expect(recognizer.prefixTarget == 5)
+
+  for character in Array("parent") {
+    #expect(recognizer.handleKeyDown(letter: character, isReturn: false) == nil)
+  }
+  #expect(recognizer.handleKeyDown(letter: nil, isReturn: true) == nil)
+
+  for character in Array("maman") {
+    #expect(recognizer.handleKeyDown(letter: character, isReturn: false) == nil)
+  }
+  #expect(recognizer.handleKeyDown(letter: nil, isReturn: true) == .passphrase)
+}
+
 @Test("Maj-Échap inactif ne sort pas")
 func shiftEscapeWhenDisabledDoesNotExit() {
   let recognizer = AdultExitRecognizer(

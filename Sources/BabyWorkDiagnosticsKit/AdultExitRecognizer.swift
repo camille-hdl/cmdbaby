@@ -33,7 +33,7 @@ public final class AdultExitRecognizer: @unchecked Sendable {
 
   private let settings: AdultExitSettings
   private let clock: any MonotonicClock
-  private let target: [Character] = Array("parent")
+  private var target: [Character] { Array(settings.passphrase.value) }
   private var buffer: [Character] = []
   private var bufferStartedAt: TimeInterval?
   private var failsafeCount = 0

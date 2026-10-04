@@ -48,6 +48,29 @@ func configurationMissingOrEmptyEnabledMethodsEnablesAllManualExits() throws {
   #expect(empty.exits.enabledMethods == AdultExitSettings.defaultEnabledMethods)
 }
 
+@Test("Une phrase absente ou invalide sur disque redevient parent")
+func configurationMissingOrInvalidPassphraseDefaultsToParent() throws {
+  let absent = try JSONDecoder().decode(
+    BabyWorksConfiguration.self,
+    from: Data(#"{"exits":{"timeLimitMinutes":45}}"#.utf8)
+  )
+  let tooShort = try JSONDecoder().decode(
+    BabyWorksConfiguration.self,
+    from: Data(#"{"exits":{"timeLimitMinutes":45,"passphrase":"ab"}}"#.utf8)
+  )
+  let notAString = try JSONDecoder().decode(
+    BabyWorksConfiguration.self,
+    from: Data(#"{"exits":{"timeLimitMinutes":45,"passphrase":12}}"#.utf8)
+  )
+
+  #expect(absent.exits.passphrase == .defaultValue)
+  #expect(absent.exits.passphrase.value == "parent")
+  #expect(absent.exits.timeLimitMinutes == 45)
+  #expect(tooShort.exits.passphrase.value == "parent")
+  #expect(tooShort.exits.timeLimitMinutes == 45)
+  #expect(notAString.exits.passphrase.value == "parent")
+}
+
 @Test("Un minuteur hors bornes relu sur disque est ramené entre 1 et 120")
 func configurationOutOfRangeTimeLimitIsClamped() throws {
   let tooLow = try JSONDecoder().decode(

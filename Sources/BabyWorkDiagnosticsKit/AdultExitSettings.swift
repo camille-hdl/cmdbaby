@@ -14,18 +14,22 @@ public struct AdultExitSettings: Codable, Equatable, Sendable {
 
   public var timeLimitMinutes: Int
   public var enabledMethods: Set<AdultExitMethod>
+  public var passphrase: ExitPassphrase
 
   public init(
     timeLimitMinutes: Int = defaultTimeLimitMinutes,
-    enabledMethods: Set<AdultExitMethod> = defaultEnabledMethods
+    enabledMethods: Set<AdultExitMethod> = defaultEnabledMethods,
+    passphrase: ExitPassphrase = .defaultValue
   ) {
     self.timeLimitMinutes = timeLimitMinutes
     self.enabledMethods = enabledMethods
+    self.passphrase = passphrase
   }
 
   private enum CodingKeys: String, CodingKey {
     case timeLimitMinutes
     case enabledMethods
+    case passphrase
   }
 
   public init(from decoder: Decoder) throws {
@@ -34,7 +38,8 @@ public struct AdultExitSettings: Codable, Equatable, Sendable {
       ?? Self.defaultTimeLimitMinutes
     self.init(
       timeLimitMinutes: Self.clamped(minutes),
-      enabledMethods: Self.decodeEnabledMethods(from: container)
+      enabledMethods: Self.decodeEnabledMethods(from: container),
+      passphrase: Self.decodePassphrase(from: container)
     )
   }
 
@@ -45,6 +50,7 @@ public struct AdultExitSettings: Codable, Equatable, Sendable {
       AdultExitMethod.allCases.filter { enabledMethods.contains($0) },
       forKey: .enabledMethods
     )
+    try container.encode(passphrase.value, forKey: .passphrase)
   }
 
   /// Absent, illisible, vide ou réduit aux valeurs inconnues : les trois méthodes.
@@ -56,6 +62,18 @@ public struct AdultExitSettings: Codable, Equatable, Sendable {
     }
     let known = Set(raw.compactMap(AdultExitMethod.init(rawValue:)))
     return known.isEmpty ? defaultEnabledMethods : known
+  }
+
+  /// Absente, illisible ou invalide : `parent`.
+  private static func decodePassphrase(
+    from container: KeyedDecodingContainer<CodingKeys>
+  ) -> ExitPassphrase {
+    guard let raw = try? container.decode(String.self, forKey: .passphrase),
+      let parsed = try? ExitPassphrase.parse(raw)
+    else {
+      return .defaultValue
+    }
+    return parsed
   }
 
   private static func clamped(_ minutes: Int) -> Int {
