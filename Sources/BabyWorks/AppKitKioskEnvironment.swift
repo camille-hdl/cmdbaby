@@ -75,8 +75,8 @@ final class AppKitKioskEnvironment: KioskSessionServices {
           onAdultExit: { kind in
             exitHandler?(kind)
           },
-          hud: hud,
-          exits: sessionExits
+          exits: sessionExits,
+          hud: hud
         )
         filterHolder.set(engine)
         engine.start()
