@@ -53,6 +53,25 @@ private enum SettingsWindowMetrics {
   static let width: CGFloat = 760
   static let height: CGFloat = 540
   static let sidebarWidth: CGFloat = 190
+  /// Décollage commun : bords de la fenêtre, et intervalle entre barre et panneau.
+  static let inset: CGFloat = 8
+  /// Rayon commun de la barre, des groupes et des cartes.
+  static let cornerRadius: CGFloat = 14
+  /// Filet au repos, commun aux groupes et aux cartes.
+  static let ruleOpacity = 0.45
+
+  static let sidebarEntryHeight: CGFloat = 28
+  static let sidebarEntryCornerRadius: CGFloat = 6
+  static let sidebarEntrySpacing: CGFloat = 2
+  static let sidebarEntryIconSize: CGFloat = 13
+  static let sidebarEntryIconWidth: CGFloat = 18
+  static let sidebarEntryFontSize: CGFloat = 13
+  static let appTitleSize: CGFloat = 18
+  static let sectionTitleSize: CGFloat = 22
+  /// Depuis le haut de la barre, déjà décollée : le titre passe sous les feux.
+  static let sidebarTitlebarClearance: CGFloat = 16
+  static let panelTopPadding: CGFloat = 12
+  static let headerToContentSpacing: CGFloat = 12
 }
 
 private struct SettingsSectionCopy {
@@ -113,8 +132,6 @@ private enum SettingsSection: CaseIterable, Identifiable {
 }
 
 private enum SettingsFormMetrics {
-  static let groupCornerRadius: CGFloat = 10
-  static let groupRuleOpacity = 0.45
   static let rowHorizontalPadding: CGFloat = 12
   static let rowVerticalPadding: CGFloat = 10
   static let passphraseFieldWidth: CGFloat = 160
@@ -150,14 +167,14 @@ private struct SettingsGroup<Content: View>: View {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .background {
-        RoundedRectangle(cornerRadius: SettingsFormMetrics.groupCornerRadius, style: .continuous)
+        RoundedRectangle(cornerRadius: SettingsWindowMetrics.cornerRadius, style: .continuous)
           .fill(settingsColor(SettingsPalette.paperRaised, colorScheme))
       }
       .overlay {
-        RoundedRectangle(cornerRadius: SettingsFormMetrics.groupCornerRadius, style: .continuous)
+        RoundedRectangle(cornerRadius: SettingsWindowMetrics.cornerRadius, style: .continuous)
           .strokeBorder(
             settingsColor(SettingsPalette.rule, colorScheme)
-              .opacity(SettingsFormMetrics.groupRuleOpacity),
+              .opacity(SettingsWindowMetrics.ruleOpacity),
             lineWidth: 1
           )
       }
@@ -263,15 +280,14 @@ struct SettingsView: View {
   @State private var passphraseRejection: String?
 
   var body: some View {
-    HStack(spacing: 0) {
+    HStack(alignment: .top, spacing: SettingsWindowMetrics.inset) {
       sidebar
-      Rectangle()
-        .fill(color(SettingsPalette.rule))
-        .frame(width: 1)
       panel
     }
+    .padding(SettingsWindowMetrics.inset)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(color(SettingsPalette.paper))
+    .ignoresSafeArea()
     .background {
       SidebarTabMonitor { handleSidebarTab(shift: $0) }
     }
@@ -286,23 +302,28 @@ struct SettingsView: View {
   }
 
   private var sidebar: some View {
-    VStack(alignment: .leading, spacing: 4) {
+    VStack(alignment: .leading, spacing: 0) {
       Text("BabyWorks")
-        .font(.system(size: 22, weight: .bold, design: .serif))
+        .font(.system(size: SettingsWindowMetrics.appTitleSize, weight: .bold, design: .serif))
         .foregroundStyle(color(SettingsPalette.ink))
-        .padding(.horizontal, 10)
-        .padding(.bottom, 16)
-      ForEach(SettingsSection.allCases) { item in
-        sidebarRow(item)
+        .padding(.horizontal, 8)
+        .padding(.bottom, 10)
+      VStack(alignment: .leading, spacing: SettingsWindowMetrics.sidebarEntrySpacing) {
+        ForEach(SettingsSection.allCases) { item in
+          sidebarRow(item)
+        }
       }
       Spacer(minLength: 0)
     }
-    .padding(.horizontal, 12)
-    .padding(.top, 40)
-    .padding(.bottom, 16)
+    .padding(.horizontal, 8)
+    .padding(.top, SettingsWindowMetrics.sidebarTitlebarClearance)
+    .padding(.bottom, 12)
     .frame(width: SettingsWindowMetrics.sidebarWidth, alignment: .topLeading)
     .frame(maxHeight: .infinity, alignment: .top)
-    .background(color(SettingsPalette.surface1))
+    .background {
+      RoundedRectangle(cornerRadius: SettingsWindowMetrics.cornerRadius, style: .continuous)
+        .fill(color(SettingsPalette.surface1))
+    }
     .focusable()
     .focused($sidebarFocused)
     .focusSection()
@@ -318,19 +339,19 @@ struct SettingsView: View {
       sidebarFocused = true
       sidebarFocusEngaged = true
     } label: {
-      HStack(spacing: 8) {
+      HStack(spacing: 6) {
         Image(systemName: item.copy.symbolName)
-          .font(.system(size: 14, weight: .medium))
-          .frame(width: 20)
+          .font(.system(size: SettingsWindowMetrics.sidebarEntryIconSize, weight: .medium))
+          .frame(width: SettingsWindowMetrics.sidebarEntryIconWidth)
         Text(item.copy.title)
-          .font(.system(size: 13, weight: selected ? .semibold : .regular))
+          .font(.system(size: SettingsWindowMetrics.sidebarEntryFontSize, weight: selected ? .semibold : .regular))
         Spacer(minLength: 0)
       }
       .foregroundStyle(sidebarForeground(selected: selected, showsFocus: showsFocus))
-      .padding(.horizontal, 10)
-      .padding(.vertical, 8)
+      .padding(.horizontal, 8)
+      .frame(height: SettingsWindowMetrics.sidebarEntryHeight)
       .background(
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
+        RoundedRectangle(cornerRadius: SettingsWindowMetrics.sidebarEntryCornerRadius, style: .continuous)
           .fill(
             sidebarFill(
               selected: selected,
@@ -426,23 +447,23 @@ struct SettingsView: View {
           .padding(.bottom, 16)
       }
       Text(section.copy.title)
-        .font(.system(size: 26, weight: .bold, design: .serif))
+        .font(.system(size: SettingsWindowMetrics.sectionTitleSize, weight: .bold, design: .serif))
         .foregroundStyle(color(SettingsPalette.ink))
       Text(section.copy.subtitle)
         .font(.system(size: 13))
         .foregroundStyle(color(SettingsPalette.inkMuted))
-        .padding(.top, 4)
+        .padding(.top, 2)
       ScrollView {
         sectionContent
           .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.top, 4)
+          .padding(.top, 2)
           .padding(.bottom, 8)
           .padding(.trailing, SettingsFormMetrics.scrollTrailingMargin)
       }
-      .padding(.top, 20)
+      .padding(.top, SettingsWindowMetrics.headerToContentSpacing)
     }
     .padding(.horizontal, 28)
-    .padding(.top, 40)
+    .padding(.top, SettingsWindowMetrics.panelTopPadding)
     .padding(.bottom, 20)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .background(color(SettingsPalette.paper))
@@ -494,12 +515,15 @@ struct SettingsView: View {
       }
       .padding(12)
       .background(
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
+        RoundedRectangle(cornerRadius: SettingsWindowMetrics.cornerRadius, style: .continuous)
           .fill(color(SettingsPalette.paperRaised))
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-          .strokeBorder(color(stroke.swatch), lineWidth: stroke.width)
+        RoundedRectangle(cornerRadius: SettingsWindowMetrics.cornerRadius, style: .continuous)
+          .strokeBorder(
+            color(stroke.swatch).opacity(stroke.opacity),
+            lineWidth: stroke.width
+          )
       )
       .overlay(alignment: .topTrailing) {
         if selected {
@@ -521,12 +545,12 @@ struct SettingsView: View {
     .accessibilityRemoveTraits(selected ? [] : .isSelected)
   }
 
-  /// Carte sélectionnée : bord `claret`. Carte focalisée : le `rule` 1 pt
-  /// devient `oxford` 2 pt. Pas d’anneau posé par-dessus.
-  private func modeCardStroke(selected: Bool, focused: Bool) -> (swatch: SettingsPalette.Swatch, width: CGFloat) {
-    if selected { return (SettingsPalette.claret, 3) }
-    if focused { return (SettingsPalette.oxford, 2) }
-    return (SettingsPalette.rule, 1)
+  /// Carte sélectionnée : bord `claret`. Carte focalisée : `oxford` 2 pt.
+  /// Au repos, le filet est celui des groupes. Pas d’anneau posé par-dessus.
+  private func modeCardStroke(selected: Bool, focused: Bool) -> (swatch: SettingsPalette.Swatch, width: CGFloat, opacity: Double) {
+    if selected { return (SettingsPalette.claret, 3, 1) }
+    if focused { return (SettingsPalette.oxford, 2, 1) }
+    return (SettingsPalette.rule, 1, SettingsWindowMetrics.ruleOpacity)
   }
 
   private var exitSettings: some View {
@@ -1040,6 +1064,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     window.identifier = NSUserInterfaceItemIdentifier("fr.camille.babywork.settings")
     window.isReleasedWhenClosed = false
     window.titlebarAppearsTransparent = true
+    window.titleVisibility = .hidden
     window.titlebarSeparatorStyle = .none
     window.backgroundColor = SettingsPalette.paper.nsColor
     window.delegate = self
