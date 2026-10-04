@@ -90,6 +90,26 @@ private enum SettingsSection: CaseIterable, Identifiable {
       )
     }
   }
+
+  /// Section voisine dans l’ordre de la barre. Les extrémités ne bouclent pas.
+  func neighbor(moving direction: MoveCommandDirection) -> SettingsSection? {
+    let delta: Int
+    switch direction {
+    case .up:
+      delta = -1
+    case .down:
+      delta = 1
+    case .left, .right:
+      return nil
+    @unknown default:
+      return nil
+    }
+    let items = Array(Self.allCases)
+    guard let index = items.firstIndex(of: self) else { return nil }
+    let next = index + delta
+    guard items.indices.contains(next) else { return nil }
+    return items[next]
+  }
 }
 
 private struct ManualExitCopy: Identifiable {
@@ -137,8 +157,15 @@ struct SettingsView: View {
   @Environment(\.colorScheme) private var colorScheme
   @State private var section: SettingsSection = .mode
   @State private var hoveredSection: SettingsSection?
-  @FocusState private var focusedSection: SettingsSection?
+  /// Vrai seulement après Tab, une flèche ou un clic : à l’ouverture le système
+  /// focalise une entrée sans que personne ait rien demandé.
+  @State private var sidebarFocusEngaged = false
+  /// Le prochain gain de focus de la barre compte comme une entrée au clavier.
+  @State private var sidebarEntryPending = false
+  @FocusState private var sidebarFocused: Bool
   @FocusState private var focusedMode: KioskPlayModeID?
+  @FocusState private var focusedExit: AdultExitMethod?
+  @FocusState private var launchAtLoginFocused: Bool
   @FocusState private var timeLimitFieldFocused: Bool
   @FocusState private var passphraseFieldFocused: Bool
   @State private var timeLimitDraft = ""
@@ -156,7 +183,17 @@ struct SettingsView: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(color(SettingsPalette.paper))
+    .background {
+      SidebarTabMonitor { handleSidebarTab(shift: $0) }
+    }
     .tint(color(SettingsPalette.claret))
+    .onChange(of: sidebarFocused) { isFocused in
+      guard sidebarEntryPending else { return }
+      sidebarEntryPending = false
+      if isFocused {
+        sidebarFocusEngaged = true
+      }
+    }
   }
 
   private var sidebar: some View {
@@ -177,12 +214,20 @@ struct SettingsView: View {
     .frame(width: SettingsWindowMetrics.sidebarWidth, alignment: .topLeading)
     .frame(maxHeight: .infinity, alignment: .top)
     .background(color(SettingsPalette.surface1))
+    .focusable()
+    .focused($sidebarFocused)
+    .focusSection()
+    .onMoveCommand(perform: moveSidebar)
+    .settingsFocusRingHidden()
   }
 
   private func sidebarRow(_ item: SettingsSection) -> some View {
     let selected = section == item
+    let showsFocus = sidebarShowsFocus && selected
     return Button {
       section = item
+      sidebarFocused = true
+      sidebarFocusEngaged = true
     } label: {
       HStack(spacing: 8) {
         Image(systemName: item.copy.symbolName)
@@ -192,23 +237,23 @@ struct SettingsView: View {
           .font(.system(size: 13, weight: selected ? .semibold : .regular))
         Spacer(minLength: 0)
       }
-      .foregroundStyle(color(selected ? SettingsPalette.ink : SettingsPalette.ink2))
+      .foregroundStyle(sidebarForeground(selected: selected, showsFocus: showsFocus))
       .padding(.horizontal, 10)
       .padding(.vertical, 8)
       .background(
         RoundedRectangle(cornerRadius: 8, style: .continuous)
-          .fill(sidebarFill(selected: selected, hovered: hoveredSection == item))
+          .fill(
+            sidebarFill(
+              selected: selected,
+              showsFocus: showsFocus,
+              hovered: hoveredSection == item
+            )
+          )
       )
     }
     .buttonStyle(.plain)
-    .focused($focusedSection, equals: item)
-    .overlay(
-      RoundedRectangle(cornerRadius: 8, style: .continuous)
-        .strokeBorder(
-          color(SettingsPalette.oxford),
-          lineWidth: focusedSection == item ? 2 : 0
-        )
-    )
+    .focusable(false)
+    .settingsFocusRingHidden()
     .accessibilityAddTraits(selected ? .isSelected : [])
     .accessibilityRemoveTraits(selected ? [] : .isSelected)
     .onHover { hovering in
@@ -220,10 +265,69 @@ struct SettingsView: View {
     }
   }
 
-  private func sidebarFill(selected: Bool, hovered: Bool) -> Color {
+  /// La couleur `claret` remplace l’anneau : elle ne s’allume que si la barre
+  /// a le focus et que l’utilisateur est entré dedans.
+  private var sidebarShowsFocus: Bool {
+    sidebarFocusEngaged && sidebarFocused
+  }
+
+  private func moveSidebar(_ direction: MoveCommandDirection) {
+    switch direction {
+    case .up, .down:
+      sidebarFocusEngaged = true
+      guard let next = section.neighbor(moving: direction) else { return }
+      section = next
+    case .left, .right:
+      break
+    @unknown default:
+      break
+    }
+  }
+
+  /// `true` si l’événement Tab est absorbé.
+  /// Le premier Tab révèle la sélection. Le suivant quitte la barre vers le panneau.
+  private func handleSidebarTab(shift: Bool) -> Bool {
+    if sidebarFocused && !sidebarFocusEngaged {
+      sidebarFocusEngaged = true
+      return true
+    }
+    if sidebarFocused && sidebarFocusEngaged {
+      if shift {
+        return false
+      }
+      sidebarFocused = false
+      focusFirstPanelControl()
+      return true
+    }
+    if !sidebarFocused && !sidebarFocusEngaged {
+      sidebarEntryPending = true
+    }
+    return false
+  }
+
+  /// Tab sort de la barre vers le premier contrôle du panneau visible.
+  private func focusFirstPanelControl() {
+    switch section {
+    case .mode:
+      focusedMode = KioskPlayModeCatalog.available.first
+    case .exits:
+      focusedExit = manualExitCopies.first?.method
+    case .general:
+      launchAtLoginFocused = true
+    }
+  }
+
+  private func sidebarFill(selected: Bool, showsFocus: Bool, hovered: Bool) -> Color {
+    if selected && showsFocus { return color(SettingsPalette.claret) }
     if selected { return color(SettingsPalette.surface3) }
     if hovered { return color(SettingsPalette.surface2) }
     return Color.clear
+  }
+
+  private func sidebarForeground(selected: Bool, showsFocus: Bool) -> Color {
+    if selected && showsFocus { return color(SettingsPalette.paper) }
+    if selected { return color(SettingsPalette.ink) }
+    return color(SettingsPalette.ink2)
   }
 
   private var panel: some View {
@@ -280,6 +384,8 @@ struct SettingsView: View {
 
   private func modeCard(_ mode: KioskPlayModeID) -> some View {
     let selected = model.configuration.mode == mode
+    let focused = focusedMode == mode
+    let stroke = modeCardStroke(selected: selected, focused: focused)
     let name = KioskPlayModeCatalog.displayName(mode)
     return Button {
       model.apply(.mode(mode))
@@ -303,10 +409,7 @@ struct SettingsView: View {
       )
       .overlay(
         RoundedRectangle(cornerRadius: 14, style: .continuous)
-          .strokeBorder(
-            color(selected ? SettingsPalette.claret : SettingsPalette.rule),
-            lineWidth: selected ? 3 : 1
-          )
+          .strokeBorder(color(stroke.swatch), lineWidth: stroke.width)
       )
       .overlay(alignment: .topTrailing) {
         if selected {
@@ -322,17 +425,18 @@ struct SettingsView: View {
     }
     .buttonStyle(.plain)
     .focused($focusedMode, equals: mode)
-    .overlay(
-      RoundedRectangle(cornerRadius: 14, style: .continuous)
-        .strokeBorder(
-          color(SettingsPalette.oxford),
-          lineWidth: focusedMode == mode ? 2 : 0
-        )
-        .padding(1)
-    )
+    .settingsFocusRingHidden()
     .accessibilityLabel(name)
     .accessibilityAddTraits(selected ? .isSelected : [])
     .accessibilityRemoveTraits(selected ? [] : .isSelected)
+  }
+
+  /// Carte sélectionnée : bord `claret`. Carte focalisée : le `rule` 1 pt
+  /// devient `oxford` 2 pt. Pas d’anneau posé par-dessus.
+  private func modeCardStroke(selected: Bool, focused: Bool) -> (swatch: SettingsPalette.Swatch, width: CGFloat) {
+    if selected { return (SettingsPalette.claret, 3) }
+    if focused { return (SettingsPalette.oxford, 2) }
+    return (SettingsPalette.rule, 1)
   }
 
   private var exitSettings: some View {
@@ -363,6 +467,7 @@ struct SettingsView: View {
       }
       .toggleStyle(.switch)
       .tint(color(SettingsPalette.claret))
+      .focused($focusedExit, equals: copy.method)
       .disabled(isLast)
       .help(help)
       Text(help)
@@ -534,6 +639,7 @@ struct SettingsView: View {
       }
       .toggleStyle(.switch)
       .tint(color(SettingsPalette.claret))
+      .focused($launchAtLoginFocused)
       .help(launchAtLoginHelp)
       Text(launchAtLoginHelp)
         .font(.system(size: 12))
@@ -567,6 +673,66 @@ struct SettingsView: View {
 
   private func color(_ swatch: SettingsPalette.Swatch) -> Color {
     swatch.resolve(colorScheme)
+  }
+}
+
+private extension View {
+  @ViewBuilder
+  func settingsFocusRingHidden() -> some View {
+    if #available(macOS 14, *) {
+      focusEffectDisabled()
+    } else {
+      self
+    }
+  }
+}
+
+/// Intercepte le premier Tab tant que la barre n’est pas engagée.
+/// Le système a déjà posé le focus : ce Tab doit révéler la sélection, pas la quitter.
+private struct SidebarTabMonitor: NSViewRepresentable {
+  var onTab: (Bool) -> Bool
+
+  func makeNSView(context: Context) -> MonitorView {
+    MonitorView()
+  }
+
+  func updateNSView(_ nsView: MonitorView, context: Context) {
+    nsView.onTab = onTab
+  }
+
+  static func dismantleNSView(_ nsView: MonitorView, coordinator: ()) {
+    nsView.removeMonitor()
+  }
+
+  final class MonitorView: NSView {
+    var onTab: (Bool) -> Bool = { _ in false }
+    private var monitor: Any?
+
+    override func viewDidMoveToWindow() {
+      super.viewDidMoveToWindow()
+      if window == nil {
+        removeMonitor()
+        return
+      }
+      guard monitor == nil else { return }
+      monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        guard let self else { return event }
+        guard event.window === self.window, self.isPlainTab(event) else { return event }
+        let shift = event.modifierFlags.contains(.shift)
+        return self.onTab(shift) ? nil : event
+      }
+    }
+
+    func removeMonitor() {
+      guard let monitor else { return }
+      NSEvent.removeMonitor(monitor)
+      self.monitor = nil
+    }
+
+    private func isPlainTab(_ event: NSEvent) -> Bool {
+      event.keyCode == MacVirtualKeyCode.tab
+        && event.modifierFlags.intersection([.command, .control, .option]).isEmpty
+    }
   }
 }
 
