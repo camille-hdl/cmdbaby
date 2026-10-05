@@ -9,7 +9,7 @@ public enum AdultExitMethod: String, Codable, CaseIterable, Equatable, Sendable 
 /// Réglages de sortie lus au lancement d’une session.
 public struct AdultExitSettings: Codable, Equatable, Sendable {
   public static let timeLimitRange = 1...120
-  public static let defaultTimeLimitMinutes = 20
+  public static let defaultTimeLimitMinutes = 3
   public static let defaultEnabledMethods = Set(AdultExitMethod.allCases)
 
   public var timeLimitMinutes: Int

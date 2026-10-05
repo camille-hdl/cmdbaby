@@ -684,7 +684,7 @@ struct SettingsView: View {
             "",
             value: timeLimitStepper,
             in: AdultExitSettings.timeLimitRange,
-            step: 5
+            step: 1
           )
           .controlSize(.small)
           .labelsHidden()

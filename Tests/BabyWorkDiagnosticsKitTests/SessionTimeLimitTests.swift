@@ -2,6 +2,13 @@ import Testing
 
 @testable import BabyWorkDiagnosticsKit
 
+@Test("Le minuteur par défaut s’arrête à 3 minutes")
+func defaultSessionTimeLimitStopsAfterThreeMinutes() {
+  let limit = SessionTimeLimit(startedAt: 0, settings: AdultExitSettings())
+  #expect(!limit.isComplete(at: 3 * 60 - 1))
+  #expect(limit.isComplete(at: 3 * 60))
+}
+
 @Test("Un minuteur de 45 minutes est à moitié à 22:30 et complet à 45:00")
 func sessionTimeLimitFromFortyFiveMinutes() {
   let limit = SessionTimeLimit(

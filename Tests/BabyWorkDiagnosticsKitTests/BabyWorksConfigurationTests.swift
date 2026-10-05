@@ -11,8 +11,32 @@ func configurationDefaultsToOceanWithoutLaunchAtLogin() {
   #expect(configuration.launchAtLogin == false)
 }
 
-@Test("Un JSON v1 sans exits donne un minuteur de 20 minutes")
-func configurationVersionOneWithoutExitsDefaultsTimeLimitToTwentyMinutes() throws {
+@Test("Un minuteur neuf dure 3 minutes, entre 1 et 120")
+func freshTimeLimitLastsThreeMinutesWithinTheExistingRange() {
+  #expect(AdultExitSettings().timeLimitMinutes == 3)
+  #expect(AdultExitSettings.timeLimitRange == 1...120)
+}
+
+@Test("Une configuration vide donne un minuteur de 3 minutes")
+func emptyConfigurationDecodesToAThreeMinuteTimeLimit() throws {
+  let decoded = try JSONDecoder().decode(
+    BabyWorksConfiguration.self,
+    from: Data("{}".utf8)
+  )
+  #expect(decoded.exits.timeLimitMinutes == 3)
+}
+
+@Test("Une durée de 20 minutes déjà enregistrée est conservée")
+func savedTimeLimitOfTwentyMinutesIsKept() throws {
+  let decoded = try JSONDecoder().decode(
+    BabyWorksConfiguration.self,
+    from: Data(#"{"exits":{"timeLimitMinutes":20}}"#.utf8)
+  )
+  #expect(decoded.exits.timeLimitMinutes == 20)
+}
+
+@Test("Un JSON v1 sans exits donne un minuteur de 3 minutes")
+func configurationVersionOneWithoutExitsDefaultsTimeLimitToThreeMinutes() throws {
   let decoded = try JSONDecoder().decode(
     BabyWorksConfiguration.self,
     from: Data(
@@ -21,7 +45,7 @@ func configurationVersionOneWithoutExitsDefaultsTimeLimitToTwentyMinutes() throw
       """#.utf8
     )
   )
-  #expect(decoded.exits.timeLimitMinutes == 20)
+  #expect(decoded.exits.timeLimitMinutes == 3)
   #expect(decoded == BabyWorksConfiguration(schemaVersion: 1, mode: .starship, launchAtLogin: true))
 }
 
@@ -85,13 +109,13 @@ func configurationOutOfRangeTimeLimitIsClamped() throws {
   #expect(tooHigh.exits.timeLimitMinutes == 120)
 }
 
-@Test("Un champ de minuteur illisible reprend 20 minutes et conserve le mode")
-func configurationInvalidTimeLimitFieldDecodesToTwentyMinutes() throws {
+@Test("Un champ de minuteur illisible reprend 3 minutes et conserve le mode")
+func configurationInvalidTimeLimitFieldDecodesToThreeMinutes() throws {
   let decoded = try JSONDecoder().decode(
     BabyWorksConfiguration.self,
     from: Data(#"{"mode":"starship","exits":{"timeLimitMinutes":"long"}}"#.utf8)
   )
-  #expect(decoded.exits.timeLimitMinutes == 20)
+  #expect(decoded.exits.timeLimitMinutes == 3)
   #expect(decoded.mode == .starship)
 }
 
