@@ -8,11 +8,25 @@ func terminalStyleMatchesMatrixPalette() {
   #expect(matches(TerminalStyle.trail, hex: 0x00FF41))
   #expect(matches(TerminalStyle.trailEnd, hex: 0x008F11))
   #expect(matches(TerminalStyle.head, hex: 0xD7FFD9))
+  #expect(matches(TerminalStyle.headGlow, hex: 0xA8FFB0))
   #expect(matches(TerminalStyle.prompt, hex: 0x00FF41))
   #expect(TerminalStyle.promptFontNames == ["Courier-Bold", "CourierNewPS-BoldMT", "Menlo-Bold"])
   #expect(TerminalStyle.promptFontSize == 64)
   #expect(TerminalStyle.glowBlur == 6)
   #expect(TerminalStyle.headGlowBlur == 10)
+  #expect(TerminalStyle.cellHeight == 28)
+  #expect(TerminalStyle.cellWidth == 17)
+}
+
+@Test("snapToGrid aligne un x positif ou négatif sur le bord gauche de la cellule")
+func terminalStyleSnapsXToGlobalGrid() {
+  #expect(TerminalStyle.snapToGrid(x: 0) == 0)
+  #expect(TerminalStyle.snapToGrid(x: 16.9) == 0)
+  #expect(TerminalStyle.snapToGrid(x: 17) == 17)
+  #expect(TerminalStyle.snapToGrid(x: 34) == 34)
+  #expect(TerminalStyle.snapToGrid(x: -0.1) == -17)
+  #expect(TerminalStyle.snapToGrid(x: -17) == -17)
+  #expect(TerminalStyle.snapToGrid(x: -17.1) == -34)
 }
 
 private func matches(_ color: TerminalStyle.SRGB, hex: UInt32) -> Bool {

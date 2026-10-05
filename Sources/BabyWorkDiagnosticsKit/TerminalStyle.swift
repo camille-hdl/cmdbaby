@@ -17,6 +17,8 @@ public enum TerminalStyle: Sendable {
   public static let trailEnd = SRGB(red: 0, green: 143.0 / 255.0, blue: 17.0 / 255.0)
   /// Glyphe de tête `#D7FFD9`.
   public static let head = SRGB(red: 215.0 / 255.0, green: 1, blue: 217.0 / 255.0)
+  /// Lueur de la tête `#A8FFB0`.
+  public static let headGlow = SRGB(red: 168.0 / 255.0, green: 1, blue: 176.0 / 255.0)
   /// Texte du prompt `#00FF41`.
   public static let prompt = SRGB(red: 0, green: 1, blue: 65.0 / 255.0)
 
@@ -24,4 +26,14 @@ public enum TerminalStyle: Sendable {
   public static let promptFontSize: Double = 64
   public static let glowBlur: Double = 6
   public static let headGlowBlur: Double = 10
+
+  /// Hauteur d’une cellule de pluie, en points.
+  public static let cellHeight: Double = 28
+  /// Largeur d’une cellule de pluie, en points (0,6 × hauteur, arrondi).
+  public static let cellWidth: Double = 17
+
+  /// Bord gauche de la cellule de grille qui contient `x` (coordonnées globales).
+  public static func snapToGrid(x: Double) -> Double {
+    (x / cellWidth).rounded(.down) * cellWidth
+  }
 }
