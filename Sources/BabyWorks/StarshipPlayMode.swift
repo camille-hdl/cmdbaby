@@ -331,7 +331,7 @@ final class StarshipDirector {
     let level = StarshipGauge.level(perMinute: rate, cap: tuning.keyRateCap)
     gaugeLevel = StarshipGauge.eased(current: gaugeLevel, target: level, dt: dt)
     // Le tir automatique est décidé avant le bouclier : une cible visée reste figée.
-    let step = lockDueTargets(now: now)
+    let step = advanceTargets(now: now)
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     paintGauge(rate: rate)
@@ -416,9 +416,9 @@ final class StarshipDirector {
     )
   }
 
-  /// Vise les cibles dont l’heure de tir est atteinte, et retient celles qui explosent maintenant.
+  /// Fige les cibles dues et note les explosions de ce tick : tir arrivé à échéance, ou bouclier.
   /// Une cible déjà visée ne bouge plus : le bouclier ne la concerne plus.
-  private func lockDueTargets(now: TimeInterval) -> TargetStep {
+  private func advanceTargets(now: TimeInterval) -> TargetStep {
     var step = TargetStep()
     let center = shipCenter
     let ship = center.map { StarshipPoint(x: Double($0.x), y: Double($0.y)) }

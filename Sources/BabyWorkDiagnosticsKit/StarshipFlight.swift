@@ -79,7 +79,7 @@ public struct StarshipFlight: Equatable, Sendable {
     if coast.isInfinite {
       return distance / initialSpeed
     }
-    let coasted = initialSpeed * coast + acceleration * coast * coast / 2
+    let coasted = self.distance(at: coast)
     if distance <= coasted {
       let discriminant = initialSpeed * initialSpeed + 2 * acceleration * distance
       return (-initialSpeed + discriminant.squareRoot()) / acceleration
