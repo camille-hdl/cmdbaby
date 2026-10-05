@@ -32,7 +32,9 @@ public enum TerminalRainPlanner: Sendable {
     maxX: Double,
     using rng: inout some RandomNumberGenerator
   ) -> [Double] {
-    guard count > 0, let slots = gridSlots(minX: minX, maxX: maxX) else { return [] }
+    guard count > 0 else { return [] }
+    let slots = gridSlots(minX: minX, maxX: maxX)
+    guard !slots.isEmpty else { return [] }
 
     var remaining = slots
     let take = min(count, remaining.count)
@@ -44,14 +46,14 @@ public enum TerminalRainPlanner: Sendable {
   }
 
   /// Bords gauches de grille dans `[minX, maxX - cellWidth]`, du plus petit au plus grand.
-  private static func gridSlots(minX: Double, maxX: Double) -> [Double]? {
+  static func gridSlots(minX: Double, maxX: Double) -> [Double] {
     let cell = TerminalStyle.cellWidth
     let upper = maxX - cell
-    guard cell > 0, upper >= minX else { return nil }
+    guard cell > 0, upper >= minX else { return [] }
 
     let first = Int(ceil(minX / cell))
     let last = Int(floor(upper / cell))
-    guard last >= first else { return nil }
+    guard last >= first else { return [] }
     return (first...last).map { Double($0) * cell }
   }
 }

@@ -17,14 +17,12 @@ final class TerminalDirector {
 
   private struct FallingColumn {
     var id: Int
-    var screenIndex: Int
     var column: TerminalRainColumn
   }
 
   /// Colonne déjà comptée dans le plafond, en attente de son départ.
   private struct PendingColumn {
     var id: Int
-    var screenIndex: Int
     var launchAt: TimeInterval
     var column: TerminalRainColumn
   }
@@ -36,6 +34,7 @@ final class TerminalDirector {
   let atlas = TerminalGlyphAtlas()
 
   private var screens: [ScreenSlot] = []
+  private var layout = TerminalScreenLayout(screens: [])
   private var columns: [FallingColumn] = []
   private var pending: [PendingColumn] = []
   private var nextColumnID = 0
@@ -67,7 +66,9 @@ final class TerminalDirector {
 
   func noteFrame(screenIndex: Int, frame: CGRect) {
     guard let slot = screens.firstIndex(where: { $0.index == screenIndex }) else { return }
+    if screens[slot].frame == frame { return }
     screens[slot].frame = frame
+    rebuildLayout()
     choosePromptScreenIfReady()
   }
 
@@ -96,17 +97,23 @@ final class TerminalDirector {
     publish()
   }
 
-  /// Fait tomber une colonne sur l’écran cliqué. Ignorée si le plafond de colonnes est atteint.
+  /// Fait tomber une colonne depuis l’écran le plus haut à cette abscisse.
+  /// Ignorée si le plafond de colonnes est atteint.
   func spawnColumn(atGlobalX x: Double, screenIndex: Int) {
     guard activeColumnCount < tuning.maxActiveColumns else { return }
-    guard let frame = screens.first(where: { $0.index == screenIndex })?.frame else { return }
+    guard screens.contains(where: { $0.index == screenIndex && $0.frame != nil }) else { return }
+    guard let highest = layout.highestScreen(atX: x) else { return }
+    let topY = highest.y + highest.height
     let id = nextColumnID
     nextColumnID += 1
     columns.append(
       FallingColumn(
         id: id,
-        screenIndex: screenIndex,
-        column: makeColumn(x: TerminalStyle.snapToGrid(x: x), in: frame)
+        column: makeColumn(
+          x: TerminalStyle.snapToGrid(x: x),
+          topY: topY,
+          floorY: layout.fallFloor(atX: x, fromTopY: topY)
+        )
       )
     )
     startRainTicker()
@@ -124,6 +131,7 @@ final class TerminalDirector {
       slot.painter.teardown()
     }
     screens.removeAll(keepingCapacity: false)
+    layout = TerminalScreenLayout(screens: [])
     atlas.reset()
     prompt = TerminalPrompt()
     promptScreenIndex = nil
@@ -131,8 +139,12 @@ final class TerminalDirector {
     promptFont = nil
   }
 
-  private func choosePromptScreenIfReady() {
-    let framed: [TerminalScreen] = screens.compactMap { slot in
+  private func rebuildLayout() {
+    layout = TerminalScreenLayout(screens: framedScreens())
+  }
+
+  private func framedScreens() -> [TerminalScreen] {
+    screens.compactMap { slot in
       guard let frame = slot.frame else { return nil }
       return TerminalScreen(
         index: slot.index,
@@ -142,6 +154,10 @@ final class TerminalDirector {
         height: Double(frame.size.height)
       )
     }
+  }
+
+  private func choosePromptScreenIfReady() {
+    let framed = framedScreens()
     guard framed.count == screens.count else { return }
     guard let index = TerminalScreenLayout.largestScreenIndex(framed) else { return }
     guard index != promptScreenIndex else { return }
@@ -211,21 +227,9 @@ final class TerminalDirector {
     while index < columns.count {
       let spawned = columns[index].column.advance(by: dt)
       let column = columns[index]
-      if let painter = screens.first(where: { $0.index == column.screenIndex })?.painter {
-        for bottomY in spawned {
-          painter.addCell(
-            columnID: column.id,
-            atGlobalX: column.column.x,
-            bottomY: bottomY,
-            trailLifetime: column.column.trailLifetime,
-            now: now
-          )
-        }
-        if column.column.isFinished {
-          painter.releaseColumnHead(columnID: column.id)
-        }
-      }
+      deliver(spawned, of: column, now: now)
       if columns[index].column.isFinished {
+        releaseColumnHead(column.id)
         columns.remove(at: index)
       } else {
         index += 1
@@ -238,10 +242,9 @@ final class TerminalDirector {
     CATransaction.commit()
   }
 
-  /// Convertit une demande du prompt en colonnes sur l’écran du prompt.
+  /// Convertit une demande du prompt en colonnes nées sur les écrans du haut.
   private func spawn(_ request: TerminalRainRequest) {
-    guard let promptScreenIndex else { return }
-    guard let frame = screens.first(where: { $0.index == promptScreenIndex })?.frame else { return }
+    guard promptScreenIndex != nil else { return }
 
     let requested = TerminalRainPlanner.columnCount(for: request, tuning: tuning, using: &rng)
     let count = TerminalRainPlanner.admissibleCount(
@@ -251,32 +254,24 @@ final class TerminalDirector {
     )
     guard count > 0 else { return }
 
-    let xs = TerminalRainPlanner.distinctGridXs(
-      count: count,
-      minX: Double(frame.minX),
-      maxX: Double(frame.maxX),
-      using: &rng
-    )
+    let spawns = layout.randomSpawnXs(count: count, using: &rng)
     let now = ProcessInfo.processInfo.systemUptime
-    for x in xs {
+    for spawn in spawns {
       let id = nextColumnID
       nextColumnID += 1
-      let column = makeColumn(x: x, in: frame)
+      let column = makeColumn(
+        x: spawn.x,
+        topY: spawn.topY,
+        floorY: layout.fallFloor(atX: spawn.x, fromTopY: spawn.topY)
+      )
       let delay = startDelay(for: request)
       if delay <= 0 {
-        columns.append(FallingColumn(id: id, screenIndex: promptScreenIndex, column: column))
+        columns.append(FallingColumn(id: id, column: column))
       } else {
-        pending.append(
-          PendingColumn(
-            id: id,
-            screenIndex: promptScreenIndex,
-            launchAt: now + delay,
-            column: column
-          )
-        )
+        pending.append(PendingColumn(id: id, launchAt: now + delay, column: column))
       }
     }
-    if !xs.isEmpty {
+    if !spawns.isEmpty {
       startRainTicker()
     }
   }
@@ -290,14 +285,51 @@ final class TerminalDirector {
     }
   }
 
-  private func makeColumn(x: Double, in frame: CGRect) -> TerminalRainColumn {
+  private func makeColumn(x: Double, topY: Double, floorY: Double) -> TerminalRainColumn {
     TerminalRainColumn(
       x: x,
-      topY: Double(frame.maxY),
-      floorY: Double(frame.minY),
+      topY: topY,
+      floorY: floorY,
       stepInterval: tuning.stepInterval(roll: Double.random(in: 0..<1, using: &rng)),
       trailLifetime: tuning.trailLifetime(roll: Double.random(in: 0..<1, using: &rng))
     )
+  }
+
+  /// La cellule va au painter dont le cadre contient son centre. Un trou ne l’efface pas :
+  /// la colonne continue, elle n’est juste pas dessinée.
+  private func deliver(_ bottoms: [Double], of column: FallingColumn, now: TimeInterval) {
+    for bottomY in bottoms {
+      let centerX = column.column.x + TerminalStyle.cellWidth / 2
+      let centerY = bottomY + TerminalStyle.cellHeight / 2
+      guard let painter = painterContaining(x: centerX, y: centerY) else { continue }
+      releaseColumnHead(column.id)
+      painter.addCell(
+        columnID: column.id,
+        atGlobalX: column.column.x,
+        bottomY: bottomY,
+        trailLifetime: column.column.trailLifetime,
+        now: now
+      )
+    }
+  }
+
+  private func releaseColumnHead(_ columnID: Int) {
+    for slot in screens {
+      slot.painter.releaseColumnHead(columnID: columnID)
+    }
+  }
+
+  private func painterContaining(x: Double, y: Double) -> TerminalPainter? {
+    let point = CGPoint(x: x, y: y)
+    var match: (top: CGFloat, index: Int, painter: TerminalPainter)?
+    for slot in screens {
+      guard let frame = slot.frame, frame.contains(point) else { continue }
+      if let match, frame.maxY < match.top || (frame.maxY == match.top && slot.index >= match.index) {
+        continue
+      }
+      match = (frame.maxY, slot.index, slot.painter)
+    }
+    return match?.painter
   }
 
   private func launchDueColumns(at now: TimeInterval) {
@@ -305,9 +337,7 @@ final class TerminalDirector {
     while index < pending.count {
       if pending[index].launchAt <= now {
         let item = pending.remove(at: index)
-        columns.append(
-          FallingColumn(id: item.id, screenIndex: item.screenIndex, column: item.column)
-        )
+        columns.append(FallingColumn(id: item.id, column: item.column))
       } else {
         index += 1
       }
