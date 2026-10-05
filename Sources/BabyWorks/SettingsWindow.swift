@@ -104,6 +104,7 @@ enum SettingsSection: CaseIterable, Identifiable {
   case mode
   case exits
   case general
+  case permissions
   case about
 
   var id: Self { self }
@@ -127,6 +128,12 @@ enum SettingsSection: CaseIterable, Identifiable {
         title: "Général",
         subtitle: "Réglages qui s’appliquent en dehors d’une session.",
         symbolName: "gearshape"
+      )
+    case .permissions:
+      SettingsSectionCopy(
+        title: L10n.current("settings.permissions.title"),
+        subtitle: L10n.current("settings.permissions.subtitle"),
+        symbolName: "lock.shield"
       )
     case .about:
       SettingsSectionCopy(
@@ -324,6 +331,7 @@ private let launchAtLoginHelp =
 struct SettingsView: View {
   @ObservedObject var model: SettingsModel
   @ObservedObject var session: DiagnosticsSessionModel
+  @ObservedObject var presence: SettingsWindowPresence
   let onLaunch: () -> Void
   let onRelaunch: () -> Void
   @Environment(\.colorScheme) private var colorScheme
@@ -342,22 +350,26 @@ struct SettingsView: View {
   @FocusState private var timeLimitFieldFocused: Bool
   @FocusState private var passphraseFieldFocused: Bool
   @FocusState private var focusedAboutLink: URL?
+  @FocusState private var focusedPermissionAction: SetupAction?
   @State private var timeLimitDraft = ""
   @State private var timeLimitRejection: String?
   @State private var passphraseDraft = ""
   @State private var passphraseRejection: String?
   @State private var keyboardLayoutName: String?
   @State private var keyboardLayoutLetters: [UInt16: Set<Character>]
+  @StateObject private var permissions = PermissionsMonitor()
 
   init(
     model: SettingsModel,
     session: DiagnosticsSessionModel,
+    presence: SettingsWindowPresence,
     initialSection: SettingsSection,
     onLaunch: @escaping () -> Void,
     onRelaunch: @escaping () -> Void
   ) {
     self.model = model
     self.session = session
+    self.presence = presence
     self.onLaunch = onLaunch
     self.onRelaunch = onRelaunch
     _section = State(initialValue: initialSection)
@@ -384,6 +396,20 @@ struct SettingsView: View {
       if isFocused {
         sidebarFocusEngaged = true
       }
+    }
+    .onAppear {
+      permissions.setSectionVisible(section == .permissions)
+      permissions.setWindowVisible(presence.isVisible)
+    }
+    .onChange(of: section) { newSection in
+      permissions.setSectionVisible(newSection == .permissions)
+    }
+    .onChange(of: presence.isVisible) { isVisible in
+      permissions.setWindowVisible(isVisible)
+    }
+    .onDisappear {
+      permissions.setSectionVisible(false)
+      permissions.setWindowVisible(false)
     }
   }
 
@@ -432,6 +458,12 @@ struct SettingsView: View {
         Text(item.copy.title)
           .font(.system(size: SettingsWindowMetrics.sidebarEntryFontSize, weight: selected ? .semibold : .regular))
         Spacer(minLength: 0)
+        if item == .permissions, permissions.checklist.needsAttention {
+          Circle()
+            .fill(color(SettingsPalette.crimson))
+            .frame(width: 6, height: 6)
+            .accessibilityHidden(true)
+        }
       }
       .foregroundStyle(sidebarForeground(selected: selected, showsFocus: showsFocus))
       .padding(.horizontal, 8)
@@ -450,6 +482,7 @@ struct SettingsView: View {
     .buttonStyle(.plain)
     .focusable(false)
     .settingsFocusRingHidden()
+    .modifier(SidebarAttentionLabel(label: sidebarAttentionLabel(item)))
     .accessibilityAddTraits(selected ? .isSelected : [])
     .accessibilityRemoveTraits(selected ? [] : .isSelected)
     .onHover { hovering in
@@ -459,6 +492,12 @@ struct SettingsView: View {
         hoveredSection = nil
       }
     }
+  }
+
+  /// « Permissions, à corriger » seulement quand la liste demande une action.
+  private func sidebarAttentionLabel(_ item: SettingsSection) -> String? {
+    guard item == .permissions, permissions.checklist.needsAttention else { return nil }
+    return L10n.current("settings.permissions.sidebar.attention")
   }
 
   /// La couleur `claret` remplace l’anneau : elle ne s’allume que si la barre
@@ -510,6 +549,8 @@ struct SettingsView: View {
       focusedExit = .passphrase
     case .general:
       languageFocused = true
+    case .permissions:
+      focusedPermissionAction = permissions.checklist.checks.first?.actions.first
     case .about:
       focusedAboutLink = Credits.authorURL
     }
@@ -566,6 +607,8 @@ struct SettingsView: View {
       exitSettings
     case .general:
       generalSettings
+    case .permissions:
+      permissionsSettings
     case .about:
       aboutSettings
     }
@@ -940,6 +983,79 @@ struct SettingsView: View {
     }
   }
 
+  private var permissionsSettings: some View {
+    VStack(alignment: .leading, spacing: 22) {
+      ForEach(permissions.checklist.checks, id: \.id) { check in
+        permissionsGroup(check)
+      }
+    }
+  }
+
+  private func permissionsGroup(_ check: SetupCheck) -> some View {
+    let symbol = permissionsSymbol(check.state)
+    return SettingsGroup {
+      SettingsRow(help: L10n.current(check.detailKey)) {
+        HStack(spacing: 8) {
+          Image(systemName: symbol.name)
+            .font(.system(size: 16))
+            .foregroundStyle(color(symbol.swatch))
+            .accessibilityHidden(true)
+          Text(L10n.current(check.titleKey))
+            .font(.system(size: 13))
+            .foregroundStyle(color(SettingsPalette.ink))
+        }
+      } control: {
+        permissionsActions(check)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func permissionsActions(_ check: SetupCheck) -> some View {
+    if !check.actions.isEmpty {
+      VStack(alignment: .trailing, spacing: 6) {
+        ForEach(check.actions, id: \.self) { action in
+          Button(permissionsActionTitle(action)) {
+            performPermissionsAction(action)
+          }
+          .buttonStyle(.bordered)
+          .controlSize(.small)
+          .focused($focusedPermissionAction, equals: action)
+        }
+      }
+      .fixedSize(horizontal: true, vertical: false)
+    }
+  }
+
+  private func permissionsSymbol(
+    _ state: SetupCheckState
+  ) -> (name: String, swatch: SettingsPalette.Swatch) {
+    switch state {
+    case .ok:
+      ("checkmark.circle.fill", SettingsPalette.jade)
+    case .attention:
+      ("exclamationmark.triangle.fill", SettingsPalette.crimson)
+    }
+  }
+
+  private func permissionsActionTitle(_ action: SetupAction) -> String {
+    switch action {
+    case .requestAccessibility:
+      L10n.current("settings.permissions.action.request")
+    case .openAccessibilitySettings:
+      L10n.current("settings.permissions.action.openSettings")
+    }
+  }
+
+  private func performPermissionsAction(_ action: SetupAction) {
+    switch action {
+    case .requestAccessibility:
+      AccessibilitySettings.requestAccess()
+    case .openAccessibilitySettings:
+      AccessibilitySettings.openSystemSettings()
+    }
+  }
+
   private var aboutSettings: some View {
     VStack(alignment: .leading, spacing: 22) {
       SettingsGroup {
@@ -1039,6 +1155,19 @@ struct SettingsView: View {
   }
 }
 
+/// Remplace le libellé vocal de l’entrée Permissions quand il y a quelque chose à corriger.
+private struct SidebarAttentionLabel: ViewModifier {
+  var label: String?
+
+  func body(content: Content) -> some View {
+    if let label {
+      content.accessibilityLabel(label)
+    } else {
+      content
+    }
+  }
+}
+
 private extension View {
   @ViewBuilder
   func settingsFocusRingHidden() -> some View {
@@ -1047,6 +1176,72 @@ private extension View {
     } else {
       self
     }
+  }
+}
+
+/// TCC ne notifie pas : relire Accessibilité tant que Permissions est visible.
+@MainActor
+private final class PermissionsMonitor: ObservableObject {
+  @Published private(set) var checklist: SetupChecklist
+  private var timer: Timer?
+  private var sectionVisible = false
+  private var windowVisible = false
+
+  init() {
+    checklist = Self.currentChecklist()
+  }
+
+  isolated deinit {
+    timer?.invalidate()
+  }
+
+  func setSectionVisible(_ visible: Bool) {
+    sectionVisible = visible
+    updateWatch()
+  }
+
+  func setWindowVisible(_ visible: Bool) {
+    windowVisible = visible
+    updateWatch()
+  }
+
+  private func updateWatch() {
+    let watch = sectionVisible && windowVisible
+    if watch {
+      guard timer == nil else { return }
+      refresh()
+      let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+        Task { @MainActor in
+          self?.refresh()
+        }
+      }
+      RunLoop.main.add(timer, forMode: .common)
+      self.timer = timer
+    } else {
+      timer?.invalidate()
+      timer = nil
+    }
+  }
+
+  private func refresh() {
+    let checklist = Self.currentChecklist()
+    guard checklist != self.checklist else { return }
+    self.checklist = checklist
+  }
+
+  private static func currentChecklist() -> SetupChecklist {
+    SetupChecklist(facts: SetupFacts(accessibilityGranted: AccessibilitySettings.isProcessTrusted()))
+  }
+}
+
+/// Vrai une fois que l’ouverture a réellement affiché la fenêtre, faux dès qu’elle se ferme.
+@MainActor
+final class SettingsWindowPresence: ObservableObject {
+  @Published private(set) var isVisible = false
+
+  func setVisible(_ isVisible: Bool) {
+    guard isVisible != self.isVisible else { return }
+    self.isVisible = isVisible
   }
 }
 
@@ -1110,6 +1305,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
   private let onLaunch: () -> Void
   private let onRelaunch: () -> Void
   private var window: NSWindow?
+  private let presence = SettingsWindowPresence()
   private var model: SettingsModel?
   private var showSequence: SettingsShowSequence?
   private var showGeneration = 0
@@ -1160,6 +1356,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
       rootView: SettingsView(
         model: model,
         session: session,
+        presence: presence,
         initialSection: section,
         onLaunch: onLaunch,
         onRelaunch: onRelaunch
@@ -1174,6 +1371,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
   func hide() {
     cancelPendingShow()
+    presence.setVisible(false)
     restoreWindowAfterHiding()
     window?.orderOut(nil)
     restoreActivationPolicy()
@@ -1232,6 +1430,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     guard var sequence = showSequence else { return }
     let visible = window?.isVisible == true
     let key = window?.isKeyWindow == true
+    presence.setVisible(visible)
     let event = sequence.recordOrderFront(isVisible: visible, isKeyWindow: key)
     showSequence = sequence
     log.emit(event)

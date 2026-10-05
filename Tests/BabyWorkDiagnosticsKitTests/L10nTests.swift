@@ -73,6 +73,52 @@ func languagePreferenceCopy() {
   #expect(L10nTable.language("en")("settings.general.language.relaunch.action") == "Relaunch Now")
 }
 
+@Test("Permissions : Accessibilité accordée, à corriger, et les deux boutons")
+func permissionsAccessibilityCopy() {
+  #expect(L10nTable.language("fr")("settings.permissions.title") == "Permissions")
+  #expect(L10nTable.language("en")("settings.permissions.title") == "Permissions")
+  #expect(
+    L10nTable.language("fr")("settings.permissions.subtitle")
+      == "Si une session peut démarrer, et comment corriger sinon."
+  )
+  #expect(
+    L10nTable.language("en")("settings.permissions.subtitle")
+      == "Whether a session can start, and how to fix it if not."
+  )
+  #expect(
+    L10nTable.language("fr")("settings.permissions.sidebar.attention") == "Permissions, à corriger"
+  )
+  #expect(
+    L10nTable.language("en")("settings.permissions.sidebar.attention") == "Permissions, needs attention"
+  )
+  #expect(L10nTable.language("fr")("settings.permissions.accessibility.title") == "Accessibilité")
+  #expect(L10nTable.language("en")("settings.permissions.accessibility.title") == "Accessibility")
+  #expect(
+    L10nTable.language("fr")("settings.permissions.accessibility.ok")
+      == "BabyWorks peut filtrer les raccourcis pendant une session."
+  )
+  #expect(
+    L10nTable.language("en")("settings.permissions.accessibility.ok")
+      == "BabyWorks can filter shortcuts during a session."
+  )
+  #expect(
+    L10nTable.language("fr")("settings.permissions.accessibility.attention")
+      == "Cochez BabyWorks dans Réglages Système › Confidentialité et sécurité › Accessibilité. Si BabyWorks y est déjà cochée, retirez-la avec « – », puis ajoutez-la de nouveau : l’entrée est périmée après une mise à jour ou une copie."
+  )
+  #expect(
+    L10nTable.language("en")("settings.permissions.accessibility.attention")
+      == "Turn on BabyWorks in System Settings › Privacy & Security › Accessibility. If BabyWorks is already on, remove it with “–”, then add it again: the entry is stale after an update or a copy."
+  )
+  #expect(L10nTable.language("fr")("settings.permissions.action.request") == "Demander l’accès")
+  #expect(L10nTable.language("en")("settings.permissions.action.request") == "Request Access")
+  #expect(
+    L10nTable.language("fr")("settings.permissions.action.openSettings") == "Ouvrir Réglages Système"
+  )
+  #expect(
+    L10nTable.language("en")("settings.permissions.action.openSettings") == "Open System Settings"
+  )
+}
+
 @Test("Une clé absente renvoie la clé")
 func missingLocalizationKeyReturnsTheKey() {
   #expect(L10nTable.language("fr")("menu.absent") == "menu.absent")

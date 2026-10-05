@@ -1,5 +1,4 @@
 import AppKit
-import ApplicationServices
 import BabyWorkDiagnosticsKit
 import OSLog
 
@@ -178,13 +177,8 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
   }
 
   private func openAccessibilitySettings() {
-    let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
-    _ = AXIsProcessTrustedWithOptions(options)
-    for candidate in SessionActivationAlert.accessibilitySettingsURLCandidates {
-      if let url = URL(string: candidate), NSWorkspace.shared.open(url) {
-        return
-      }
-    }
+    AccessibilitySettings.requestAccess()
+    AccessibilitySettings.openSystemSettings()
   }
 
   private func activateApp() {

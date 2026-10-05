@@ -19,3 +19,11 @@
 "settings.general.language.french" = "Français";
 "settings.general.language.relaunch.help" = "Relaunch BabyWorks to apply";
 "settings.general.language.relaunch.action" = "Relaunch Now";
+"settings.permissions.title" = "Permissions";
+"settings.permissions.subtitle" = "Whether a session can start, and how to fix it if not.";
+"settings.permissions.sidebar.attention" = "Permissions, needs attention";
+"settings.permissions.accessibility.title" = "Accessibility";
+"settings.permissions.accessibility.ok" = "BabyWorks can filter shortcuts during a session.";
+"settings.permissions.accessibility.attention" = "Turn on BabyWorks in System Settings › Privacy & Security › Accessibility. If BabyWorks is already on, remove it with “–”, then add it again: the entry is stale after an update or a copy.";
+"settings.permissions.action.request" = "Request Access";
+"settings.permissions.action.openSettings" = "Open System Settings";
