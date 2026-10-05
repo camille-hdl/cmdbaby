@@ -33,6 +33,7 @@ func starshipTuningStandardFire() {
   #expect(abs(tuning.minimumFireDelay - 0.5) < 1e-6)
   #expect(abs(tuning.fireSafetyMargin - 80) < 1e-6)
   #expect(abs(tuning.boltSpeed - 1800) < 1e-6)
+  #expect(abs(tuning.boltOvershoot - 80) < 1e-6)
   #expect(abs(tuning.beamDuration - 0.15) < 1e-6)
   #expect(abs(tuning.explosionDuration - 0.35) < 1e-6)
 }

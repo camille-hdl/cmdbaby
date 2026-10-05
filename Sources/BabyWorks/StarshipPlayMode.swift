@@ -75,6 +75,47 @@ final class StarshipDirector {
     }
   }
 
+  /// Clic : le vaisseau pivote vers `point` puis tire dans cette direction.
+  /// Rien si `screenIndex` n’est pas l’écran du vaisseau.
+  func fire(towards point: CGPoint, screenIndex: Int) {
+    guard screenIndex == homeScreenIndex,
+      let origin = shipCenter,
+      let frame = screens.first(where: { $0.index == screenIndex })?.frame,
+      let painter = painter(at: screenIndex)
+    else { return }
+
+    let originPoint = StarshipPoint(x: Double(origin.x), y: Double(origin.y))
+    let click = StarshipPoint(x: Double(point.x), y: Double(point.y))
+    let angle = StarshipAim.angle(from: originPoint, to: click) ?? painter.aimAngle
+    painter.aimShip(at: angle, duration: tuning.aimDuration)
+
+    let directionX = cos(angle)
+    let directionY = sin(angle)
+    let nose = Double(painter.shipHeight) / 2
+    let start = CGPoint(
+      x: origin.x + CGFloat(nose * directionX),
+      y: origin.y + CGFloat(nose * directionY)
+    )
+    let exit = StarshipAim.rayExit(
+      from: originPoint,
+      angle: angle,
+      width: Double(frame.width),
+      height: Double(frame.height)
+    )
+    let end = CGPoint(
+      x: CGFloat(exit.x + tuning.boltOvershoot * directionX),
+      y: CGFloat(exit.y + tuning.boltOvershoot * directionY)
+    )
+    let distance = hypot(end.x - start.x, end.y - start.y)
+    painter.fireBolt(
+      from: start,
+      to: end,
+      angle: angle,
+      duration: Double(distance) / tuning.boltSpeed,
+      delay: tuning.aimDuration
+    )
+  }
+
   /// Centre du vaisseau, en coordonnées locales à l’écran du vaisseau.
   /// `nil` tant qu’aucun écran n’a de cadre.
   var shipCenter: CGPoint? {
@@ -276,283 +317,6 @@ final class StarshipPlayMode: PlayMode {
   }
 }
 
-/// Ciel et vaisseau d’un écran. Le `contentsRect` choisit le morceau du ciel.
-@MainActor
-final class StarshipPainter {
-  let skyboxBack = CALayer()
-  let skyboxFront = CALayer()
-  let shipRoot = CALayer()
-
-  private let tuning: StarshipTuning
-  private let shipBob = CALayer()
-  private let shipSpin = CALayer()
-  private let shipAim = CALayer()
-  private let shipSprite = CALayer()
-  private var ephemerals: [(layer: CALayer, endsAt: TimeInterval)] = []
-  private var warpToken = 0
-  /// Compteur de tours, pour que chaque appui ait sa propre animation.
-  private var spinCounter = 0
-  /// Fin de la file de tours, dans le temps local de `shipSpin`.
-  private var spinQueue = StarshipSpinQueue()
-  /// Fin du fondu en cours. `nil` quand le ciel du dessous est le ciel courant.
-  private var skyboxFadeEndsAt: TimeInterval?
-
-  private static let warpKey = "warp"
-  private static let skyboxFadeKey = "skyboxFade"
-
-  init(tuning: StarshipTuning, scale: CGFloat) {
-    self.tuning = tuning
-    configureSkybox(skyboxBack, zPosition: 0)
-    configureSkybox(skyboxFront, zPosition: 1)
-    skyboxFront.opacity = 0
-    installShip(scale: scale)
-  }
-
-  func setBounds(_ bounds: CGRect, scale: CGFloat) {
-    CATransaction.begin()
-    CATransaction.setDisableActions(true)
-    skyboxBack.frame = bounds
-    skyboxFront.frame = bounds
-    shipRoot.position = CGPoint(x: bounds.midX, y: bounds.midY)
-    shipSprite.contentsScale = scale
-    CATransaction.commit()
-  }
-
-  func showShip(animated: Bool) {
-    warpToken += 1
-    shipRoot.removeAnimation(forKey: Self.warpKey)
-    CATransaction.begin()
-    CATransaction.setDisableActions(true)
-    shipRoot.isHidden = false
-    shipRoot.opacity = 1
-    shipRoot.transform = CATransform3DIdentity
-    if animated {
-      shipRoot.add(Self.appearWarp(duration: tuning.shipWarpDuration), forKey: Self.warpKey)
-    }
-    CATransaction.commit()
-  }
-
-  func hideShip(animated: Bool) {
-    warpToken += 1
-    let token = warpToken
-    guard animated else {
-      shipRoot.removeAnimation(forKey: Self.warpKey)
-      CATransaction.begin()
-      CATransaction.setDisableActions(true)
-      shipRoot.isHidden = true
-      CATransaction.commit()
-      return
-    }
-    CATransaction.begin()
-    CATransaction.setCompletionBlock { [weak self] in
-      MainActor.assumeIsolated {
-        guard let self, self.warpToken == token else { return }
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        self.shipRoot.isHidden = true
-        self.shipRoot.removeAnimation(forKey: Self.warpKey)
-        CATransaction.commit()
-      }
-    }
-    shipRoot.add(Self.disappearWarp(duration: tuning.shipWarpDuration), forKey: Self.warpKey)
-    CATransaction.commit()
-  }
-
-  /// Un tour complet sur `shipSpin`, sens horaire. Les tours s’enchaînent :
-  /// un nouvel appui allonge la toupie, il ne la remplace pas et ne l’accélère pas.
-  func spin(duration: Double) {
-    let now = shipSpin.convertTime(CACurrentMediaTime(), from: nil)
-    let start = spinQueue.addTurn(now: now, duration: duration)
-    let turn = CABasicAnimation(keyPath: "transform.rotation.z")
-    turn.fromValue = 0
-    turn.toValue = -2 * Double.pi
-    turn.duration = duration
-    turn.isAdditive = true
-    turn.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-    if start > now {
-      turn.beginTime = start
-    }
-    shipSpin.add(turn, forKey: "spin-\(spinCounter)")
-    spinCounter += 1
-  }
-
-  /// Ajoute `layer` à la scène et le retire automatiquement après `lifetime` secondes.
-  func addEphemeral(_ layer: CALayer, lifetime: TimeInterval, now: TimeInterval) {
-    skyboxBack.superlayer?.addSublayer(layer)
-    ephemerals.append((layer: layer, endsAt: now + lifetime))
-  }
-
-  /// Retire les éphémères expirés et pose le ciel fondu sur le calque du dessous.
-  func tick(now: TimeInterval) {
-    if let endsAt = skyboxFadeEndsAt, now >= endsAt {
-      settleSkyboxFade()
-    }
-    ephemerals.removeAll { item in
-      guard now >= item.endsAt else { return false }
-      item.layer.removeFromSuperlayer()
-      return true
-    }
-  }
-
-  func teardown() {
-    warpToken += 1
-    skyboxFadeEndsAt = nil
-    shipRoot.removeAnimation(forKey: Self.warpKey)
-    skyboxFront.removeAnimation(forKey: Self.skyboxFadeKey)
-    for item in ephemerals {
-      item.layer.removeFromSuperlayer()
-    }
-    ephemerals.removeAll(keepingCapacity: false)
-    CATransaction.begin()
-    CATransaction.setDisableActions(true)
-    skyboxBack.contents = nil
-    skyboxFront.contents = nil
-    skyboxFront.opacity = 0
-    CATransaction.commit()
-    shipRoot.removeFromSuperlayer()
-    skyboxFront.removeFromSuperlayer()
-    skyboxBack.removeFromSuperlayer()
-  }
-
-  private func configureSkybox(_ layer: CALayer, zPosition: CGFloat) {
-    layer.zPosition = zPosition
-    layer.contentsGravity = .resize
-    layer.magnificationFilter = .linear
-    layer.minificationFilter = .trilinear
-  }
-
-  private func settleSkyboxFade() {
-    skyboxBack.contents = skyboxFront.contents
-    skyboxBack.contentsRect = skyboxFront.contentsRect
-    skyboxFront.removeAnimation(forKey: Self.skyboxFadeKey)
-    skyboxFront.contents = nil
-    skyboxFront.opacity = 0
-    skyboxFadeEndsAt = nil
-  }
-
-  private func installShip(scale: CGFloat) {
-    let image = StarshipSprite.cgImage(named: StarshipCatalog.shipSprite)
-    let size = Self.shipSize(width: tuning.shipWidth, image: image)
-    let shipBounds = CGRect(origin: .zero, size: size)
-    let center = CGPoint(x: size.width / 2, y: size.height / 2)
-
-    shipRoot.bounds = shipBounds
-    shipRoot.zPosition = 20
-    shipRoot.isHidden = true
-
-    for layer in [shipBob, shipSpin, shipAim, shipSprite] {
-      layer.bounds = shipBounds
-      layer.position = center
-    }
-    shipSprite.contents = image
-    shipSprite.contentsGravity = .resizeAspect
-    shipSprite.contentsScale = scale
-
-    shipRoot.addSublayer(shipBob)
-    shipBob.addSublayer(shipSpin)
-    shipSpin.addSublayer(shipAim)
-    shipAim.addSublayer(shipSprite)
-
-    let bob = CABasicAnimation(keyPath: "transform.translation.y")
-    bob.fromValue = -4
-    bob.toValue = 4
-    bob.duration = 1.2
-    bob.autoreverses = true
-    bob.repeatCount = .infinity
-    bob.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-    shipBob.add(bob, forKey: "bob")
-  }
-
-  private static func shipSize(width: Double, image: CGImage?) -> CGSize {
-    let points = CGFloat(width)
-    guard let image, image.width > 0 else {
-      return CGSize(width: points, height: points)
-    }
-    let ratio = CGFloat(image.height) / CGFloat(image.width)
-    return CGSize(width: points, height: points * ratio)
-  }
-
-  private static func appearWarp(duration: Double) -> CAAnimationGroup {
-    let scale = CAKeyframeAnimation(keyPath: "transform.scale")
-    scale.values = [0.1, 1.15, 1]
-    scale.keyTimes = [0, 0.7, 1]
-    scale.duration = duration
-    let opacity = CABasicAnimation(keyPath: "opacity")
-    opacity.fromValue = 0
-    opacity.toValue = 1
-    opacity.duration = duration
-    let group = CAAnimationGroup()
-    group.animations = [scale, opacity]
-    group.duration = duration
-    return group
-  }
-
-  private static func disappearWarp(duration: Double) -> CAAnimationGroup {
-    let scale = CABasicAnimation(keyPath: "transform.scale")
-    scale.fromValue = 1
-    scale.toValue = 0.1
-    scale.duration = duration
-    scale.fillMode = .forwards
-    scale.isRemovedOnCompletion = false
-    let opacity = CABasicAnimation(keyPath: "opacity")
-    opacity.fromValue = 1
-    opacity.toValue = 0
-    opacity.duration = duration
-    opacity.fillMode = .forwards
-    opacity.isRemovedOnCompletion = false
-    let group = CAAnimationGroup()
-    group.animations = [scale, opacity]
-    group.duration = duration
-    group.fillMode = .forwards
-    group.isRemovedOnCompletion = false
-    return group
-  }
-
-  /// `contentsRect` partage l’origine en bas à gauche du calque non retourné.
-  /// Vérifié avec `skybox-space-band` : la bande claire reste dans le même sens que le PNG.
-  func showSkybox(image: CGImage, contentsRect: StarshipUnitRect) {
-    let rect = Self.cgRect(contentsRect)
-    CATransaction.begin()
-    CATransaction.setDisableActions(true)
-    if skyboxFadeEndsAt == nil {
-      skyboxBack.contents = image
-      skyboxBack.contentsRect = rect
-    } else {
-      skyboxBack.contentsRect = rect
-      skyboxFront.contentsRect = rect
-    }
-    CATransaction.commit()
-  }
-
-  /// Fondu du calque du dessus vers `image`. Le dessous garde le ciel courant jusqu’à la fin.
-  func crossfadeSkybox(to image: CGImage, contentsRect: StarshipUnitRect, duration: TimeInterval) {
-    let rect = Self.cgRect(contentsRect)
-    CATransaction.begin()
-    CATransaction.setDisableActions(true)
-    skyboxBack.contentsRect = rect
-    skyboxFront.contents = image
-    skyboxFront.contentsRect = rect
-    skyboxFront.opacity = 0
-    CATransaction.commit()
-
-    let fade = CABasicAnimation(keyPath: "opacity")
-    fade.fromValue = 0
-    fade.toValue = 1
-    fade.duration = duration
-    fade.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-    CATransaction.begin()
-    CATransaction.setDisableActions(true)
-    skyboxFront.opacity = 1
-    CATransaction.commit()
-    skyboxFront.add(fade, forKey: Self.skyboxFadeKey)
-    skyboxFadeEndsAt = ProcessInfo.processInfo.systemUptime + duration
-  }
-
-  private static func cgRect(_ rect: StarshipUnitRect) -> CGRect {
-    CGRect(x: rect.x, y: rect.y, width: rect.width, height: rect.height)
-  }
-}
-
 /// Ciel et vaisseau de la session sur un écran. La frappe remonte d’abord les sorties adultes.
 final class StarshipStageView: NSView {
   static let backgroundColor = NSColor(
@@ -648,6 +412,8 @@ final class StarshipStageView: NSView {
   override func mouseDown(with event: NSEvent) {
     director.notePointer(screenIndex: screenIndex)
     window?.makeFirstResponder(self)
+    let point = convert(event.locationInWindow, from: nil)
+    director.fire(towards: point, screenIndex: screenIndex)
   }
 
   private func reportFrame() {

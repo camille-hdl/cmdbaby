@@ -24,6 +24,7 @@ public struct StarshipTuning: Equatable, Sendable {
   public var minimumFireDelay: Double = 0.5
   public var fireSafetyMargin: Double = 80
   public var boltSpeed: Double = 1800
+  public var boltOvershoot: Double = 80
   public var beamDuration: Double = 0.15
   public var explosionDuration: Double = 0.35
 
