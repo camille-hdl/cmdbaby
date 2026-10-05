@@ -35,12 +35,12 @@ func starshipTargetInsideTheShieldStaysUntilTheShot() {
   let delay = StarshipFireSchedule.delay(for: flight, tuning: tuning, roll: 0)
   #expect(abs(delay - 2) < 1e-6)
 
-  let insideShield = 0.8
-  #expect(flight.remaining(at: insideShield) < tuning.shieldRadius)
+  let elapsed = 0.8
+  #expect(flight.remaining(at: elapsed) < tuning.shieldRadius)
   #expect(
     StarshipFireSchedule.shieldDestroys(
       flight: flight,
-      elapsed: insideShield,
+      elapsed: elapsed,
       fireDelay: delay,
       tuning: tuning
     ) == false
