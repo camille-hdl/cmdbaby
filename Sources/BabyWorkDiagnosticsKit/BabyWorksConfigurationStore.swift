@@ -15,6 +15,11 @@ public struct BabyWorksConfigurationStore: Sendable {
     self.fileURL = fileURL
   }
 
+  /// Vrai dès que `config.json` existe, même s’il est illisible.
+  public var hasSavedConfiguration: Bool {
+    FileManager.default.fileExists(atPath: fileURL.path)
+  }
+
   public func load() -> BabyWorksConfiguration {
     do {
       let data = try Data(contentsOf: fileURL)

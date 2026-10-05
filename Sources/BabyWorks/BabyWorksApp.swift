@@ -1,6 +1,9 @@
 import AppKit
 import ApplicationServices
 import BabyWorkDiagnosticsKit
+import OSLog
+
+private let appLogger = Logger(subsystem: "fr.camille.babywork", category: "App")
 
 @main
 enum BabyWorksMain {
@@ -47,6 +50,25 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
         self?.presentActivationFailure(error)
       }
     )
+    applyLaunchPlan()
+  }
+
+  /// Premier lancement : enregistrer les défauts, puis ouvrir Sorties. Pas de session.
+  private func applyLaunchPlan() {
+    let store = BabyWorksConfigurationStore()
+    switch LaunchPlan.atLaunch(hasSavedConfiguration: store.hasSavedConfiguration) {
+    case .idle:
+      break
+    case .openSettings(let section):
+      do {
+        try store.save(store.load())
+      } catch {
+        appLogger.error(
+          "Impossible d’enregistrer la configuration par défaut : \(error.localizedDescription, privacy: .public)"
+        )
+      }
+      openSettings(section: SettingsSection(section))
+    }
   }
 
   func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -182,6 +204,15 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
       #selector(openSettings(_:))
     case .terminate:
       #selector(quitApplication(_:))
+    }
+  }
+}
+
+extension SettingsSection {
+  fileprivate init(_ section: InitialSettingsSection) {
+    switch section {
+    case .exits:
+      self = .exits
     }
   }
 }

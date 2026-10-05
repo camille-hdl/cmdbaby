@@ -45,6 +45,18 @@ func unknownModeInConfigurationFileFallsBackToOcean() throws {
   #expect(store.load() == BabyWorksConfiguration(mode: .ocean, launchAtLogin: true))
 }
 
+@Test("Aucune configuration n’est enregistrée avant le premier save, et elle l’est après")
+func hasSavedConfigurationIsFalseUntilTheFileIsWritten() throws {
+  let file = TemporaryConfigurationFile()
+  defer { file.remove() }
+
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  #expect(store.hasSavedConfiguration == false)
+
+  try store.save(BabyWorksConfiguration())
+  #expect(store.hasSavedConfiguration == true)
+}
+
 @Test("Le chemin par défaut est Application Support/BabyWorks/config.json")
 func defaultConfigurationPathIsApplicationSupport() {
   let url = BabyWorksConfigurationStore.defaultFileURL
