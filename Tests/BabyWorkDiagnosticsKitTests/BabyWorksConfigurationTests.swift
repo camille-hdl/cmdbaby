@@ -17,12 +17,12 @@ func configurationVersionOneWithoutExitsDefaultsTimeLimitToTwentyMinutes() throw
     BabyWorksConfiguration.self,
     from: Data(
       #"""
-      {"schemaVersion":1,"mode":"galaxy","launchAtLogin":true}
+      {"schemaVersion":1,"mode":"starship","launchAtLogin":true}
       """#.utf8
     )
   )
   #expect(decoded.exits.timeLimitMinutes == 20)
-  #expect(decoded == BabyWorksConfiguration(schemaVersion: 1, mode: .galaxy, launchAtLogin: true))
+  #expect(decoded == BabyWorksConfiguration(schemaVersion: 1, mode: .starship, launchAtLogin: true))
 }
 
 @Test("Une méthode inconnue est ignorée et les méthodes connues restent")
@@ -89,10 +89,10 @@ func configurationOutOfRangeTimeLimitIsClamped() throws {
 func configurationInvalidTimeLimitFieldDecodesToTwentyMinutes() throws {
   let decoded = try JSONDecoder().decode(
     BabyWorksConfiguration.self,
-    from: Data(#"{"mode":"galaxy","exits":{"timeLimitMinutes":"long"}}"#.utf8)
+    from: Data(#"{"mode":"starship","exits":{"timeLimitMinutes":"long"}}"#.utf8)
   )
   #expect(decoded.exits.timeLimitMinutes == 20)
-  #expect(decoded.mode == .galaxy)
+  #expect(decoded.mode == .starship)
 }
 
 @Test("Un JSON v1 sans champ nouveau se relit à l’identique")
@@ -101,16 +101,16 @@ func configurationVersionOneJSONDecodesIdentically() throws {
     BabyWorksConfiguration.self,
     from: Data(
       #"""
-      {"schemaVersion":1,"mode":"galaxy","launchAtLogin":true}
+      {"schemaVersion":1,"mode":"starship","launchAtLogin":true}
       """#.utf8
     )
   )
-  #expect(decoded == BabyWorksConfiguration(schemaVersion: 1, mode: .galaxy, launchAtLogin: true))
+  #expect(decoded == BabyWorksConfiguration(schemaVersion: 1, mode: .starship, launchAtLogin: true))
 }
 
 @Test("Une config encodée se relit à l’identique")
 func configurationRoundTripsThroughJSON() throws {
-  let original = BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true)
+  let original = BabyWorksConfiguration(mode: .starship, launchAtLogin: true)
   let data = try JSONEncoder().encode(original)
   let decoded = try JSONDecoder().decode(BabyWorksConfiguration.self, from: data)
   #expect(decoded == original)
@@ -123,9 +123,18 @@ func configurationMissingFieldsDecodeToDefaults() throws {
 
   let partial = try JSONDecoder().decode(
     BabyWorksConfiguration.self,
-    from: Data(#"{"mode":"galaxy"}"#.utf8)
+    from: Data(#"{"mode":"starship"}"#.utf8)
   )
-  #expect(partial == BabyWorksConfiguration(mode: .galaxy))
+  #expect(partial == BabyWorksConfiguration(mode: .starship))
+}
+
+@Test("Une configuration enregistrée en Galaxie ouvre le mode Vaisseau")
+func retiredGalaxyConfigurationOpensStarship() throws {
+  let decoded = try JSONDecoder().decode(
+    BabyWorksConfiguration.self,
+    from: Data(#"{"schemaVersion":1,"mode":"galaxy","launchAtLogin":true}"#.utf8)
+  )
+  #expect(decoded.mode == .starship)
 }
 
 @Test("Un mode JSON inconnu replie sur Océan et conserve les autres champs")

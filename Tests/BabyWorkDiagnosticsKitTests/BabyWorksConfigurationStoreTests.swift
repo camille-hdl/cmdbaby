@@ -18,7 +18,7 @@ func savedConfigurationRoundTripsThroughTheFile() throws {
   defer { file.remove() }
 
   let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
-  let original = BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true)
+  let original = BabyWorksConfiguration(mode: .starship, launchAtLogin: true)
   try store.save(original)
   #expect(store.load() == original)
 }

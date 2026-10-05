@@ -20,8 +20,6 @@ enum PlayModeRegistry {
     switch id {
     case .ocean:
       OceanPlayMode()
-    case .galaxy:
-      GalaxyPlayMode()
     case .terminal:
       TerminalPlayMode()
     case .starship:
@@ -35,8 +33,6 @@ enum PlayModeRegistry {
     switch id {
     case .ocean:
       OceanModePreview()
-    case .galaxy:
-      GalaxyModePreview()
     case .terminal:
       TerminalModePreview()
     case .starship:

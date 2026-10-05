@@ -4,10 +4,9 @@ import Testing
 
 @Test("Le catalogue expose le mode océan par défaut")
 func playModeCatalogDefaultsToOcean() {
-  #expect(KioskPlayModeCatalog.available == [.ocean, .galaxy, .terminal, .starship])
+  #expect(KioskPlayModeCatalog.available == [.ocean, .terminal, .starship])
   #expect(KioskPlayModeCatalog.default == .ocean)
   #expect(KioskPlayModeCatalog.displayName(.ocean) == "Océan")
-  #expect(KioskPlayModeCatalog.displayName(.galaxy) == "Galaxie")
   #expect(KioskPlayModeCatalog.displayName(.terminal) == "Terminal")
   #expect(KioskPlayModeCatalog.displayName(.starship) == "Vaisseau")
 }
@@ -20,7 +19,6 @@ func playModeCatalogAvailableMatchesAllCases() {
 @Test("Chaque mode a une phrase courte pour la carte de Réglages")
 func playModeCatalogTaglineIsPresentForEveryMode() {
   #expect(KioskPlayModeCatalog.tagline(.ocean) == "Des poissons, du sable et des bulles à chaque touche.")
-  #expect(KioskPlayModeCatalog.tagline(.galaxy) == "Des lettres et des étoiles qui filent dans l’espace.")
   #expect(KioskPlayModeCatalog.tagline(.terminal) == "Tape au clavier et fais pleuvoir le code vert.")
   #expect(KioskPlayModeCatalog.tagline(.starship) == "Chaque touche fait surgir un intrus, ton vaisseau le pulvérise au laser.")
   for id in KioskPlayModeID.allCases {
@@ -28,10 +26,9 @@ func playModeCatalogTaglineIsPresentForEveryMode() {
   }
 }
 
-@Test("Le registre résout Océan, Galaxie, Terminal et Vaisseau par identifiant")
+@Test("Le registre résout Océan, Terminal et Vaisseau par identifiant")
 func playModeCatalogResolvesRegisteredIDs() {
   #expect(KioskPlayModeCatalog.resolve("ocean") == .ocean)
-  #expect(KioskPlayModeCatalog.resolve("galaxy") == .galaxy)
   #expect(KioskPlayModeCatalog.resolve("terminal") == .terminal)
   #expect(KioskPlayModeCatalog.resolve("starship") == .starship)
 }
@@ -42,75 +39,18 @@ func playModeCatalogRejectsUnknownID() {
   #expect(KioskPlayModeCatalog.resolve("") == nil)
 }
 
+@Test("Un identifiant Galaxie enregistré ouvre le mode Vaisseau")
+func retiredGalaxyIdentifierOpensStarship() {
+  #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "galaxy") == .starship)
+  #expect(KioskPlayModeCatalog.resolve("galaxy") == nil)
+  #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "inconnu") == .ocean)
+}
+
 @Test("Le mode de session suit l’identifiant enregistré, sinon Océan")
 func playModeCatalogSessionModeFallsBackToOcean() {
   #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "ocean") == .ocean)
-  #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "galaxy") == .galaxy)
   #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "terminal") == .terminal)
   #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "starship") == .starship)
   #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "leaf") == .ocean)
   #expect(KioskPlayModeCatalog.sessionMode(fromRawID: "") == .ocean)
-}
-
-@Test("Une lettre devient un glyphe majuscule")
-func letterBecomesUppercaseGlyph() {
-  #expect(PlayGlyphResolver.glyph(fromVisibleCharacter: "a", emojiIndex: 0) == .character("A"))
-  #expect(PlayGlyphResolver.glyph(fromVisibleCharacter: "é", emojiIndex: 0) == .character("É"))
-}
-
-@Test("Un chiffre est affiché tel quel")
-func digitBecomesGlyph() {
-  #expect(PlayGlyphResolver.glyph(fromVisibleCharacter: "7", emojiIndex: 0) == .character("7"))
-}
-
-@Test("Une touche sans lettre ni chiffre devient un emoji du catalogue")
-func nonAlphanumericBecomesEmoji() {
-  let glyph = PlayGlyphResolver.glyph(fromVisibleCharacter: "&", emojiIndex: 2)
-  #expect(glyph == .emoji(PlayGlyphResolver.emojis[2]))
-  #expect(PlayGlyphResolver.glyph(fromVisibleCharacter: nil, emojiIndex: 0) == .emoji(PlayGlyphResolver.emojis[0]))
-}
-
-@Test("L’indice d’emoji boucle dans le catalogue")
-func emojiIndexWraps() {
-  let count = PlayGlyphResolver.emojis.count
-  #expect(
-    PlayGlyphResolver.glyph(fromVisibleCharacter: nil, emojiIndex: count)
-      == .emoji(PlayGlyphResolver.emojis[0])
-  )
-}
-
-@Test("Le champ d’étoiles privilégie les étoiles, avec quelques objets rares")
-func warpFieldCatalogPrefersStars() {
-  #expect(WarpFieldCatalog.emoji(roll: 0.07, starIndex: 0, rareIndex: 1) == WarpFieldCatalog.rare[1])
-  #expect(WarpFieldCatalog.emoji(roll: 0.08, starIndex: 2, rareIndex: 0) == WarpFieldCatalog.stars[2])
-}
-
-@Test("La vitesse max vaut cinq fois la vitesse de repos")
-func warpDriveMaxIsFiveTimesRest() {
-  #expect(WarpDrive.maxSpeed == WarpDrive.rest * 5)
-}
-
-@Test("Une frappe accélère, l’arrêt ramène à la vitesse de repos")
-func warpDriveAcceleratesThenDecays() {
-  var drive = WarpDrive(now: 0)
-  #expect(drive.speed == WarpDrive.rest)
-  drive.impulse(at: 1)
-  let boosted = drive.speed
-  #expect(boosted > WarpDrive.rest)
-  drive.impulse(at: 1.05)
-  let faster = drive.speed
-  #expect(faster > boosted)
-  drive.tick(now: 1.1, dt: 0.5)
-  #expect(drive.speed == faster)
-  drive.tick(now: 1.05 + WarpDrive.idleDelay + 0.01, dt: 2)
-  #expect(drive.speed == WarpDrive.rest)
-}
-
-@Test("La vitesse de défilement est plafonnée")
-func warpDriveIsCapped() {
-  var drive = WarpDrive(now: 0)
-  for step in 0..<40 {
-    drive.impulse(at: Double(step) * 0.05)
-  }
-  #expect(drive.speed == WarpDrive.maxSpeed)
 }

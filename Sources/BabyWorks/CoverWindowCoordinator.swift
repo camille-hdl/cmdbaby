@@ -481,7 +481,7 @@ private final class CoverWindow: NSWindow {
 }
 
 final class FailsafeClickView: NSView {
-  /// Au-dessus des hôtes de jeu (océan : bulles à 5, galaxie : glyphes à 2).
+  /// Au-dessus des hôtes de jeu (océan : bulles à 5, vaisseau : jauge à 40).
   static let abovePlayContent: CGFloat = 1_000
   static let buttonSide: CGFloat = 72
   static let outlineGutter: CGFloat = 4

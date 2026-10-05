@@ -16,9 +16,9 @@ func changingModePersistsModeAndKeepsLaunchAtLogin() throws {
   let settings = BabyWorksSettings(store: store, loginItem: loginItem)
   #expect(settings.current() == BabyWorksConfiguration(mode: .ocean, launchAtLogin: true))
 
-  let saved = try settings.apply(.mode(.galaxy))
+  let saved = try settings.apply(.mode(.starship))
 
-  #expect(saved == BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true))
+  #expect(saved == BabyWorksConfiguration(mode: .starship, launchAtLogin: true))
   #expect(settings.current() == saved)
 }
 
@@ -76,7 +76,7 @@ func disablingTheLastManualExitLeavesFileUnchanged() throws {
   defer { file.remove() }
 
   let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
-  try store.save(BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true))
+  try store.save(BabyWorksConfiguration(mode: .starship, launchAtLogin: true))
   let loginItem = FakeLoginItemRegistration()
   loginItem.isRegistered = true
 
@@ -97,7 +97,7 @@ func invalidPassphraseLeavesFileUnchanged() throws {
   defer { file.remove() }
 
   let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
-  let original = BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true)
+  let original = BabyWorksConfiguration(mode: .starship, launchAtLogin: true)
   try store.save(original)
   let loginItem = FakeLoginItemRegistration()
   loginItem.isRegistered = true
@@ -157,7 +157,7 @@ func timeLimitOutOfRangeLeavesFileUnchanged() throws {
   defer { file.remove() }
 
   let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
-  let original = BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true)
+  let original = BabyWorksConfiguration(mode: .starship, launchAtLogin: true)
   try store.save(original)
   let loginItem = FakeLoginItemRegistration()
   loginItem.isRegistered = true
@@ -175,16 +175,16 @@ func enablingLaunchAtLoginRegistersLoginItemThenPersists() throws {
   defer { file.remove() }
 
   let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
-  try store.save(BabyWorksConfiguration(mode: .galaxy, launchAtLogin: false))
+  try store.save(BabyWorksConfiguration(mode: .starship, launchAtLogin: false))
   let loginItem = FakeLoginItemRegistration()
 
   let settings = BabyWorksSettings(store: store, loginItem: loginItem)
-  #expect(settings.current() == BabyWorksConfiguration(mode: .galaxy, launchAtLogin: false))
+  #expect(settings.current() == BabyWorksConfiguration(mode: .starship, launchAtLogin: false))
 
   let saved = try settings.apply(.launchAtLogin(true))
 
   #expect(loginItem.isRegistered)
-  #expect(saved == BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true))
+  #expect(saved == BabyWorksConfiguration(mode: .starship, launchAtLogin: true))
   #expect(settings.current() == saved)
 }
 
@@ -231,18 +231,18 @@ func currentReconcilesLaunchAtLoginChangedOutsideTheApp() throws {
   defer { file.remove() }
 
   let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
-  try store.save(BabyWorksConfiguration(mode: .galaxy, launchAtLogin: false))
+  try store.save(BabyWorksConfiguration(mode: .starship, launchAtLogin: false))
   let loginItem = FakeLoginItemRegistration()
   loginItem.isRegistered = true
 
   let settings = BabyWorksSettings(store: store, loginItem: loginItem)
 
-  #expect(settings.current() == BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true))
-  #expect(store.load() == BabyWorksConfiguration(mode: .galaxy, launchAtLogin: true))
+  #expect(settings.current() == BabyWorksConfiguration(mode: .starship, launchAtLogin: true))
+  #expect(store.load() == BabyWorksConfiguration(mode: .starship, launchAtLogin: true))
 
   loginItem.isRegistered = false
-  #expect(settings.current() == BabyWorksConfiguration(mode: .galaxy, launchAtLogin: false))
-  #expect(store.load() == BabyWorksConfiguration(mode: .galaxy, launchAtLogin: false))
+  #expect(settings.current() == BabyWorksConfiguration(mode: .starship, launchAtLogin: false))
+  #expect(store.load() == BabyWorksConfiguration(mode: .starship, launchAtLogin: false))
 }
 
 private struct LoginItemFailure: Error {}
