@@ -151,38 +151,30 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
   }
 
   private func presentActivationFailure(_ error: KioskSessionError) {
-    let spec = SessionActivationAlert.forFailedActivation(
-      error,
-      runningBinaryURL: Bundle.main.bundleURL
+    LifecycleLogRecorder.shared.emit(
+      SessionActivationAlert.activationFailureLog(
+        error,
+        binaryPath: Bundle.main.bundleURL.path
+      )
     )
+    let spec = SessionActivationAlert.forFailedActivation(error)
     let alert = NSAlert()
     alert.alertStyle = .warning
     alert.messageText = spec.title
     alert.informativeText = spec.informativeText
     for action in spec.actions {
-      alert.addButton(withTitle: action.title)
+      alert.addButton(withTitle: action.title())
     }
     activateApp()
     let response = alert.runModal()
     let index = response.rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
     guard spec.actions.indices.contains(index) else { return }
     switch spec.actions[index] {
-    case .openAccessibilitySettings:
-      openAccessibilitySettings()
-    case .openAppSettings:
-      if let section = spec.settingsSection {
-        openSettings(section: SettingsSection(section))
-      } else {
-        openSettings(nil)
-      }
+    case .openAppSettings(let section):
+      openSettings(section: SettingsSection(section))
     case .dismiss:
       break
     }
-  }
-
-  private func openAccessibilitySettings() {
-    AccessibilitySettings.requestAccess()
-    AccessibilitySettings.openSystemSettings()
   }
 
   private func activateApp() {
@@ -250,10 +242,14 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
 extension SettingsSection {
   fileprivate init(_ section: InitialSettingsSection) {
     switch section {
+    case .mode:
+      self = .mode
     case .exits:
       self = .exits
     case .general:
       self = .general
+    case .permissions:
+      self = .permissions
     }
   }
 }

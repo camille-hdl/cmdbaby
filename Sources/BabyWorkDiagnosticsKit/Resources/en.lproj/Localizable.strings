@@ -40,3 +40,10 @@
 "settings.permissions.passphrase.attention" = "Letters missing from the “%@” layout: %@.";
 "settings.permissions.action.changePhrase" = "Change Phrase";
 "alert.passphraseNotTypable" = "The exit phrase can't be typed with the active keyboard layout (missing letters: %@). Change the phrase or turn on Shift-Escape.";
+"alert.filterUnavailable" = "BabyWorks needs the Accessibility permission to protect the Mac during a session. Open Settings › Permissions to check it.";
+"alert.title" = "The session couldn't start";
+"alert.action.settings" = "Settings…";
+"alert.action.ok" = "OK";
+"alert.noScreens" = "No screen is available for the cover.";
+"alert.presentationRejected" = "The kiosk presentation options were refused. Relaunch the app and try again.";
+"alert.injectedFailure" = "The session couldn't start. Try again from the menu.";

@@ -6,22 +6,17 @@ public struct SessionActivationAlert: Equatable, Sendable {
   public let title: String
   public let informativeText: String
   public let actions: [Action]
-  /// Section ouverte par « Réglages… ». `nil` garde le routage actuel, Mode de jeu.
-  public let settingsSection: InitialSettingsSection?
 
   public enum Action: Equatable, Sendable {
-    case openAccessibilitySettings
-    case openAppSettings
+    case openAppSettings(InitialSettingsSection)
     case dismiss
 
-    public var title: String {
+    public func title(in table: L10nTable = .current) -> String {
       switch self {
-      case .openAccessibilitySettings:
-        "Ouvrir Accessibilité"
       case .openAppSettings:
-        "Réglages…"
+        table("alert.action.settings")
       case .dismiss:
-        "OK"
+        table("alert.action.ok")
       }
     }
   }
@@ -33,71 +28,61 @@ public struct SessionActivationAlert: Equatable, Sendable {
 
   public static func forFailedActivation(
     _ error: KioskSessionError,
-    runningBinaryURL: URL? = nil,
     table: L10nTable = .current
   ) -> SessionActivationAlert {
     SessionActivationAlert(
-      title: "La session n’a pas pu démarrer",
-      informativeText: informativeText(
-        for: error,
-        runningBinaryURL: runningBinaryURL,
-        table: table
-      ),
-      actions: actions(for: error),
-      settingsSection: settingsSection(for: error)
+      title: table("alert.title"),
+      informativeText: informativeText(for: error, table: table),
+      actions: actions(for: error)
     )
   }
 
-  private static func informativeText(
-    for error: KioskSessionError,
-    runningBinaryURL: URL?,
-    table: L10nTable
-  ) -> String {
+  private static func informativeText(for error: KioskSessionError, table: L10nTable) -> String {
     switch error {
-    case .filterUnavailable(let reason):
-      filterUnavailableText(reason: reason, runningBinaryURL: runningBinaryURL)
+    case .filterUnavailable:
+      table("alert.filterUnavailable")
     case .noScreens:
-      "Aucun écran n’est disponible pour la couverture."
+      table("alert.noScreens")
     case .presentationRejected:
-      "Les options de présentation kiosque ont été refusées. Relancez l’application et réessayez."
+      table("alert.presentationRejected")
     case .injectedFailure:
-      "La session n’a pas pu démarrer. Réessayez depuis le menu."
+      table("alert.injectedFailure")
     case .passphraseNotTypable(let letters):
       passphraseNotTypableText(letters, table: table)
     }
   }
 
-  private static func filterUnavailableText(reason: String, runningBinaryURL: URL?) -> String {
-    var lines = [
-      "BabyWorks n’a pas pu activer le kiosque (\(reason))."
-    ]
-    if let runningBinaryURL {
-      lines.append("Binaire actuel : \(runningBinaryURL.path)")
-    }
-    lines.append(
-      "Retirez les anciennes entrées BabyWorks dans Réglages système → Accessibilité, puis ré-autorisez cette copie. Une signature ad hoc invalide l’identité TCC à chaque rebuild."
-    )
-    lines.append(
-      "Accordez Accessibilité, puis quittez et relancez l’application."
-    )
-    return lines.joined(separator: "\n\n")
-  }
-
   private static func actions(for error: KioskSessionError) -> [Action] {
     switch error {
     case .filterUnavailable:
-      [.openAccessibilitySettings, .openAppSettings, .dismiss]
-    case .noScreens, .presentationRejected, .injectedFailure, .passphraseNotTypable:
-      [.openAppSettings, .dismiss]
+      [.openAppSettings(.permissions), .dismiss]
+    case .passphraseNotTypable:
+      [.openAppSettings(.exits), .dismiss]
+    case .noScreens, .presentationRejected, .injectedFailure:
+      [.openAppSettings(.mode), .dismiss]
     }
   }
 
-  private static func settingsSection(for error: KioskSessionError) -> InitialSettingsSection? {
+  /// Motif technique et chemin du binaire, pour le journal. Jamais la phrase ni ses lettres.
+  public static func activationFailureLog(
+    _ error: KioskSessionError,
+    binaryPath: String
+  ) -> LifecycleLogEvent {
+    .sessionActivationFail(reason: journalReason(for: error), binaryPath: binaryPath)
+  }
+
+  private static func journalReason(for error: KioskSessionError) -> String {
     switch error {
+    case .filterUnavailable(let reason):
+      reason
+    case .noScreens:
+      "noScreens"
+    case .presentationRejected:
+      "presentationRejected"
+    case .injectedFailure(let step):
+      "injectedFailure \(step.rawValue)"
     case .passphraseNotTypable:
-      .exits
-    case .filterUnavailable, .noScreens, .presentationRejected, .injectedFailure:
-      nil
+      "passphraseNotTypable"
     }
   }
 

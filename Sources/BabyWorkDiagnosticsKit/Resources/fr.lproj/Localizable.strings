@@ -40,3 +40,10 @@
 "settings.permissions.passphrase.attention" = "Lettres absentes de la disposition « %@ » : %@.";
 "settings.permissions.action.changePhrase" = "Modifier la phrase";
 "alert.passphraseNotTypable" = "La phrase de sortie ne peut pas être tapée avec la disposition clavier active (lettres absentes : %@). Changez de phrase ou activez Maj-Échap.";
+"alert.filterUnavailable" = "BabyWorks a besoin de l’autorisation Accessibilité pour protéger le Mac pendant la session. Ouvrez Réglages › Permissions pour la vérifier.";
+"alert.title" = "La session n’a pas pu démarrer";
+"alert.action.settings" = "Réglages…";
+"alert.action.ok" = "OK";
+"alert.noScreens" = "Aucun écran n’est disponible pour la couverture.";
+"alert.presentationRejected" = "Les options de présentation kiosque ont été refusées. Relancez l’application et réessayez.";
+"alert.injectedFailure" = "La session n’a pas pu démarrer. Réessayez depuis le menu.";

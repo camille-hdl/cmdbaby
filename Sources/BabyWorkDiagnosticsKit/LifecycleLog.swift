@@ -119,13 +119,14 @@ public enum LifecycleLogEvent: Equatable, Sendable {
   case terminateRequest
   case applicationShouldTerminate(reply: LifecycleLog.TerminateReply)
   case statusItemAlive(Bool)
+  case sessionActivationFail(reason: String, binaryPath: String)
 
   public var category: LifecycleLog.Category {
     switch self {
     case .statusItemCreate, .activationPolicy, .terminateRequest, .applicationShouldTerminate,
       .statusItemAlive:
       .lifecycle
-    case .sessionStart, .sessionPhase, .sessionStop, .coversKey:
+    case .sessionStart, .sessionPhase, .sessionStop, .coversKey, .sessionActivationFail:
       .session
     case .tapCreate, .tapEnable, .tapDisable, .tapFail, .tapReenable:
       .inputFilter
@@ -177,6 +178,8 @@ public enum LifecycleLogEvent: Equatable, Sendable {
       return "applicationShouldTerminate reply=\(reply.rawValue)"
     case .statusItemAlive(let alive):
       return "statusItem.alive=\(alive)"
+    case .sessionActivationFail(let reason, let binaryPath):
+      return "session.activation.fail reason=\(reason) binary=\(binaryPath)"
     }
   }
 }
