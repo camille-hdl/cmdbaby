@@ -142,13 +142,10 @@ final class StarshipDirector {
     ) else { return }
     guard index != homeScreenIndex else { return }
     let previous = homeScreenIndex
-    // Avant que le curseur n’entre dans un autre écran, une correction vers
-    // le plus grand reste un premier affichage : pas de warp au lancement.
-    let animated = previous != nil && lastPointerScreenIndex != nil
     if let previous {
-      painter(at: previous)?.hideShip(animated: animated)
+      painter(at: previous)?.hideShip(animated: true)
     }
-    painter(at: index)?.showShip(animated: animated)
+    painter(at: index)?.showShip(animated: previous != nil)
     homeScreenIndex = index
   }
 
