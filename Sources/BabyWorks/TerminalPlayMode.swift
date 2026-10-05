@@ -21,11 +21,23 @@ final class TerminalDirector {
     var column: TerminalRainColumn
   }
 
+  /// Colonne déjà comptée dans le plafond, en attente de son départ.
+  private struct PendingColumn {
+    var id: Int
+    var screenIndex: Int
+    var launchAt: TimeInterval
+    var column: TerminalRainColumn
+  }
+
+  /// Départ étalé d’une vague, pour éviter un front horizontal.
+  private static let waveStartDelay: ClosedRange<Double> = 0...0.25
+
   let tuning: TerminalRainTuning
   let atlas = TerminalGlyphAtlas()
 
   private var screens: [ScreenSlot] = []
   private var columns: [FallingColumn] = []
+  private var pending: [PendingColumn] = []
   private var nextColumnID = 0
   private var prompt = TerminalPrompt()
   private var promptScreenIndex: Int?
@@ -34,6 +46,12 @@ final class TerminalDirector {
   private var rainTimer: Timer?
   private var lastRainTick: TimeInterval = 0
   private var promptFont: NSFont?
+  private var rng = SystemRandomNumberGenerator()
+
+  /// Une colonne compte dès la demande, y compris tant qu’elle attend dans une vague.
+  private var activeColumnCount: Int {
+    columns.count + pending.count
+  }
 
   init(tuning: TerminalRainTuning = .standard) {
     self.tuning = tuning
@@ -53,7 +71,7 @@ final class TerminalDirector {
     choosePromptScreenIfReady()
   }
 
-  /// Reçoit la frappe. La demande de pluie est ignorée : le ticket #58 la branchera.
+  /// Reçoit la frappe et, le cas échéant, lance la pluie demandée par le prompt.
   func handleKey(_ event: NSEvent) {
     cursorOn = true
     scheduleBlink()
@@ -64,20 +82,23 @@ final class TerminalDirector {
       return
     }
     if code == Self.returnCode || code == Self.keypadEnterCode {
-      _ = prompt.submit()
+      let request = prompt.submit()
       publish()
       shakePromptScreen()
+      spawn(request)
       return
     }
     for character in event.characters ?? "" where Self.acceptsPromptCharacter(character) {
-      _ = prompt.type(character)
+      if let request = prompt.type(character) {
+        spawn(request)
+      }
     }
     publish()
   }
 
   /// Fait tomber une colonne sur l’écran cliqué. Ignorée si le plafond de colonnes est atteint.
   func spawnColumn(atGlobalX x: Double, screenIndex: Int) {
-    guard columns.count < tuning.maxActiveColumns else { return }
+    guard activeColumnCount < tuning.maxActiveColumns else { return }
     guard let frame = screens.first(where: { $0.index == screenIndex })?.frame else { return }
     let id = nextColumnID
     nextColumnID += 1
@@ -85,13 +106,7 @@ final class TerminalDirector {
       FallingColumn(
         id: id,
         screenIndex: screenIndex,
-        column: TerminalRainColumn(
-          x: TerminalStyle.snapToGrid(x: x),
-          topY: Double(frame.maxY),
-          floorY: Double(frame.minY),
-          stepInterval: tuning.stepInterval(roll: Double.random(in: 0..<1)),
-          trailLifetime: tuning.trailLifetime(roll: Double.random(in: 0..<1))
-        )
+        column: makeColumn(x: TerminalStyle.snapToGrid(x: x), in: frame)
       )
     )
     startRainTicker()
@@ -103,6 +118,8 @@ final class TerminalDirector {
     timer?.invalidate()
     stopRainTicker()
     columns.removeAll(keepingCapacity: false)
+    pending.removeAll(keepingCapacity: false)
+    rng = SystemRandomNumberGenerator()
     for slot in screens {
       slot.painter.teardown()
     }
@@ -214,10 +231,87 @@ final class TerminalDirector {
         index += 1
       }
     }
+    launchDueColumns(at: now)
     for slot in screens {
       slot.painter.tick(now: now)
     }
     CATransaction.commit()
+  }
+
+  /// Convertit une demande du prompt en colonnes sur l’écran du prompt.
+  private func spawn(_ request: TerminalRainRequest) {
+    guard let promptScreenIndex else { return }
+    guard let frame = screens.first(where: { $0.index == promptScreenIndex })?.frame else { return }
+
+    let requested = TerminalRainPlanner.columnCount(for: request, tuning: tuning, using: &rng)
+    let count = TerminalRainPlanner.admissibleCount(
+      requested: requested,
+      active: activeColumnCount,
+      tuning: tuning
+    )
+    guard count > 0 else { return }
+
+    let xs = TerminalRainPlanner.distinctGridXs(
+      count: count,
+      minX: Double(frame.minX),
+      maxX: Double(frame.maxX),
+      using: &rng
+    )
+    let now = ProcessInfo.processInfo.systemUptime
+    for x in xs {
+      let id = nextColumnID
+      nextColumnID += 1
+      let column = makeColumn(x: x, in: frame)
+      let delay = startDelay(for: request)
+      if delay <= 0 {
+        columns.append(FallingColumn(id: id, screenIndex: promptScreenIndex, column: column))
+      } else {
+        pending.append(
+          PendingColumn(
+            id: id,
+            screenIndex: promptScreenIndex,
+            launchAt: now + delay,
+            column: column
+          )
+        )
+      }
+    }
+    if !xs.isEmpty {
+      startRainTicker()
+    }
+  }
+
+  private func startDelay(for request: TerminalRainRequest) -> Double {
+    switch request {
+    case .column:
+      return 0
+    case .wave:
+      return Double.random(in: Self.waveStartDelay, using: &rng)
+    }
+  }
+
+  private func makeColumn(x: Double, in frame: CGRect) -> TerminalRainColumn {
+    TerminalRainColumn(
+      x: x,
+      topY: Double(frame.maxY),
+      floorY: Double(frame.minY),
+      stepInterval: tuning.stepInterval(roll: Double.random(in: 0..<1, using: &rng)),
+      trailLifetime: tuning.trailLifetime(roll: Double.random(in: 0..<1, using: &rng))
+    )
+  }
+
+  private func launchDueColumns(at now: TimeInterval) {
+    var index = 0
+    while index < pending.count {
+      if pending[index].launchAt <= now {
+        let item = pending.remove(at: index)
+        columns.append(
+          FallingColumn(id: item.id, screenIndex: item.screenIndex, column: item.column)
+        )
+      } else {
+        index += 1
+      }
+    }
   }
 
   private func resolvedPromptFont() -> NSFont {
