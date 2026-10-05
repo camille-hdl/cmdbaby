@@ -3,3 +3,6 @@
 "menu.quit" = "Quitter";
 "settings.mode.launch" = "Lancer";
 "settings.mode.launch.accessibility" = "Lancer %@";
+"settings.exits.layout.label" = "Disposition clavier";
+"settings.exits.layout.ok" = "La phrase se tape avec cette disposition.";
+"settings.exits.layout.missing" = "Lettres absentes de cette disposition : %@. Choisissez une autre phrase ou gardez Maj-Échap activé.";

@@ -279,11 +279,15 @@ struct SettingsView: View {
   @State private var timeLimitRejection: String?
   @State private var passphraseDraft = ""
   @State private var passphraseRejection: String?
+  @State private var keyboardLayoutName: String?
+  @State private var keyboardLayoutLetters: [UInt16: Set<Character>]
 
   init(model: SettingsModel, initialSection: SettingsSection, onLaunch: @escaping () -> Void) {
     self.model = model
     self.onLaunch = onLaunch
     _section = State(initialValue: initialSection)
+    _keyboardLayoutName = State(initialValue: KeyboardLayoutLetter.shared.layoutName)
+    _keyboardLayoutLetters = State(initialValue: KeyboardLayoutLetter.shared.snapshot())
   }
 
   var body: some View {
@@ -589,6 +593,10 @@ struct SettingsView: View {
       exitToggleRow(method: .passphrase, label: "Phrase + Entrée", help: nil)
       SettingsGroupDivider()
       passphraseRow
+      if passphraseExitEnabled {
+        SettingsGroupDivider()
+        keyboardLayoutRow
+      }
       SettingsGroupDivider()
       exitToggleRow(method: .shiftEscape, label: "Maj-Échap", help: "Majuscule + Échap")
       SettingsGroupDivider()
@@ -598,6 +606,40 @@ struct SettingsView: View {
         help: "5 clics rapides sur le carré en bas à droite"
       )
     }
+    .onAppear(perform: refreshKeyboardLayout)
+    .onReceive(
+      NotificationCenter.default.publisher(for: KeyboardLayoutLetter.didChangeNotification)
+    ) { _ in
+      refreshKeyboardLayout()
+    }
+  }
+
+  private var passphraseExitEnabled: Bool {
+    model.configuration.exits.enabledMethods.contains(.passphrase)
+  }
+
+  private var keyboardLayoutRow: some View {
+    let typability = PassphraseTypability.check(
+      model.configuration.exits.passphrase,
+      layoutLetters: keyboardLayoutLetters
+    )
+    let missing = typability.missingLetters.map(String.init).joined(separator: " ")
+    return SettingsRow(
+      label: L10n.current("settings.exits.layout.label"),
+      help: typability.isTypable ? L10n.current("settings.exits.layout.ok") : nil,
+      rejection: typability.isTypable
+        ? nil
+        : L10n.current("settings.exits.layout.missing", missing)
+    ) {
+      Text(keyboardLayoutName ?? "")
+        .font(.system(size: 13))
+        .foregroundStyle(color(SettingsPalette.ink))
+    }
+  }
+
+  private func refreshKeyboardLayout() {
+    keyboardLayoutName = KeyboardLayoutLetter.shared.layoutName
+    keyboardLayoutLetters = KeyboardLayoutLetter.shared.snapshot()
   }
 
   private func exitToggleRow(method: AdultExitMethod, label: String, help: String?) -> some View {

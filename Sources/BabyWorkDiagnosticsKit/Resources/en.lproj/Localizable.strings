@@ -3,3 +3,6 @@
 "menu.quit" = "Quit";
 "settings.mode.launch" = "Start";
 "settings.mode.launch.accessibility" = "Start %@";
+"settings.exits.layout.label" = "Keyboard Layout";
+"settings.exits.layout.ok" = "The phrase is typed with this layout.";
+"settings.exits.layout.missing" = "Letters missing from this layout: %@. Choose another phrase or keep Shift-Escape on.";

@@ -9,6 +9,22 @@ func settingsMenuTitleMatchesLanguage() {
   #expect(L10nTable.language("en")("menu.settings") == "Settings…")
 }
 
+@Test("Disposition clavier : aide si la phrase se tape, lettres manquantes sinon")
+func keyboardLayoutExitCopy() {
+  #expect(L10nTable.language("fr")("settings.exits.layout.label") == "Disposition clavier")
+  #expect(L10nTable.language("en")("settings.exits.layout.label") == "Keyboard Layout")
+  #expect(L10nTable.language("fr")("settings.exits.layout.ok") == "La phrase se tape avec cette disposition.")
+  #expect(L10nTable.language("en")("settings.exits.layout.ok") == "The phrase is typed with this layout.")
+  #expect(
+    L10nTable.language("fr")("settings.exits.layout.missing", "p a")
+      == "Lettres absentes de cette disposition : p a. Choisissez une autre phrase ou gardez Maj-Échap activé."
+  )
+  #expect(
+    L10nTable.language("en")("settings.exits.layout.missing", "p a")
+      == "Letters missing from this layout: p a. Choose another phrase or keep Shift-Escape on."
+  )
+}
+
 @Test("Lancer un mode : Start en anglais, Lancer en français")
 func launchModeButtonCopy() {
   #expect(L10nTable.language("en")("settings.mode.launch") == "Start")

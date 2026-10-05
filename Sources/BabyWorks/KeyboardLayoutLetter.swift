@@ -6,8 +6,14 @@ import Foundation
 final class KeyboardLayoutLetter: @unchecked Sendable {
   static let shared = KeyboardLayoutLetter()
 
+  /// Postée sur le fil principal à la fin de `refreshFromCurrentLayout()`.
+  static let didChangeNotification = Notification.Name(
+    "fr.camille.babywork.keyboardLayoutLetterDidChange"
+  )
+
   private let lock = NSLock()
   private var letters: [UInt16: Character] = [:]
+  private(set) var layoutName: String?
 
   private init() {}
 
@@ -17,14 +23,26 @@ final class KeyboardLayoutLetter: @unchecked Sendable {
     return letters[keyCode]
   }
 
+  /// Table keycode → lettres, lue sous le verrou.
+  func snapshot() -> [UInt16: Set<Character>] {
+    lock.lock()
+    defer { lock.unlock() }
+    return letters.mapValues { [$0] }
+  }
+
   @MainActor
   func refreshFromCurrentLayout() {
+    defer {
+      NotificationCenter.default.post(name: Self.didChangeNotification, object: self)
+    }
     guard let inputSource = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue() else {
       return
     }
+    layoutName = localizedName(of: inputSource)
     guard
       let rawLayout = TISGetInputSourceProperty(inputSource, kTISPropertyUnicodeKeyLayoutData)
     else {
+      replaceLetters([:])
       return
     }
     let layoutData = Unmanaged<CFData>.fromOpaque(rawLayout).takeUnretainedValue() as Data
@@ -41,9 +59,20 @@ final class KeyboardLayoutLetter: @unchecked Sendable {
       }
     }
 
+    replaceLetters(map)
+  }
+
+  private func replaceLetters(_ map: [UInt16: Character]) {
     lock.lock()
     letters = map
     lock.unlock()
+  }
+
+  private func localizedName(of inputSource: TISInputSource) -> String? {
+    guard let rawName = TISGetInputSourceProperty(inputSource, kTISPropertyLocalizedName) else {
+      return nil
+    }
+    return Unmanaged<CFString>.fromOpaque(rawName).takeUnretainedValue() as String
   }
 
   private func translate(
