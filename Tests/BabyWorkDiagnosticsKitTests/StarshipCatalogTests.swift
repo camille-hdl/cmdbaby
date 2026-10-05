@@ -51,6 +51,23 @@ func starshipCatalogListsSkyboxesAlphabetically() {
   ])
 }
 
+@Test("Le tirage d’une cible choisit la sorte puis un sprite de cette sorte")
+func starshipCatalogPicksASpriteOfTheRolledKind() {
+  let meteor = StarshipCatalog.pickTarget(kindRoll: 0, spriteRoll: 0)
+  let alien = StarshipCatalog.pickTarget(kindRoll: 0.5, spriteRoll: 0.5)
+  let enemy = StarshipCatalog.pickTarget(kindRoll: 0.99, spriteRoll: 0)
+
+  #expect(meteor.kind == .meteor)
+  #expect(alien.kind == .alien)
+  #expect(enemy.kind == .enemy)
+  #expect(meteor.sprite == "meteorBrown_big1")
+  #expect(alien.sprite == "shipBeige_manned")
+  #expect(enemy.sprite == "enemyBlack1")
+  #expect(StarshipCatalog.sprites(for: meteor.kind).contains(meteor.sprite))
+  #expect(StarshipCatalog.sprites(for: alien.kind).contains(alien.sprite))
+  #expect(StarshipCatalog.sprites(for: enemy.kind).contains(enemy.sprite))
+}
+
 @Test("Le catalogue nomme les 53 images du mode, sans doublon")
 func starshipCatalogNamesEveryImageOnce() {
   #expect(StarshipCatalog.shipSprite == "playerShip1_blue")

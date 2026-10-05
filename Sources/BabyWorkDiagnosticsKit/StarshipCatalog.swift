@@ -29,6 +29,14 @@ public enum StarshipCatalog: Sendable {
     "skybox-space-nebula",
   ]
 
+  /// Sorte tirée uniformément par `kindRoll`, puis sprite tiré uniformément dans cette sorte par `spriteRoll`. Rolls dans `[0, 1)`.
+  public static func pickTarget(kindRoll: Double, spriteRoll: Double) -> (kind: StarshipTargetKind, sprite: String) {
+    let kinds = StarshipTargetKind.allCases
+    let kind = kinds[index(roll: kindRoll, count: kinds.count)]
+    let sprites = sprites(for: kind)
+    return (kind, sprites[index(roll: spriteRoll, count: sprites.count)])
+  }
+
   public static func sprites(for kind: StarshipTargetKind) -> [String] {
     switch kind {
     case .meteor:
@@ -65,5 +73,10 @@ public enum StarshipCatalog: Sendable {
 
   private static func numbered(_ prefix: String, _ range: ClosedRange<Int>) -> [String] {
     range.map { "\(prefix)\($0)" }
+  }
+
+  private static func index(roll: Double, count: Int) -> Int {
+    let clamped = min(max(roll, 0), 0.999_999)
+    return min(Int(clamped * Double(count)), count - 1)
   }
 }

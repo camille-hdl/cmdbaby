@@ -31,11 +31,21 @@ final class StarshipPainter {
   /// La pulsation s’ajoute après la transaction : dedans, `setDisableActions` la jette au commit.
   private var gaugePulsePending = false
   private var contentsScale: CGFloat
+  private var targetsByID: [Int: TargetView] = [:]
+
+  private struct TargetView {
+    let root: CALayer
+    let label: String?
+  }
 
   private static let warpKey = "warp"
   private static let skyboxFadeKey = "skyboxFade"
   /// Sprite 9 × 54 px agrandi 1,6 fois.
   private static let boltSize = CGSize(width: 14, height: 86)
+  private static let burstSide: CGFloat = 120
+  private static let debrisSide: CGFloat = 24
+  private static let debrisLifetime = 0.5
+  private static let glyphPopDuration = 0.3
   private static let muzzleSide: CGFloat = 28
   private static let muzzleDuration = 0.12
   private static let gaugeSize = CGSize(width: 28, height: 220)
@@ -74,6 +84,11 @@ final class StarshipPainter {
     shipSprite.contentsScale = scale
     gaugeTrack.contentsScale = scale
     gaugeFill.contentsScale = scale
+    for target in targetsByID.values {
+      for child in target.root.sublayers ?? [] {
+        child.contentsScale = scale
+      }
+    }
     CATransaction.commit()
   }
 
@@ -221,6 +236,60 @@ final class StarshipPainter {
     )
   }
 
+  /// Cible au bord de l’écran : sprite orienté selon sa sorte, glyphe droit par-dessus.
+  func addTarget(
+    id: Int,
+    kind: StarshipTargetKind,
+    sprite: String,
+    label: String?,
+    at point: CGPoint,
+    heading: Double
+  ) {
+    let root = CALayer()
+    root.zPosition = 10
+    let spriteLayer = targetSprite(named: sprite, kind: kind, heading: heading)
+    let size = spriteLayer.bounds.size
+    root.bounds = CGRect(origin: .zero, size: size)
+    let center = CGPoint(x: size.width / 2, y: size.height / 2)
+    spriteLayer.position = center
+    root.addSublayer(spriteLayer)
+    if let label {
+      root.addSublayer(glyphLayer(label, at: center))
+    }
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    root.position = point
+    skyboxBack.superlayer?.addSublayer(root)
+    CATransaction.commit()
+    if kind == .meteor {
+      spriteLayer.add(Self.meteorSpin(), forKey: "spin")
+    }
+    targetsByID[id] = TargetView(root: root, label: label)
+  }
+
+  func moveTarget(id: Int, to point: CGPoint) {
+    targetsByID[id]?.root.position = point
+  }
+
+  /// Retire la cible et joue l’explosion là où elle se trouvait.
+  func explodeTarget(id: Int, kind: StarshipTargetKind, now: TimeInterval) {
+    guard let flying = targetsByID.removeValue(forKey: id) else { return }
+    let point = flying.root.position
+    flying.root.removeFromSuperlayer()
+    addEphemeral(burst(at: point), lifetime: tuning.explosionDuration, now: now)
+    for _ in 0..<5 {
+      guard let debris = debris(kind: kind, from: point) else { continue }
+      addEphemeral(debris, lifetime: Self.debrisLifetime, now: now)
+    }
+    if let label = flying.label {
+      let pop = glyphLayer(label, at: point)
+      pop.zPosition = 31
+      pop.opacity = 0
+      pop.add(Self.glyphPop(), forKey: "pop")
+      addEphemeral(pop, lifetime: Self.glyphPopDuration, now: now)
+    }
+  }
+
   /// Ajoute `layer` à la scène et le retire automatiquement après `lifetime` secondes.
   func addEphemeral(_ layer: CALayer, lifetime: TimeInterval, now: TimeInterval) {
     skyboxBack.superlayer?.addSublayer(layer)
@@ -245,6 +314,10 @@ final class StarshipPainter {
     shipRoot.removeAnimation(forKey: Self.warpKey)
     skyboxFront.removeAnimation(forKey: Self.skyboxFadeKey)
     gaugeTrack.removeAnimation(forKey: Self.gaugePulseKey)
+    for target in targetsByID.values {
+      target.root.removeFromSuperlayer()
+    }
+    targetsByID.removeAll(keepingCapacity: false)
     for item in ephemerals {
       item.layer.removeFromSuperlayer()
     }
@@ -259,6 +332,146 @@ final class StarshipPainter {
     gaugeTrack.removeFromSuperlayer()
     skyboxFront.removeFromSuperlayer()
     skyboxBack.removeFromSuperlayer()
+  }
+
+  private func targetSprite(named name: String, kind: StarshipTargetKind, heading: Double) -> CALayer {
+    let image = StarshipSprite.cgImage(named: name)
+    let size = Self.spriteSize(width: tuning.targetWidth, image: image)
+    let sprite = CALayer()
+    sprite.bounds = CGRect(origin: .zero, size: size)
+    sprite.contents = image
+    sprite.contentsGravity = .resizeAspect
+    sprite.contentsScale = contentsScale
+    if kind == .enemy {
+      sprite.setValue(heading + .pi / 2, forKeyPath: "transform.rotation.z")
+    }
+    return sprite
+  }
+
+  private func glyphLayer(_ label: String, at point: CGPoint) -> CATextLayer {
+    let size = CGFloat(tuning.glyphFontSize)
+    let font = Self.roundedBlackFont(size: size)
+    let attributed = NSAttributedString(string: label, attributes: [
+      .font: font,
+      .foregroundColor: NSColor.white,
+      .strokeColor: NSColor.black,
+      .strokeWidth: -4.0,
+    ])
+    let measured = attributed.size()
+    let height = size * 1.25
+    let width = max(ceil(measured.width) + 8, height)
+    let layer = CATextLayer()
+    layer.string = attributed
+    layer.alignmentMode = .center
+    layer.contentsScale = contentsScale
+    layer.isWrapped = false
+    layer.bounds = CGRect(x: 0, y: 0, width: width, height: height)
+    layer.position = point
+    layer.zPosition = 1
+    return layer
+  }
+
+  private func burst(at point: CGPoint) -> CALayer {
+    let layer = CALayer()
+    layer.contents = StarshipSprite.cgImage(named: StarshipCatalog.explosionSprite)
+    layer.bounds = CGRect(x: 0, y: 0, width: Self.burstSide, height: Self.burstSide)
+    layer.position = point
+    layer.zPosition = 30
+    layer.contentsGravity = .resizeAspect
+    layer.contentsScale = contentsScale
+    layer.setValue(Double.random(in: 0..<(2 * .pi)), forKeyPath: "transform.rotation.z")
+    layer.opacity = 0
+    layer.add(Self.burstAnimation(duration: tuning.explosionDuration), forKey: "burst")
+    return layer
+  }
+
+  private func debris(kind: StarshipTargetKind, from point: CGPoint) -> CALayer? {
+    let names = StarshipCatalog.debrisSprites.filter { name in
+      kind == .meteor ? name.hasPrefix("meteor") : name.hasPrefix("star")
+    }
+    guard let name = names.randomElement() else { return nil }
+    let layer = CALayer()
+    layer.contents = StarshipSprite.cgImage(named: name)
+    layer.bounds = CGRect(x: 0, y: 0, width: Self.debrisSide, height: Self.debrisSide)
+    layer.zPosition = 30
+    layer.contentsGravity = .resizeAspect
+    layer.contentsScale = contentsScale
+    layer.opacity = 0
+    let angle = Double.random(in: 0..<(2 * .pi))
+    let distance = CGFloat.random(in: 60...120)
+    let end = CGPoint(
+      x: point.x + CGFloat(cos(angle)) * distance,
+      y: point.y + CGFloat(sin(angle)) * distance
+    )
+    layer.position = end
+    layer.add(Self.debrisFlight(from: point, to: end), forKey: "debris")
+    return layer
+  }
+
+  private static func meteorSpin() -> CABasicAnimation {
+    let spin = CABasicAnimation(keyPath: "transform.rotation.z")
+    spin.fromValue = 0
+    spin.toValue = (Bool.random() ? 1.0 : -1.0) * 2 * Double.pi
+    spin.duration = Double.random(in: 3...7)
+    spin.repeatCount = .infinity
+    spin.timingFunction = CAMediaTimingFunction(name: .linear)
+    return spin
+  }
+
+  private static func burstAnimation(duration: Double) -> CAAnimationGroup {
+    let scale = CABasicAnimation(keyPath: "transform.scale")
+    scale.fromValue = 0.3
+    scale.toValue = 1.3
+    let fade = CABasicAnimation(keyPath: "opacity")
+    fade.fromValue = 1
+    fade.toValue = 0
+    let group = CAAnimationGroup()
+    group.animations = [scale, fade]
+    group.duration = duration
+    group.fillMode = .both
+    group.isRemovedOnCompletion = false
+    return group
+  }
+
+  private static func debrisFlight(from start: CGPoint, to end: CGPoint) -> CAAnimationGroup {
+    let move = CABasicAnimation(keyPath: "position")
+    move.fromValue = start
+    move.toValue = end
+    let spin = CABasicAnimation(keyPath: "transform.rotation.z")
+    spin.fromValue = 0
+    spin.toValue = (Bool.random() ? 1.0 : -1.0) * 2 * Double.pi
+    let fade = CABasicAnimation(keyPath: "opacity")
+    fade.fromValue = 1
+    fade.toValue = 0
+    let group = CAAnimationGroup()
+    group.animations = [move, spin, fade]
+    group.duration = debrisLifetime
+    group.fillMode = .both
+    group.isRemovedOnCompletion = false
+    return group
+  }
+
+  private static func glyphPop() -> CAAnimationGroup {
+    let scale = CABasicAnimation(keyPath: "transform.scale")
+    scale.fromValue = 1
+    scale.toValue = 1.6
+    let fade = CABasicAnimation(keyPath: "opacity")
+    fade.fromValue = 1
+    fade.toValue = 0
+    let group = CAAnimationGroup()
+    group.animations = [scale, fade]
+    group.duration = glyphPopDuration
+    group.fillMode = .both
+    group.isRemovedOnCompletion = false
+    return group
+  }
+
+  private static func roundedBlackFont(size: CGFloat) -> NSFont {
+    let base = NSFont.systemFont(ofSize: size, weight: .black)
+    guard let descriptor = base.fontDescriptor.withDesign(.rounded),
+      let rounded = NSFont(descriptor: descriptor, size: size)
+    else { return base }
+    return rounded
   }
 
   private func boltLayer(
@@ -378,7 +591,7 @@ final class StarshipPainter {
 
   private func installShip(scale: CGFloat) {
     let image = StarshipSprite.cgImage(named: StarshipCatalog.shipSprite)
-    let size = Self.shipSize(width: tuning.shipWidth, image: image)
+    let size = Self.spriteSize(width: tuning.shipWidth, image: image)
     let shipBounds = CGRect(origin: .zero, size: size)
     let center = CGPoint(x: size.width / 2, y: size.height / 2)
 
@@ -409,7 +622,7 @@ final class StarshipPainter {
     shipBob.add(bob, forKey: "bob")
   }
 
-  private static func shipSize(width: Double, image: CGImage?) -> CGSize {
+  private static func spriteSize(width: Double, image: CGImage?) -> CGSize {
     let points = CGFloat(width)
     guard let image, image.width > 0 else {
       return CGSize(width: points, height: points)

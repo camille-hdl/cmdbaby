@@ -4,7 +4,7 @@ import Foundation
 public enum StarshipKeyAction: Equatable, Sendable {
   /// Barre d’espace.
   case spin
-  /// Toute autre touche (le glyphe éventuel est décidé au ticket des cibles).
+  /// Toute autre touche. Le glyphe, s’il y en a un, vient de `StarshipGlyph`.
   case other
   /// Répétition automatique d’une touche maintenue : ignorée par le mode.
   case ignored

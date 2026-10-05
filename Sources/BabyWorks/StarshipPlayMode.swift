@@ -11,6 +11,13 @@ final class StarshipDirector {
     var painter: StarshipPainter
   }
 
+  private struct LiveTarget {
+    let id: Int
+    let kind: StarshipTargetKind
+    let flight: StarshipFlight
+    let spawnedAt: TimeInterval
+  }
+
   let tuning: StarshipTuning
 
   private var screens: [ScreenSlot] = []
@@ -31,6 +38,9 @@ final class StarshipDirector {
   private var keyRate: StarshipKeyRate
   private var gaugeLevel = 0.0
   private var lastTick: TimeInterval = 0
+  /// Cibles en vol, dans l’ordre d’apparition.
+  private var targets: [LiveTarget] = []
+  private var nextTargetID = 0
 
   init(tuning: StarshipTuning = .standard) {
     self.tuning = tuning
@@ -77,7 +87,9 @@ final class StarshipDirector {
     case .spin:
       guard let homeScreenIndex else { return }
       painter(at: homeScreenIndex)?.spin(duration: tuning.spinDuration)
-    case .other, .ignored:
+    case .other:
+      spawnTarget(label: StarshipGlyph.label(for: event.characters))
+    case .ignored:
       break
     }
   }
@@ -154,6 +166,8 @@ final class StarshipDirector {
     keyRate = StarshipKeyRate(window: tuning.keyRateWindow, cap: tuning.keyRateCap)
     gaugeLevel = 0
     lastTick = 0
+    targets.removeAll(keepingCapacity: false)
+    nextTargetID = 0
   }
 
   private func framedScreens() -> [TerminalScreen] {
@@ -214,6 +228,7 @@ final class StarshipDirector {
     guard index != homeScreenIndex else { return }
     let previous = homeScreenIndex
     if let previous {
+      explodeAllTargets(now: ProcessInfo.processInfo.systemUptime)
       painter(at: previous)?.hideShip(animated: true)
       painter(at: previous)?.hideGauge()
     }
@@ -299,16 +314,97 @@ final class StarshipDirector {
       skyboxToForget = nil
     }
     let rate = keyRate.perMinute(at: now)
-    let target = StarshipGauge.level(perMinute: rate, cap: tuning.keyRateCap)
-    gaugeLevel = StarshipGauge.eased(current: gaugeLevel, target: target, dt: dt)
+    let level = StarshipGauge.level(perMinute: rate, cap: tuning.keyRateCap)
+    gaugeLevel = StarshipGauge.eased(current: gaugeLevel, target: level, dt: dt)
+    let hits = targetsTouchingShield(now: now)
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     paintGauge(rate: rate)
+    moveTargets(skipping: hits, now: now)
     for slot in screens {
       slot.painter.tick(now: now)
     }
     CATransaction.commit()
+    for hit in hits {
+      explode(hit, now: now)
+    }
     installPendingGaugePulse()
+  }
+
+  /// Sans écran du vaisseau, la frappe ne fait rien. Au-delà de `maxTargets`, la plus ancienne explose.
+  private func spawnTarget(label: String?) {
+    guard let homeScreenIndex,
+      let frame = screens.first(where: { $0.index == homeScreenIndex })?.frame,
+      let center = shipCenter,
+      let painter = painter(at: homeScreenIndex)
+    else { return }
+
+    let now = ProcessInfo.processInfo.systemUptime
+    if targets.count >= tuning.maxTargets, let oldest = targets.first {
+      explode(oldest, now: now)
+    }
+
+    let margin = tuning.targetWidth / 2 + 10
+    let start = StarshipSpawn.edgePoint(
+      width: Double(frame.width),
+      height: Double(frame.height),
+      margin: margin,
+      roll: Double.random(in: 0..<1)
+    )
+    let goal = StarshipPoint(x: Double(center.x), y: Double(center.y))
+    let flight = StarshipFlight.random(
+      start: start,
+      goal: goal,
+      tuning: tuning,
+      speedRoll: Double.random(in: 0..<1),
+      accelerationRoll: Double.random(in: 0..<1)
+    )
+    let picked = StarshipCatalog.pickTarget(
+      kindRoll: Double.random(in: 0..<1),
+      spriteRoll: Double.random(in: 0..<1)
+    )
+    let id = nextTargetID
+    nextTargetID += 1
+    painter.addTarget(
+      id: id,
+      kind: picked.kind,
+      sprite: picked.sprite,
+      label: label,
+      at: CGPoint(x: start.x, y: start.y),
+      heading: flight.heading
+    )
+    targets.append(
+      LiveTarget(id: id, kind: picked.kind, flight: flight, spawnedAt: now)
+    )
+  }
+
+  /// Cibles qui touchent le bouclier. Le déplacement des autres se fait dans la transaction du tick.
+  private func targetsTouchingShield(now: TimeInterval) -> [LiveTarget] {
+    targets.filter { target in
+      target.flight.remaining(at: now - target.spawnedAt) <= tuning.shieldRadius
+    }
+  }
+
+  private func moveTargets(skipping hits: [LiveTarget], now: TimeInterval) {
+    guard let homeScreenIndex, let painter = painter(at: homeScreenIndex) else { return }
+    let hitIDs = Set(hits.map(\.id))
+    for target in targets where !hitIDs.contains(target.id) {
+      let position = target.flight.position(at: now - target.spawnedAt)
+      painter.moveTarget(id: target.id, to: CGPoint(x: position.x, y: position.y))
+    }
+  }
+
+  private func explodeAllTargets(now: TimeInterval) {
+    let flying = targets
+    for target in flying {
+      explode(target, now: now)
+    }
+  }
+
+  private func explode(_ target: LiveTarget, now: TimeInterval) {
+    targets.removeAll { $0.id == target.id }
+    guard let homeScreenIndex else { return }
+    painter(at: homeScreenIndex)?.explodeTarget(id: target.id, kind: target.kind, now: now)
   }
 }
 
