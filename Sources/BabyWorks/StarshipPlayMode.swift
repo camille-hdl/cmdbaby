@@ -1,19 +1,77 @@
 import AppKit
 import BabyWorkDiagnosticsKit
+import QuartzCore
 
-/// Réglages de la session. La scène est encore un fond uni.
+/// Une skybox par session, découpée sur l’union des écrans.
 @MainActor
 final class StarshipDirector {
+  private struct ScreenSlot {
+    var index: Int
+    var frame: CGRect?
+    var painter: StarshipPainter
+  }
+
   let tuning: StarshipTuning
+
+  private var screens: [ScreenSlot] = []
+  private var skybox: CGImage?
+  private var skyboxChosen = false
+  private var rng = SystemRandomNumberGenerator()
 
   init(tuning: StarshipTuning = .standard) {
     self.tuning = tuning
   }
 
-  func reset() {}
+  func register(screenIndex: Int, painter: StarshipPainter) {
+    screens.append(ScreenSlot(index: screenIndex, frame: nil, painter: painter))
+    if !skyboxChosen {
+      skyboxChosen = true
+      let name = StarshipSkyboxRotation.first(using: &rng)
+      skybox = StarshipSprite.cgImage(named: name)
+    }
+    publishSkybox()
+  }
+
+  func noteFrame(screenIndex: Int, frame: CGRect) {
+    guard let slot = screens.firstIndex(where: { $0.index == screenIndex }) else { return }
+    if screens[slot].frame == frame { return }
+    screens[slot].frame = frame
+    publishSkybox()
+  }
+
+  func reset() {
+    screens.removeAll(keepingCapacity: false)
+    skybox = nil
+    skyboxChosen = false
+    rng = SystemRandomNumberGenerator()
+  }
+
+  private func framedScreens() -> [TerminalScreen] {
+    screens.compactMap { slot in
+      guard let frame = slot.frame else { return nil }
+      return TerminalScreen(
+        index: slot.index,
+        x: Double(frame.origin.x),
+        y: Double(frame.origin.y),
+        width: Double(frame.size.width),
+        height: Double(frame.size.height)
+      )
+    }
+  }
+
+  private func publishSkybox() {
+    guard let skybox else { return }
+    let framed = framedScreens()
+    for slot in screens {
+      guard slot.frame != nil,
+        let rect = StarshipSkyboxFraming.contentsRect(forScreen: slot.index, among: framed)
+      else { continue }
+      slot.painter.showSkybox(image: skybox, contentsRect: rect)
+    }
+  }
 }
 
-/// Fond spatial uni sur tous les écrans. Rien ne bouge encore.
+/// Ciel commun à tous les écrans. Rien ne bouge encore.
 @MainActor
 final class StarshipPlayMode: PlayMode {
   private let director: StarshipDirector
@@ -29,9 +87,14 @@ final class StarshipPlayMode: PlayMode {
     StarshipStageView.backgroundColor
   }
 
-  func makeStage(inputBridge: KioskInputBridge, screenIndex _: Int, scale: CGFloat) -> NSView {
+  func makeStage(inputBridge: KioskInputBridge, screenIndex: Int, scale: CGFloat) -> NSView {
     assertCatalogImagesIfNeeded()
-    return StarshipStageView(inputBridge: inputBridge, scale: scale)
+    return StarshipStageView(
+      inputBridge: inputBridge,
+      director: director,
+      screenIndex: screenIndex,
+      scale: scale
+    )
   }
 
   func reset() {
@@ -53,7 +116,42 @@ final class StarshipPlayMode: PlayMode {
   }
 }
 
-/// Fond `#0B0B1F`. La frappe ne fait encore que remonter les sorties adultes.
+/// Calque de skybox d’un écran. Le `contentsRect` choisit le morceau du ciel.
+@MainActor
+final class StarshipPainter {
+  let skyboxLayer = CALayer()
+
+  init() {
+    skyboxLayer.zPosition = 0
+    skyboxLayer.contentsGravity = .resize
+    skyboxLayer.magnificationFilter = .linear
+    skyboxLayer.minificationFilter = .trilinear
+  }
+
+  func setBounds(_ bounds: CGRect) {
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    skyboxLayer.frame = bounds
+    CATransaction.commit()
+  }
+
+  /// `contentsRect` partage l’origine en bas à gauche du calque non retourné.
+  /// Vérifié avec `skybox-space-band` : la bande claire reste dans le même sens que le PNG.
+  func showSkybox(image: CGImage, contentsRect: StarshipUnitRect) {
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    skyboxLayer.contents = image
+    skyboxLayer.contentsRect = CGRect(
+      x: contentsRect.x,
+      y: contentsRect.y,
+      width: contentsRect.width,
+      height: contentsRect.height
+    )
+    CATransaction.commit()
+  }
+}
+
+/// Ciel de la session sur un écran. La frappe ne fait encore que remonter les sorties adultes.
 final class StarshipStageView: NSView {
   static let backgroundColor = NSColor(
     srgbRed: 0x0B / 255,
@@ -63,9 +161,20 @@ final class StarshipStageView: NSView {
   )
 
   private let inputBridge: KioskInputBridge
+  private let director: StarshipDirector
+  private let screenIndex: Int
+  private let sceneLayer = CALayer()
+  private var painter: StarshipPainter!
 
-  init(inputBridge: KioskInputBridge, scale: CGFloat) {
+  init(
+    inputBridge: KioskInputBridge,
+    director: StarshipDirector,
+    screenIndex: Int,
+    scale: CGFloat
+  ) {
     self.inputBridge = inputBridge
+    self.director = director
+    self.screenIndex = screenIndex
     super.init(frame: .zero)
     wantsLayer = true
     guard let root = layer else {
@@ -73,6 +182,11 @@ final class StarshipStageView: NSView {
     }
     root.backgroundColor = Self.backgroundColor.cgColor
     root.contentsScale = scale
+    root.addSublayer(sceneLayer)
+    let painter = StarshipPainter()
+    self.painter = painter
+    sceneLayer.addSublayer(painter.skyboxLayer)
+    director.register(screenIndex: screenIndex, painter: painter)
   }
 
   @available(*, unavailable)
@@ -80,8 +194,32 @@ final class StarshipStageView: NSView {
     fatalError("init(coder:) n’est pas supporté")
   }
 
+  override func viewDidMoveToWindow() {
+    super.viewDidMoveToWindow()
+    reportFrame()
+  }
+
+  override func layout() {
+    super.layout()
+    guard painter != nil else { return }
+    let scale = window?.backingScaleFactor ?? 2
+    layer?.contentsScale = scale
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    sceneLayer.frame = bounds
+    sceneLayer.contentsScale = scale
+    CATransaction.commit()
+    painter.setBounds(bounds)
+    reportFrame()
+  }
+
   override func mouseDown(with event: NSEvent) {
     window?.makeFirstResponder(self)
+  }
+
+  private func reportFrame() {
+    guard let frame = window?.frame else { return }
+    director.noteFrame(screenIndex: screenIndex, frame: frame)
   }
 
   override var acceptsFirstResponder: Bool { true }
