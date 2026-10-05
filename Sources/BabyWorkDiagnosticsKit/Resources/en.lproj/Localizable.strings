@@ -6,3 +6,7 @@
 "settings.exits.layout.label" = "Keyboard Layout";
 "settings.exits.layout.ok" = "The phrase is typed with this layout.";
 "settings.exits.layout.missing" = "Letters missing from this layout: %@. Choose another phrase or keep Shift-Escape on.";
+"settings.about.title" = "About";
+"settings.about.subtitle" = "BabyWorks and what makes it possible.";
+"settings.about.assets" = "Artwork";
+"settings.about.madeBy" = "Made by";

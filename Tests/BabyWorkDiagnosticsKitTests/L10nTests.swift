@@ -33,6 +33,18 @@ func launchModeButtonCopy() {
   #expect(L10nTable.language("fr")("settings.mode.launch.accessibility", "Océan") == "Lancer Océan")
 }
 
+@Test("À propos : titre, sous-titre, images, et « Made by » dans les deux langues")
+func aboutSectionCopy() {
+  #expect(L10nTable.language("fr")("settings.about.title") == "À propos")
+  #expect(L10nTable.language("en")("settings.about.title") == "About")
+  #expect(L10nTable.language("fr")("settings.about.subtitle") == "BabyWorks et ce qui le rend possible.")
+  #expect(L10nTable.language("en")("settings.about.subtitle") == "BabyWorks and what makes it possible.")
+  #expect(L10nTable.language("fr")("settings.about.assets") == "Images")
+  #expect(L10nTable.language("en")("settings.about.assets") == "Artwork")
+  #expect(L10nTable.language("fr")("settings.about.madeBy") == "Made by")
+  #expect(L10nTable.language("en")("settings.about.madeBy") == "Made by")
+}
+
 @Test("Une clé absente renvoie la clé")
 func missingLocalizationKeyReturnsTheKey() {
   #expect(L10nTable.language("fr")("menu.absent") == "menu.absent")

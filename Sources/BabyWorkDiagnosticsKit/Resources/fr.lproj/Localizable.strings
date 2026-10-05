@@ -6,3 +6,7 @@
 "settings.exits.layout.label" = "Disposition clavier";
 "settings.exits.layout.ok" = "La phrase se tape avec cette disposition.";
 "settings.exits.layout.missing" = "Lettres absentes de cette disposition : %@. Choisissez une autre phrase ou gardez Maj-Échap activé.";
+"settings.about.title" = "À propos";
+"settings.about.subtitle" = "BabyWorks et ce qui le rend possible.";
+"settings.about.assets" = "Images";
+"settings.about.madeBy" = "Made by";

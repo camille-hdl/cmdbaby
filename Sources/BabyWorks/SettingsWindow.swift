@@ -84,6 +84,7 @@ enum SettingsSection: CaseIterable, Identifiable {
   case mode
   case exits
   case general
+  case about
 
   var id: Self { self }
 
@@ -106,6 +107,12 @@ enum SettingsSection: CaseIterable, Identifiable {
         title: "Général",
         subtitle: "Réglages qui s’appliquent en dehors d’une session.",
         symbolName: "gearshape"
+      )
+    case .about:
+      SettingsSectionCopy(
+        title: L10n.current("settings.about.title"),
+        subtitle: L10n.current("settings.about.subtitle"),
+        symbolName: "info.circle"
       )
     }
   }
@@ -184,8 +191,8 @@ private struct SettingsGroup<Content: View>: View {
 }
 
 /// Une ligne : libellé (et aide, rejet) à gauche, contrôle en bout de ligne.
-private struct SettingsRow<Control: View>: View {
-  var label: String
+private struct SettingsRow<Label: View, Control: View>: View {
+  var label: Label
   var help: String?
   var rejection: String?
   var control: Control
@@ -193,23 +200,21 @@ private struct SettingsRow<Control: View>: View {
   @Environment(\.isEnabled) private var isEnabled
 
   init(
-    label: String,
     help: String? = nil,
     rejection: String? = nil,
+    @ViewBuilder label: () -> Label,
     @ViewBuilder control: () -> Control
   ) {
-    self.label = label
     self.help = help
     self.rejection = rejection
+    self.label = label()
     self.control = control()
   }
 
   var body: some View {
     HStack(alignment: .center, spacing: 0) {
       VStack(alignment: .leading, spacing: 2) {
-        Text(label)
-          .font(.system(size: 13))
-          .foregroundStyle(settingsColor(SettingsPalette.ink, colorScheme))
+        label
         if let help {
           Text(help)
             .font(.system(size: 12))
@@ -230,6 +235,44 @@ private struct SettingsRow<Control: View>: View {
     .padding(.vertical, SettingsFormMetrics.rowVerticalPadding)
     .frame(maxWidth: .infinity, alignment: .leading)
     .opacity(isEnabled ? 1 : 0.45)
+  }
+}
+
+private extension SettingsRow where Label == SettingsPlainLabel {
+  init(
+    label: String,
+    help: String? = nil,
+    rejection: String? = nil,
+    @ViewBuilder control: () -> Control
+  ) {
+    self.init(help: help, rejection: rejection) {
+      SettingsPlainLabel(text: label)
+    } control: {
+      control()
+    }
+  }
+}
+
+private extension SettingsRow where Control == EmptyView {
+  init(
+    help: String? = nil,
+    rejection: String? = nil,
+    @ViewBuilder label: () -> Label
+  ) {
+    self.init(help: help, rejection: rejection, label: label) {
+      EmptyView()
+    }
+  }
+}
+
+private struct SettingsPlainLabel: View {
+  var text: String
+  @Environment(\.colorScheme) private var colorScheme
+
+  var body: some View {
+    Text(text)
+      .font(.system(size: 13))
+      .foregroundStyle(settingsColor(SettingsPalette.ink, colorScheme))
   }
 }
 
@@ -275,6 +318,7 @@ struct SettingsView: View {
   @FocusState private var launchAtLoginFocused: Bool
   @FocusState private var timeLimitFieldFocused: Bool
   @FocusState private var passphraseFieldFocused: Bool
+  @FocusState private var focusedAboutLink: URL?
   @State private var timeLimitDraft = ""
   @State private var timeLimitRejection: String?
   @State private var passphraseDraft = ""
@@ -435,6 +479,8 @@ struct SettingsView: View {
       focusedExit = .passphrase
     case .general:
       launchAtLoginFocused = true
+    case .about:
+      focusedAboutLink = Credits.authorURL
     }
   }
 
@@ -489,6 +535,8 @@ struct SettingsView: View {
       exitSettings
     case .general:
       generalSettings
+    case .about:
+      aboutSettings
     }
   }
 
@@ -807,6 +855,84 @@ struct SettingsView: View {
           .focused($launchAtLoginFocused)
       }
     }
+  }
+
+  private var aboutSettings: some View {
+    VStack(alignment: .leading, spacing: 22) {
+      SettingsGroup {
+        SettingsRow(label: installedAppName) {
+          Text(installedAppVersion)
+            .font(.system(size: 13))
+            .foregroundStyle(color(SettingsPalette.ink))
+        }
+        SettingsGroupDivider()
+        aboutAuthorRow
+      }
+      SettingsGroup(title: L10n.current("settings.about.assets")) {
+        ForEach(Array(Credits.assets.enumerated()), id: \.element.url) { index, asset in
+          VStack(spacing: 0) {
+            if index > 0 {
+              SettingsGroupDivider()
+            }
+            aboutAssetRow(asset)
+          }
+        }
+      }
+    }
+  }
+
+  private var aboutAuthorRow: some View {
+    SettingsRow {
+      HStack(spacing: 0) {
+        Text(L10n.current("settings.about.madeBy") + " ")
+          .font(.system(size: 13))
+          .foregroundStyle(color(SettingsPalette.ink))
+          .accessibilityHidden(true)
+        Link(Credits.authorName, destination: Credits.authorURL)
+          .font(.system(size: 13))
+          .focused($focusedAboutLink, equals: Credits.authorURL)
+          .accessibilityLabel(madeByLine)
+      }
+    }
+  }
+
+  private var madeByLine: String {
+    "\(L10n.current("settings.about.madeBy")) \(Credits.authorName)"
+  }
+
+  private func aboutAssetRow(_ asset: CreditedAsset) -> some View {
+    SettingsRow(help: "\(asset.author) · \(asset.license)") {
+      Link(asset.name, destination: asset.url)
+        .font(.system(size: 13))
+        .focused($focusedAboutLink, equals: asset.url)
+    }
+  }
+
+  /// Nom affiché de l’app. Repli « BabyWorks » hors bundle `.app`.
+  private var installedAppName: String {
+    let candidates = ["CFBundleDisplayName", "CFBundleName"].compactMap { key -> String? in
+      guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String else { return nil }
+      let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+      return trimmed.isEmpty ? nil : trimmed
+    }
+    return candidates.first ?? "BabyWorks"
+  }
+
+  /// `CFBundleShortVersionString` (`CFBundleVersion`). « — » si l’un des deux manque (`swift run`).
+  private var installedAppVersion: String {
+    guard
+      let short = infoString("CFBundleShortVersionString"),
+      let build = infoString("CFBundleVersion")
+    else {
+      return "—"
+    }
+    return "\(short) (\(build))"
+  }
+
+  private func infoString(_ key: String) -> String? {
+    guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String else { return nil }
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmed.isEmpty ? nil : trimmed
   }
 
   private var launchAtLogin: Binding<Bool> {
