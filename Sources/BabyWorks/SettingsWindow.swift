@@ -114,20 +114,20 @@ enum SettingsSection: CaseIterable, Identifiable {
     switch self {
     case .mode:
       SettingsSectionCopy(
-        title: "Mode de jeu",
-        subtitle: "Choisis ce que l’enfant voit pendant la session.",
+        title: L10n.current("settings.mode.title"),
+        subtitle: L10n.current("settings.mode.subtitle"),
         symbolName: "sparkles"
       )
     case .exits:
       SettingsSectionCopy(
-        title: "Sorties",
-        subtitle: "Ce qui met fin à une session.",
+        title: L10n.current("settings.exits.title"),
+        subtitle: L10n.current("settings.exits.subtitle"),
         symbolName: "door.left.hand.open"
       )
     case .general:
       SettingsSectionCopy(
-        title: "Général",
-        subtitle: "Réglages qui s’appliquent en dehors d’une session.",
+        title: L10n.current("settings.general.title"),
+        subtitle: L10n.current("settings.general.subtitle"),
         symbolName: "gearshape"
       )
     case .permissions:
@@ -315,19 +315,29 @@ private struct SettingsGroupDivider: View {
   }
 }
 
-private let keepOneManualExitHelp = "Gardez au moins une sortie active."
+private var keepOneManualExitHelp: String {
+  L10n.current("settings.exits.keepOne")
+}
 
-private let passphraseHelp =
-  "3 à 12 lettres, à taper en moins de 5 secondes puis Entrée."
+private var passphraseHelp: String {
+  L10n.current("settings.exits.passphrase.help")
+}
 
-private let timeLimitHelp =
-  "Le contour du carré de secours se remplit pendant la session ; la session s’arrête quand il est complet."
+private var timeLimitHelp: String {
+  L10n.current("settings.exits.timer.help")
+}
 
-private let timeLimitRejectionMessage =
-  "Indique une durée entre \(AdultExitSettings.timeLimitRange.lowerBound) et \(AdultExitSettings.timeLimitRange.upperBound) minutes."
+private var timeLimitRejectionMessage: String {
+  L10n.current(
+    "settings.exits.timer.rejection",
+    Int64(AdultExitSettings.timeLimitRange.lowerBound),
+    Int64(AdultExitSettings.timeLimitRange.upperBound)
+  )
+}
 
-private let launchAtLoginHelp =
-  "Ouvre BabyWorks dans la barre de menus au login, sans lancer de session."
+private var launchAtLoginHelp: String {
+  L10n.current("settings.general.launchAtLogin.help")
+}
 
 struct SettingsView: View {
   @ObservedObject var model: SettingsModel
@@ -731,8 +741,12 @@ struct SettingsView: View {
   }
 
   private var parentExits: some View {
-    SettingsGroup(title: "Sorties parent") {
-      exitToggleRow(method: .passphrase, label: "Phrase + Entrée", help: nil)
+    SettingsGroup(title: L10n.current("settings.exits.parent.title")) {
+      exitToggleRow(
+        method: .passphrase,
+        label: L10n.current("settings.exits.passphrase.toggle"),
+        help: nil
+      )
       SettingsGroupDivider()
       passphraseRow
       if passphraseExitEnabled {
@@ -740,12 +754,16 @@ struct SettingsView: View {
         keyboardLayoutRow
       }
       SettingsGroupDivider()
-      exitToggleRow(method: .shiftEscape, label: "Maj-Échap", help: "Majuscule + Échap")
+      exitToggleRow(
+        method: .shiftEscape,
+        label: L10n.current("settings.exits.shiftEscape.label"),
+        help: L10n.current("settings.exits.shiftEscape.help")
+      )
       SettingsGroupDivider()
       exitToggleRow(
         method: .failsafeClick,
-        label: "Clics de secours",
-        help: "5 clics rapides sur le carré en bas à droite"
+        label: L10n.current("settings.exits.failsafe.label"),
+        help: L10n.current("settings.exits.failsafe.help")
       )
     }
     .onAppear(perform: refreshKeyboardLayout)
@@ -795,19 +813,20 @@ struct SettingsView: View {
 
   private var passphraseRow: some View {
     let enabled = model.configuration.exits.enabledMethods.contains(.passphrase)
+    let label = L10n.current("settings.exits.passphrase.label")
     return SettingsRow(
-      label: "Phrase de sortie",
+      label: label,
       help: passphraseHelp,
       rejection: passphraseRejection
     ) {
-      TextField("Phrase de sortie", text: $passphraseDraft)
+      TextField(label, text: $passphraseDraft)
         .textFieldStyle(.roundedBorder)
         .controlSize(.small)
         .frame(width: SettingsFormMetrics.passphraseFieldWidth)
         .foregroundStyle(color(SettingsPalette.ink))
         .focused($passphraseFieldFocused)
         .onSubmit(commitPassphraseDraft)
-        .accessibilityLabel("Phrase de sortie")
+        .accessibilityLabel(label)
     }
     .disabled(!enabled)
     .onAppear(perform: seedPassphraseDraft)
@@ -861,14 +880,15 @@ struct SettingsView: View {
   }
 
   private var timerSettings: some View {
-    SettingsGroup(title: "Minuteur") {
+    let label = L10n.current("settings.exits.timer.label")
+    return SettingsGroup(title: L10n.current("settings.exits.timer.title")) {
       SettingsRow(
-        label: "Fin de session après",
+        label: label,
         help: timeLimitHelp,
         rejection: timeLimitRejection
       ) {
         HStack(spacing: 6) {
-          TextField("minutes", text: $timeLimitDraft)
+          TextField(L10n.current("settings.exits.timer.field"), text: $timeLimitDraft)
             .textFieldStyle(.roundedBorder)
             .controlSize(.small)
             .multilineTextAlignment(.trailing)
@@ -879,8 +899,8 @@ struct SettingsView: View {
             .onChange(of: timeLimitDraft) { draft in
               acceptTimeLimitDraft(draft, reportIncomplete: false)
             }
-            .accessibilityLabel("Fin de session après, en minutes")
-          Text("min")
+            .accessibilityLabel(L10n.current("settings.exits.timer.accessibility"))
+          Text(L10n.current("settings.exits.timer.unit"))
             .font(.system(size: 13))
             .foregroundStyle(color(SettingsPalette.ink))
           Stepper(
@@ -891,7 +911,7 @@ struct SettingsView: View {
           )
           .controlSize(.small)
           .labelsHidden()
-          .accessibilityLabel("Durée de la session")
+          .accessibilityLabel(L10n.current("settings.exits.timer.duration"))
         }
         .onAppear(perform: seedTimeLimitDraft)
         .onChange(of: timeLimitFieldFocused) { focused in
@@ -946,8 +966,9 @@ struct SettingsView: View {
     SettingsGroup {
       languageRow
       SettingsGroupDivider()
-      SettingsRow(label: "Démarrage automatique", help: launchAtLoginHelp) {
-        settingsSwitch("Démarrage automatique", isOn: launchAtLogin)
+      let launchLabel = L10n.current("settings.general.launchAtLogin.label")
+      SettingsRow(label: launchLabel, help: launchAtLoginHelp) {
+        settingsSwitch(launchLabel, isOn: launchAtLogin)
           .focused($launchAtLoginFocused)
       }
     }
@@ -1629,7 +1650,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
       backing: .buffered,
       defer: false
     )
-    window.title = "Réglages"
+    window.title = L10n.current("settings.window.title")
     window.identifier = NSUserInterfaceItemIdentifier("fr.camille.babywork.settings")
     window.isReleasedWhenClosed = false
     window.titlebarAppearsTransparent = true

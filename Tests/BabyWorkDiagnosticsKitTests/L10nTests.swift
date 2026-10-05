@@ -208,6 +208,120 @@ func passphraseNotTypableAlertCopy() {
   )
 }
 
+@Test("La fenêtre Réglages parle français et anglais")
+func settingsWindowCopy() {
+  #expect(L10nTable.language("fr")("settings.window.title") == "Réglages")
+  #expect(L10nTable.language("en")("settings.window.title") == "Settings")
+
+  #expect(L10nTable.language("fr")("settings.mode.title") == "Mode de jeu")
+  #expect(L10nTable.language("en")("settings.mode.title") == "Play Mode")
+  #expect(
+    L10nTable.language("fr")("settings.mode.subtitle")
+      == "Choisis ce que l’enfant voit pendant la session."
+  )
+  #expect(
+    L10nTable.language("en")("settings.mode.subtitle")
+      == "Choose what the child sees during the session."
+  )
+
+  #expect(L10nTable.language("fr")("settings.exits.title") == "Sorties")
+  #expect(L10nTable.language("en")("settings.exits.title") == "Exits")
+  #expect(L10nTable.language("fr")("settings.exits.subtitle") == "Ce qui met fin à une session.")
+  #expect(L10nTable.language("en")("settings.exits.subtitle") == "What ends a session.")
+  #expect(L10nTable.language("fr")("settings.exits.parent.title") == "Sorties parent")
+  #expect(L10nTable.language("en")("settings.exits.parent.title") == "Parent Exits")
+  #expect(L10nTable.language("fr")("settings.exits.passphrase.toggle") == "Phrase + Entrée")
+  #expect(L10nTable.language("en")("settings.exits.passphrase.toggle") == "Phrase + Return")
+  #expect(L10nTable.language("fr")("settings.exits.shiftEscape.label") == "Maj-Échap")
+  #expect(L10nTable.language("en")("settings.exits.shiftEscape.label") == "Shift-Escape")
+  #expect(L10nTable.language("fr")("settings.exits.shiftEscape.help") == "Majuscule + Échap")
+  #expect(L10nTable.language("en")("settings.exits.shiftEscape.help") == "Shift + Escape")
+  #expect(L10nTable.language("fr")("settings.exits.failsafe.label") == "Clics de secours")
+  #expect(L10nTable.language("en")("settings.exits.failsafe.label") == "Failsafe clicks")
+  #expect(
+    L10nTable.language("fr")("settings.exits.failsafe.help")
+      == "5 clics rapides sur le carré en bas à droite"
+  )
+  #expect(
+    L10nTable.language("en")("settings.exits.failsafe.help")
+      == "5 quick clicks on the square at the bottom right"
+  )
+  #expect(L10nTable.language("fr")("settings.exits.passphrase.label") == "Phrase de sortie")
+  #expect(L10nTable.language("en")("settings.exits.passphrase.label") == "Exit Phrase")
+  #expect(
+    L10nTable.language("fr")("settings.exits.passphrase.help")
+      == "3 à 12 lettres, à taper en moins de 5 secondes puis Entrée."
+  )
+  #expect(
+    L10nTable.language("en")("settings.exits.passphrase.help")
+      == "3 to 12 letters, typed in under 5 seconds, then Return."
+  )
+  #expect(
+    L10nTable.language("fr")("settings.exits.keepOne") == "Gardez au moins une sortie active."
+  )
+  #expect(L10nTable.language("en")("settings.exits.keepOne") == "Keep at least one exit on.")
+
+  #expect(L10nTable.language("fr")("settings.exits.timer.title") == "Minuteur")
+  #expect(L10nTable.language("en")("settings.exits.timer.title") == "Timer")
+  #expect(L10nTable.language("fr")("settings.exits.timer.label") == "Fin de session après")
+  #expect(L10nTable.language("en")("settings.exits.timer.label") == "Session ends after")
+  #expect(L10nTable.language("fr")("settings.exits.timer.field") == "minutes")
+  #expect(L10nTable.language("en")("settings.exits.timer.field") == "minutes")
+  #expect(L10nTable.language("fr")("settings.exits.timer.unit") == "min")
+  #expect(L10nTable.language("en")("settings.exits.timer.unit") == "min")
+  #expect(
+    L10nTable.language("fr")("settings.exits.timer.accessibility")
+      == "Fin de session après, en minutes"
+  )
+  #expect(
+    L10nTable.language("en")("settings.exits.timer.accessibility")
+      == "Session ends after, in minutes"
+  )
+  #expect(L10nTable.language("fr")("settings.exits.timer.duration") == "Durée de la session")
+  #expect(L10nTable.language("en")("settings.exits.timer.duration") == "Session length")
+  #expect(
+    L10nTable.language("fr")("settings.exits.timer.help")
+      == "Le contour du carré de secours se remplit pendant la session ; la session s’arrête quand il est complet."
+  )
+  #expect(
+    L10nTable.language("en")("settings.exits.timer.help")
+      == "The outline of the failsafe square fills during the session; the session stops when it is full."
+  )
+  #expect(
+    L10nTable.language("fr")("settings.exits.timer.rejection", Int64(1), Int64(120))
+      == "Indique une durée entre 1 et 120 minutes."
+  )
+  #expect(
+    L10nTable.language("en")("settings.exits.timer.rejection", Int64(1), Int64(120))
+      == "Enter a duration between 1 and 120 minutes."
+  )
+
+  #expect(L10nTable.language("fr")("settings.general.title") == "Général")
+  #expect(L10nTable.language("en")("settings.general.title") == "General")
+  #expect(
+    L10nTable.language("fr")("settings.general.subtitle")
+      == "Réglages qui s’appliquent en dehors d’une session."
+  )
+  #expect(
+    L10nTable.language("en")("settings.general.subtitle")
+      == "Settings that apply outside a session."
+  )
+  #expect(
+    L10nTable.language("fr")("settings.general.launchAtLogin.label") == "Démarrage automatique"
+  )
+  #expect(
+    L10nTable.language("en")("settings.general.launchAtLogin.label") == "Launch at Login"
+  )
+  #expect(
+    L10nTable.language("fr")("settings.general.launchAtLogin.help")
+      == "Ouvre BabyWorks dans la barre de menus au login, sans lancer de session."
+  )
+  #expect(
+    L10nTable.language("en")("settings.general.launchAtLogin.help")
+      == "Opens BabyWorks in the menu bar at login, without starting a session."
+  )
+}
+
 @Test("Une clé absente renvoie la clé")
 func missingLocalizationKeyReturnsTheKey() {
   #expect(L10nTable.language("fr")("menu.absent") == "menu.absent")

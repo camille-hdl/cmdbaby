@@ -17,17 +17,23 @@ public enum SettingsError: Error, Equatable, Sendable {
 }
 
 extension SettingsError: LocalizedError {
-  public var errorDescription: String? {
+  /// Texte de rejet de la phrase de sortie. Les autres cas n’en ont pas :
+  /// la fenêtre l’explique à part.
+  public func message(in table: L10nTable) -> String? {
     switch self {
     case .passphraseTooShort:
-      "Au moins 3 lettres."
+      table("settings.error.passphrase.tooShort")
     case .passphraseTooLong:
-      "12 lettres au maximum."
+      table("settings.error.passphrase.tooLong")
     case .passphraseInvalidCharacters:
-      "Uniquement des lettres, sans espace ni chiffre."
+      table("settings.error.passphrase.invalidCharacters")
     case .timeLimitOutOfRange, .lastManualExit:
       nil
     }
+  }
+
+  public var errorDescription: String? {
+    message(in: .current)
   }
 }
 

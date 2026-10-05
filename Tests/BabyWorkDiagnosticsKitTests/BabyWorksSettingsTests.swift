@@ -103,13 +103,6 @@ func invalidPassphraseLeavesFileUnchanged() throws {
   loginItem.isRegistered = true
   let settings = BabyWorksSettings(store: store, loginItem: loginItem)
 
-  #expect(SettingsError.passphraseTooShort.errorDescription == "Au moins 3 lettres.")
-  #expect(SettingsError.passphraseTooLong.errorDescription == "12 lettres au maximum.")
-  #expect(
-    SettingsError.passphraseInvalidCharacters.errorDescription
-      == "Uniquement des lettres, sans espace ni chiffre."
-  )
-
   #expect(throws: SettingsError.passphraseTooShort) {
     try settings.apply(.passphrase("ab"))
   }
@@ -129,6 +122,32 @@ func invalidPassphraseLeavesFileUnchanged() throws {
     try settings.apply(.passphrase("pa-pa"))
   }
   #expect(store.load() == original)
+}
+
+@Test("Les messages de la phrase de sortie sont en français et en anglais")
+func passphraseRejectionIsLocalized() {
+  #expect(
+    SettingsError.passphraseTooShort.message(in: .language("fr")) == "Au moins 3 lettres."
+  )
+  #expect(
+    SettingsError.passphraseTooShort.message(in: .language("en")) == "At least 3 letters."
+  )
+  #expect(
+    SettingsError.passphraseTooLong.message(in: .language("fr")) == "12 lettres au maximum."
+  )
+  #expect(
+    SettingsError.passphraseTooLong.message(in: .language("en")) == "12 letters at most."
+  )
+  #expect(
+    SettingsError.passphraseInvalidCharacters.message(in: .language("fr"))
+      == "Uniquement des lettres, sans espace ni chiffre."
+  )
+  #expect(
+    SettingsError.passphraseInvalidCharacters.message(in: .language("en"))
+      == "Letters only, with no spaces or digits."
+  )
+  #expect(SettingsError.timeLimitOutOfRange.message(in: .language("fr")) == nil)
+  #expect(SettingsError.lastManualExit.message(in: .language("en")) == nil)
 }
 
 @Test("Une phrase valide est enregistrée sous sa forme normalisée")
