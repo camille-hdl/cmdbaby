@@ -91,7 +91,7 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
   private func relaunchApplyingLanguage() {
     let configuration = NSWorkspace.OpenConfiguration()
     configuration.createsNewApplicationInstance = true
-    configuration.arguments = ["--open-settings", "general"]
+    configuration.arguments = LaunchPlan.openGeneralSettingsArguments
     NSWorkspace.shared.openApplication(
       at: Bundle.main.bundleURL,
       configuration: configuration
