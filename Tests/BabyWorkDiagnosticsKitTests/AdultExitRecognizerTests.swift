@@ -8,41 +8,79 @@ func passphraseThenReturnWithinWindowExits() {
   let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: clock)
 
   for character in Array("parent") {
-    #expect(recognizer.handleKeyDown(letter: character, isReturn: false) == nil)
+    #expect(recognizer.handleKeyDown(letters: [character], isReturn: false) == nil)
   }
-  #expect(recognizer.handleKeyDown(letter: nil, isReturn: true) == .passphrase)
+  #expect(recognizer.handleKeyDown(letters: [], isReturn: true) == .passphrase)
+}
+
+@Test("Chaque touche cyrillique et latine reconnaît parent puis Entrée")
+func cyrillicAndLatinLettersRecognizeParent() {
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: ManualClock(now: 0))
+  let keys: [Set<Character>] = [
+    ["з", "p"],
+    ["ф", "a"],
+    ["к", "r"],
+    ["у", "e"],
+    ["т", "n"],
+    ["е", "t"],
+  ]
+  for letters in keys {
+    #expect(recognizer.handleKeyDown(letters: letters, isReturn: false) == nil)
+  }
+  #expect(recognizer.handleKeyDown(letters: [], isReturn: true) == .passphrase)
 }
 
 @Test("Une frappe hors préfixe réinitialise le tampon")
 func wrongLetterResetsPassphraseBuffer() {
   let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: ManualClock(now: 0))
-  #expect(recognizer.handleKeyDown(letter: "p", isReturn: false) == nil)
-  #expect(recognizer.handleKeyDown(letter: "x", isReturn: false) == nil)
+  #expect(recognizer.handleKeyDown(letters: ["p"], isReturn: false) == nil)
+  #expect(recognizer.handleKeyDown(letters: ["x"], isReturn: false) == nil)
   for character in Array("parent") {
-    #expect(recognizer.handleKeyDown(letter: character, isReturn: false) == nil)
+    #expect(recognizer.handleKeyDown(letters: [character], isReturn: false) == nil)
   }
-  #expect(recognizer.handleKeyDown(letter: nil, isReturn: true) == .passphrase)
+  #expect(recognizer.handleKeyDown(letters: [], isReturn: true) == .passphrase)
+}
+
+@Test("Une touche dont aucune lettre n’est attendue vide le tampon")
+func lettersOutsideTheExpectedOneClearTheBuffer() {
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: ManualClock(now: 0))
+  #expect(recognizer.handleKeyDown(letters: ["з", "p"], isReturn: false) == nil)
+  #expect(recognizer.prefixLength == 1)
+  #expect(recognizer.handleKeyDown(letters: ["ы", "s"], isReturn: false) == nil)
+  #expect(recognizer.prefixLength == 0)
+  let keys: [Set<Character>] = [
+    ["з", "p"],
+    ["ф", "a"],
+    ["к", "r"],
+    ["у", "e"],
+    ["т", "n"],
+    ["е", "t"],
+  ]
+  for letters in keys {
+    #expect(recognizer.handleKeyDown(letters: letters, isReturn: false) == nil)
+  }
+  #expect(recognizer.handleKeyDown(letters: [], isReturn: true) == .passphrase)
 }
 
 @Test("L’expiration de la fenêtre empêche la sortie")
 func passphraseWindowExpirationPreventsExit() {
   let clock = ManualClock(now: 0)
   let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: clock)
-  #expect(recognizer.handleKeyDown(letter: "p", isReturn: false) == nil)
+  #expect(recognizer.handleKeyDown(letters: ["p"], isReturn: false) == nil)
   clock.now = 6
-  #expect(recognizer.handleKeyDown(letter: "a", isReturn: false) == nil)
+  #expect(recognizer.handleKeyDown(letters: ["a"], isReturn: false) == nil)
   for character in Array("rent") {
-    #expect(recognizer.handleKeyDown(letter: character, isReturn: false) == nil)
+    #expect(recognizer.handleKeyDown(letters: [character], isReturn: false) == nil)
   }
   clock.now = 7
-  #expect(recognizer.handleKeyDown(letter: nil, isReturn: true) == nil)
+  #expect(recognizer.handleKeyDown(letters: [], isReturn: true) == nil)
 }
 
 @Test("Majuscule-Échap produit la sortie de secours")
 func shiftEscapeExitsImmediately() {
   let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: ManualClock(now: 0))
   #expect(
-    recognizer.handleKeyDown(letter: nil, isReturn: false, isEscape: true, shiftDown: true)
+    recognizer.handleKeyDown(letters: [], isReturn: false, isEscape: true, shiftDown: true)
       == .shiftEscape
   )
 }
@@ -51,7 +89,7 @@ func shiftEscapeExitsImmediately() {
 func escapeWithoutShiftIsNotAnExit() {
   let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: ManualClock(now: 0))
   #expect(
-    recognizer.handleKeyDown(letter: nil, isReturn: false, isEscape: true, shiftDown: false) == nil
+    recognizer.handleKeyDown(letters: [], isReturn: false, isEscape: true, shiftDown: false) == nil
   )
 }
 
@@ -65,7 +103,7 @@ func commandQIsNotAnAdultExit() {
       letter: "q"
     ) == .suppress(.commandQ)
   )
-  #expect(recognizer.handleKeyDown(letter: "q", isReturn: false) == nil)
+  #expect(recognizer.handleKeyDown(letters: ["q"], isReturn: false) == nil)
 }
 
 @Test("maman puis Entrée sort, parent puis Entrée ne sort pas")
@@ -77,14 +115,14 @@ func customPassphraseMatchesOnlyThatPhrase() throws {
   #expect(recognizer.prefixTarget == 5)
 
   for character in Array("parent") {
-    #expect(recognizer.handleKeyDown(letter: character, isReturn: false) == nil)
+    #expect(recognizer.handleKeyDown(letters: [character], isReturn: false) == nil)
   }
-  #expect(recognizer.handleKeyDown(letter: nil, isReturn: true) == nil)
+  #expect(recognizer.handleKeyDown(letters: [], isReturn: true) == nil)
 
   for character in Array("maman") {
-    #expect(recognizer.handleKeyDown(letter: character, isReturn: false) == nil)
+    #expect(recognizer.handleKeyDown(letters: [character], isReturn: false) == nil)
   }
-  #expect(recognizer.handleKeyDown(letter: nil, isReturn: true) == .passphrase)
+  #expect(recognizer.handleKeyDown(letters: [], isReturn: true) == .passphrase)
 }
 
 @Test("Maj-Échap inactif ne sort pas")
@@ -94,7 +132,7 @@ func shiftEscapeWhenDisabledDoesNotExit() {
     clock: ManualClock(now: 0)
   )
   #expect(
-    recognizer.handleKeyDown(letter: nil, isReturn: false, isEscape: true, shiftDown: true) == nil
+    recognizer.handleKeyDown(letters: [], isReturn: false, isEscape: true, shiftDown: true) == nil
   )
 }
 
@@ -105,10 +143,10 @@ func passphraseWhenDisabledDoesNotExit() {
     clock: ManualClock(now: 0)
   )
   for character in Array("parent") {
-    #expect(recognizer.handleKeyDown(letter: character, isReturn: false) == nil)
+    #expect(recognizer.handleKeyDown(letters: [character], isReturn: false) == nil)
     #expect(recognizer.prefixLength == 0)
   }
-  #expect(recognizer.handleKeyDown(letter: nil, isReturn: true) == nil)
+  #expect(recognizer.handleKeyDown(letters: [], isReturn: true) == nil)
   #expect(recognizer.prefixTarget == 0)
 }
 

@@ -76,7 +76,7 @@ public final class AdultExitRecognizer: @unchecked Sendable {
   }
 
   public func handleKeyDown(
-    letter: Character?,
+    letters: Set<Character>,
     isReturn: Bool,
     isEscape: Bool = false,
     shiftDown: Bool = false
@@ -101,14 +101,12 @@ public final class AdultExitRecognizer: @unchecked Sendable {
       return matches ? .passphrase : nil
     }
 
-    guard let letter, let scalar = letter.lowercased().unicodeScalars.first,
-      CharacterSet.letters.contains(scalar)
-    else {
+    let candidates = Set(letters.compactMap(passphraseLetter))
+    guard !candidates.isEmpty else {
       clearBuffer()
       return nil
     }
 
-    let character = Character(scalar)
     if buffer.isEmpty {
       bufferStartedAt = now
     } else if !isBufferInsideWindow(now) {
@@ -116,11 +114,26 @@ public final class AdultExitRecognizer: @unchecked Sendable {
       bufferStartedAt = now
     }
 
-    buffer.append(character)
-    if !target.starts(with: buffer) {
+    guard buffer.count < target.count else {
       clearBuffer()
+      return nil
     }
+    let expected = target[buffer.count]
+    guard candidates.contains(expected) else {
+      clearBuffer()
+      return nil
+    }
+    buffer.append(expected)
     return nil
+  }
+
+  private func passphraseLetter(_ letter: Character) -> Character? {
+    guard let scalar = letter.lowercased().unicodeScalars.first,
+      CharacterSet.letters.contains(scalar)
+    else {
+      return nil
+    }
+    return Character(scalar)
   }
 
   private func isBufferInsideWindow(_ now: TimeInterval) -> Bool {

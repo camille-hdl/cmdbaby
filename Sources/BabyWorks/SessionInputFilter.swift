@@ -234,22 +234,25 @@ final class SessionInputFilter: @unchecked Sendable {
 
     let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
     let modifiers = InputModifierMask(cgEventFlags: event.flags)
-    let letter = letterFromEvent(event, keyCode: keyCode)
+    let cached = KeyboardLayoutLetter.shared.letters(for: keyCode)
+    let fallback = cached.merged.isEmpty || cached.active == nil ? unicodeLetter(from: event) : nil
+    let letters = letterFromEvent(cached: cached.merged, fallback: fallback)
+    let shown = cached.active ?? fallback
     let isReturn = keyCode == 0x24 || keyCode == 0x4C
     let isEscape = keyCode == 0x35
     let shiftDown = modifiers.contains(.shift)
 
     if type == .keyDown {
       let distinguishing = modifiers.intersection(.distinguishing)
-      let letterForPhrase = distinguishing.isEmpty ? letter : nil
+      let lettersForPhrase = distinguishing.isEmpty ? letters : []
       let kind = exitRecognizer.handleKeyDown(
-        letter: letterForPhrase,
+        letters: lettersForPhrase,
         isReturn: isReturn && distinguishing.subtracting(.shift).isEmpty,
         isEscape: isEscape,
         shiftDown: shiftDown
       )
       hud?.noteFilterKey(
-        letter: letter,
+        letter: shown,
         isReturn: isReturn,
         isEscape: isEscape,
         filled: exitRecognizer.prefixLength,
@@ -265,7 +268,7 @@ final class SessionInputFilter: @unchecked Sendable {
     let decision = ShortcutSuppressionPolicy.decision(
       keyCode: keyCode,
       modifiers: modifiers,
-      letter: letter
+      letter: shown
     )
     if type == .keyDown, case .suppress(let shortcut) = decision {
       recordSuppression(of: shortcut)
@@ -290,13 +293,24 @@ final class SessionInputFilter: @unchecked Sendable {
     onCountsChange([:])
   }
 
-  private func letterFromEvent(_ event: CGEvent, keyCode: UInt16) -> Character? {
-    if let cached = KeyboardLayoutLetter.shared.fromKeyCode(keyCode) {
+  private func letterFromEvent(cached: Set<Character>, fallback: Character?) -> Set<Character> {
+    if !cached.isEmpty {
       return cached
     }
+    if let fallback {
+      return [fallback]
+    }
+    return []
+  }
+
+  private func unicodeLetter(from event: CGEvent) -> Character? {
     var length = 0
     var chars = [UniChar](repeating: 0, count: 4)
-    event.keyboardGetUnicodeString(maxStringLength: 4, actualStringLength: &length, unicodeString: &chars)
+    event.keyboardGetUnicodeString(
+      maxStringLength: 4,
+      actualStringLength: &length,
+      unicodeString: &chars
+    )
     guard length > 0 else { return nil }
     let scalar = String(utf16CodeUnits: chars, count: Int(length))
       .lowercased()

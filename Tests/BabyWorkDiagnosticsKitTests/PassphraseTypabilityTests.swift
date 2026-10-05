@@ -31,6 +31,24 @@ func eteOnUsLayoutIsMissingEAcute() throws {
   #expect(!typability.isTypable)
 }
 
+@Test("« parent » sur une disposition russe fusionnée avec l’ASCII est tapable")
+func parentOnRussianLayoutMergedWithAsciiIsTypable() throws {
+  let phrase = try ExitPassphrase.parse("parent")
+  let merged: [UInt16: Set<Character>] = [
+    0: ["з", "p"],
+    1: ["ф", "a"],
+    2: ["к", "r"],
+    3: ["у", "e"],
+    4: ["т", "n"],
+    5: ["е", "t"],
+  ]
+
+  let typability = PassphraseTypability.check(phrase, layoutLetters: merged)
+
+  #expect(typability.isTypable)
+  #expect(typability.missingLetters.isEmpty)
+}
+
 @Test("« parent » sur une disposition russe manque p a r e n t")
 func parentOnRussianLayoutIsMissingEveryLetter() throws {
   let phrase = try ExitPassphrase.parse("parent")

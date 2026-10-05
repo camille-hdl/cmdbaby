@@ -12,22 +12,37 @@ final class KeyboardLayoutLetter: @unchecked Sendable {
   )
 
   private let lock = NSLock()
-  private var letters: [UInt16: Character] = [:]
+  /// Disposition active fusionnée avec la disposition ASCII : 1 ou 2 lettres par touche.
+  private var letters: [UInt16: Set<Character>] = [:]
+  /// Disposition active seule, pour le HUD : pas la lettre ASCII en plus.
+  private var activeLetters: [UInt16: Character] = [:]
   private(set) var layoutName: String?
 
   private init() {}
 
-  func fromKeyCode(_ keyCode: UInt16) -> Character? {
+  /// `merged` : disposition active et ASCII. `active` : disposition active seule, pour le HUD.
+  func letters(for keyCode: UInt16) -> (merged: Set<Character>, active: Character?) {
     lock.lock()
     defer { lock.unlock() }
-    return letters[keyCode]
+    return (letters[keyCode] ?? [], activeLetters[keyCode])
+  }
+
+  /// Lettres reconnues pour une frappe de fenêtre, et la lettre unique du HUD.
+  func keyDownLetters(keyCode: UInt16, charactersIgnoringModifiers: String) -> (
+    letters: Set<Character>, shown: Character?
+  ) {
+    let cached = letters(for: keyCode)
+    let typed = charactersIgnoringModifiers.lowercased().first { $0.isLetter }
+    var recognized = cached.merged
+    if let typed { recognized.insert(typed) }
+    return (recognized, typed ?? cached.active)
   }
 
   /// Table keycode → lettres, lue sous le verrou.
   func snapshot() -> [UInt16: Set<Character>] {
     lock.lock()
     defer { lock.unlock() }
-    return letters.mapValues { [$0] }
+    return letters
   }
 
   @MainActor
@@ -39,11 +54,17 @@ final class KeyboardLayoutLetter: @unchecked Sendable {
       return
     }
     layoutName = localizedName(of: inputSource)
+    let active = unicodeLetters(of: inputSource)
+    let asciiSource = TISCopyCurrentASCIICapableKeyboardLayoutInputSource()?.takeRetainedValue()
+    let ascii = asciiSource.flatMap { unicodeLetters(of: $0) }
+    replaceTables(merged: merge(active: active, ascii: ascii), active: active ?? [:])
+  }
+
+  private func unicodeLetters(of inputSource: TISInputSource) -> [UInt16: Character]? {
     guard
       let rawLayout = TISGetInputSourceProperty(inputSource, kTISPropertyUnicodeKeyLayoutData)
     else {
-      replaceLetters([:])
-      return
+      return nil
     }
     let layoutData = Unmanaged<CFData>.fromOpaque(rawLayout).takeUnretainedValue() as Data
 
@@ -58,13 +79,32 @@ final class KeyboardLayoutLetter: @unchecked Sendable {
         }
       }
     }
-
-    replaceLetters(map)
+    return map
   }
 
-  private func replaceLetters(_ map: [UInt16: Character]) {
+  /// Active sans données Unicode → ASCII seule. Aucune des deux → table vide.
+  private func merge(
+    active: [UInt16: Character]?,
+    ascii: [UInt16: Character]?
+  ) -> [UInt16: Set<Character>] {
+    guard active != nil || ascii != nil else { return [:] }
+    var merged: [UInt16: Set<Character>] = [:]
+    var codes = Set<UInt16>()
+    if let active { codes.formUnion(active.keys) }
+    if let ascii { codes.formUnion(ascii.keys) }
+    for code in codes {
+      var set: Set<Character> = []
+      if let letter = active?[code] { set.insert(letter) }
+      if let letter = ascii?[code] { set.insert(letter) }
+      if !set.isEmpty { merged[code] = set }
+    }
+    return merged
+  }
+
+  private func replaceTables(merged: [UInt16: Set<Character>], active: [UInt16: Character]) {
     lock.lock()
-    letters = map
+    letters = merged
+    activeLetters = active
     lock.unlock()
   }
 

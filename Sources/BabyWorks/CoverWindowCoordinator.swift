@@ -358,9 +358,15 @@ final class KioskInputBridge {
     self.onExit = onExit
   }
 
-  func noteKeyDown(letter: Character?, isReturn: Bool, isEscape: Bool, shiftDown: Bool) {
+  func noteKeyDown(
+    letters: Set<Character>,
+    shownLetter: Character?,
+    isReturn: Bool,
+    isEscape: Bool,
+    shiftDown: Bool
+  ) {
     let kind = recognizer.handleKeyDown(
-      letter: letter,
+      letters: letters,
       isReturn: isReturn,
       isEscape: isEscape,
       shiftDown: shiftDown
@@ -368,7 +374,7 @@ final class KioskInputBridge {
     let filled = recognizer.prefixLength
     let target = recognizer.prefixTarget
     hud.noteWindowKey(
-      letter: letter,
+      letter: shownLetter,
       isReturn: isReturn,
       isEscape: isEscape,
       filled: filled,
