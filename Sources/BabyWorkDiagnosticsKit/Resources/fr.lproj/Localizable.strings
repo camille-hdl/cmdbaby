@@ -13,3 +13,9 @@
 "settings.about.name.fallback" = "BabyWorks";
 "settings.about.version.missing" = "—";
 "settings.about.asset.credit" = "%@ · %@";
+"settings.general.language.label" = "Langue";
+"settings.general.language.system" = "Système";
+"settings.general.language.english" = "English";
+"settings.general.language.french" = "Français";
+"settings.general.language.relaunch.help" = "Relancer BabyWorks pour appliquer";
+"settings.general.language.relaunch.action" = "Relancer maintenant";

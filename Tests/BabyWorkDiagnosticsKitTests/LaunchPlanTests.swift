@@ -13,6 +13,26 @@ func launchWithoutSavedConfigurationOpensExits() {
   #expect(plan == .openSettings(.exits))
 }
 
+@Test("L’argument --open-settings general ouvre Général, même au premier lancement")
+func launchArgumentOpensGeneralSettings() {
+  let arguments = ["BabyWorks", "--open-settings", "general"]
+  #expect(LaunchPlan.atLaunch(hasSavedConfiguration: true, arguments: arguments) == .openSettings(.general))
+  #expect(LaunchPlan.atLaunch(hasSavedConfiguration: false, arguments: arguments) == .openSettings(.general))
+}
+
+@Test("Sans --open-settings general, le lancement ne change pas")
+func launchWithoutLanguageArgumentKeepsTheExistingPlan() {
+  #expect(LaunchPlan.atLaunch(hasSavedConfiguration: true, arguments: ["BabyWorks"]) == .idle)
+  #expect(
+    LaunchPlan.atLaunch(hasSavedConfiguration: false, arguments: ["BabyWorks", "--open-settings"])
+      == .openSettings(.exits)
+  )
+  #expect(
+    LaunchPlan.atLaunch(hasSavedConfiguration: true, arguments: ["BabyWorks", "--open-settings", "mode"])
+      == .idle
+  )
+}
+
 @Test("Une configuration présente, même illisible, laisse le lancement au repos")
 func launchWithUnreadableConfigurationStaysIdle() throws {
   let file = TemporaryConfigurationFile()

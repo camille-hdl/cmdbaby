@@ -8,12 +8,32 @@ private let settingsLogger = Logger(subsystem: "fr.camille.babywork", category: 
 @MainActor
 final class SettingsModel: ObservableObject {
   private let settings: BabyWorksSettings
+  private let languageSettings: AppLanguageSettings
+  private let languageAtLaunch: AppLanguagePreference
   @Published private(set) var configuration: BabyWorksConfiguration
   @Published private(set) var lastError: String?
+  @Published private(set) var language: AppLanguagePreference
 
-  init(settings: BabyWorksSettings) {
+  /// La langue enregistrée n’est pas celle avec laquelle ce process a démarré.
+  var languageNeedsRelaunch: Bool {
+    language != languageAtLaunch
+  }
+
+  init(
+    settings: BabyWorksSettings,
+    languageSettings: AppLanguageSettings,
+    languageAtLaunch: AppLanguagePreference
+  ) {
     self.settings = settings
+    self.languageSettings = languageSettings
+    self.languageAtLaunch = languageAtLaunch
     self.configuration = settings.current()
+    self.language = languageSettings.current()
+  }
+
+  func applyLanguage(_ preference: AppLanguagePreference) {
+    languageSettings.apply(preference)
+    language = languageSettings.current()
   }
 
   func apply(_ change: SettingsChange) {
@@ -303,7 +323,9 @@ private let launchAtLoginHelp =
 
 struct SettingsView: View {
   @ObservedObject var model: SettingsModel
+  @ObservedObject var session: DiagnosticsSessionModel
   let onLaunch: () -> Void
+  let onRelaunch: () -> Void
   @Environment(\.colorScheme) private var colorScheme
   @State private var section: SettingsSection
   @State private var hoveredSection: SettingsSection?
@@ -316,6 +338,7 @@ struct SettingsView: View {
   @FocusState private var focusedMode: KioskPlayModeID?
   @FocusState private var focusedExit: AdultExitMethod?
   @FocusState private var launchAtLoginFocused: Bool
+  @FocusState private var languageFocused: Bool
   @FocusState private var timeLimitFieldFocused: Bool
   @FocusState private var passphraseFieldFocused: Bool
   @FocusState private var focusedAboutLink: URL?
@@ -326,9 +349,17 @@ struct SettingsView: View {
   @State private var keyboardLayoutName: String?
   @State private var keyboardLayoutLetters: [UInt16: Set<Character>]
 
-  init(model: SettingsModel, initialSection: SettingsSection, onLaunch: @escaping () -> Void) {
+  init(
+    model: SettingsModel,
+    session: DiagnosticsSessionModel,
+    initialSection: SettingsSection,
+    onLaunch: @escaping () -> Void,
+    onRelaunch: @escaping () -> Void
+  ) {
     self.model = model
+    self.session = session
     self.onLaunch = onLaunch
+    self.onRelaunch = onRelaunch
     _section = State(initialValue: initialSection)
     _keyboardLayoutName = State(initialValue: KeyboardLayoutLetter.shared.layoutName)
     _keyboardLayoutLetters = State(initialValue: KeyboardLayoutLetter.shared.snapshot())
@@ -478,7 +509,7 @@ struct SettingsView: View {
     case .exits:
       focusedExit = .passphrase
     case .general:
-      launchAtLoginFocused = true
+      languageFocused = true
     case .about:
       focusedAboutLink = Credits.authorURL
     }
@@ -850,10 +881,62 @@ struct SettingsView: View {
 
   private var generalSettings: some View {
     SettingsGroup {
+      languageRow
+      SettingsGroupDivider()
       SettingsRow(label: "Démarrage automatique", help: launchAtLoginHelp) {
         settingsSwitch("Démarrage automatique", isOn: launchAtLogin)
           .focused($launchAtLoginFocused)
       }
+    }
+  }
+
+  private var languageRow: some View {
+    let label = L10n.current("settings.general.language.label")
+    return SettingsRow(
+      label: label,
+      help: model.languageNeedsRelaunch
+        ? L10n.current("settings.general.language.relaunch.help") : nil
+    ) {
+      HStack(spacing: 8) {
+        Picker(label, selection: languagePreference) {
+          ForEach(AppLanguagePreference.allCases, id: \.self) { preference in
+            Text(languageMenuTitle(preference)).tag(preference)
+          }
+        }
+        .labelsHidden()
+        .pickerStyle(.menu)
+        .controlSize(.small)
+        .fixedSize()
+        .focused($languageFocused)
+        .accessibilityLabel(label)
+        if model.languageNeedsRelaunch {
+          Button(L10n.current("settings.general.language.relaunch.action")) {
+            onRelaunch()
+          }
+          .buttonStyle(.bordered)
+          .controlSize(.small)
+        }
+      }
+      .disabled(session.isTerminationBlocked)
+    }
+  }
+
+  private var languagePreference: Binding<AppLanguagePreference> {
+    Binding(
+      get: { model.language },
+      set: { model.applyLanguage($0) }
+    )
+  }
+
+  /// *English* et *Français* restent dans leur langue ; *Système* suit la table.
+  private func languageMenuTitle(_ preference: AppLanguagePreference) -> String {
+    switch preference {
+    case .system:
+      L10n.current("settings.general.language.system")
+    case .english:
+      L10n.current("settings.general.language.english")
+    case .french:
+      L10n.current("settings.general.language.french")
     }
   }
 
@@ -1020,8 +1103,12 @@ private struct SidebarTabMonitor: NSViewRepresentable {
 final class SettingsWindowController: NSObject, NSWindowDelegate {
   private let store: BabyWorksConfigurationStore
   private let loginItem: any LoginItemRegistration
+  private let languageSettings: AppLanguageSettings
+  private let languageAtLaunch: AppLanguagePreference
+  private let session: DiagnosticsSessionModel
   private let log: LifecycleLogRecorder
   private let onLaunch: () -> Void
+  private let onRelaunch: () -> Void
   private var window: NSWindow?
   private var model: SettingsModel?
   private var showSequence: SettingsShowSequence?
@@ -1033,12 +1120,20 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
   init(
     store: BabyWorksConfigurationStore = BabyWorksConfigurationStore(),
     loginItem: any LoginItemRegistration = SMAppServiceLoginItem(),
+    languageSettings: AppLanguageSettings = AppLanguageSettings(store: UserDefaultsAppLanguageStore()),
+    languageAtLaunch: AppLanguagePreference,
+    session: DiagnosticsSessionModel,
     log: LifecycleLogRecorder = .shared,
+    onRelaunch: @escaping () -> Void,
     onLaunch: @escaping () -> Void
   ) {
     self.store = store
     self.loginItem = loginItem
+    self.languageSettings = languageSettings
+    self.languageAtLaunch = languageAtLaunch
+    self.session = session
     self.log = log
+    self.onRelaunch = onRelaunch
     self.onLaunch = onLaunch
     super.init()
   }
@@ -1055,12 +1150,20 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     cancelPendingShow()
     log.emit(.settingsShowRequest)
     let model = SettingsModel(
-      settings: BabyWorksSettings(store: store, loginItem: loginItem)
+      settings: BabyWorksSettings(store: store, loginItem: loginItem),
+      languageSettings: languageSettings,
+      languageAtLaunch: languageAtLaunch
     )
     self.model = model
     let window = existingOrMakeWindow()
     let hosting = NSHostingView(
-      rootView: SettingsView(model: model, initialSection: section, onLaunch: onLaunch)
+      rootView: SettingsView(
+        model: model,
+        session: session,
+        initialSection: section,
+        onLaunch: onLaunch,
+        onRelaunch: onRelaunch
+      )
     )
     hosting.sizingOptions = []
     window.contentView = hosting

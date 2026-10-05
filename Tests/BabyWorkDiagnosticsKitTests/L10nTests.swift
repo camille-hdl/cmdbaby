@@ -51,6 +51,28 @@ func aboutSectionCopy() {
   #expect(L10nTable.language("en")("settings.about.asset.credit", "Kenney", "CC0") == "Kenney · CC0")
 }
 
+@Test("Langue : Système, English, Français, et la relance")
+func languagePreferenceCopy() {
+  #expect(L10nTable.language("fr")("settings.general.language.label") == "Langue")
+  #expect(L10nTable.language("en")("settings.general.language.label") == "Language")
+  #expect(L10nTable.language("fr")("settings.general.language.system") == "Système")
+  #expect(L10nTable.language("en")("settings.general.language.system") == "System")
+  #expect(L10nTable.language("fr")("settings.general.language.english") == "English")
+  #expect(L10nTable.language("en")("settings.general.language.english") == "English")
+  #expect(L10nTable.language("fr")("settings.general.language.french") == "Français")
+  #expect(L10nTable.language("en")("settings.general.language.french") == "Français")
+  #expect(
+    L10nTable.language("fr")("settings.general.language.relaunch.help")
+      == "Relancer BabyWorks pour appliquer"
+  )
+  #expect(
+    L10nTable.language("en")("settings.general.language.relaunch.help")
+      == "Relaunch BabyWorks to apply"
+  )
+  #expect(L10nTable.language("fr")("settings.general.language.relaunch.action") == "Relancer maintenant")
+  #expect(L10nTable.language("en")("settings.general.language.relaunch.action") == "Relaunch Now")
+}
+
 @Test("Une clé absente renvoie la clé")
 func missingLocalizationKeyReturnsTheKey() {
   #expect(L10nTable.language("fr")("menu.absent") == "menu.absent")

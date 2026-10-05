@@ -24,12 +24,21 @@ enum BabyWorksMain {
 @MainActor
 final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
   private let model: DiagnosticsSessionModel
+  private let languageAtLaunch: AppLanguagePreference
   private var statusItem: NSStatusItem?
-  private lazy var settingsWindowController = SettingsWindowController { [weak self] in
-    self?.launchFromSettings()
-  }
+  private lazy var settingsWindowController = SettingsWindowController(
+    languageAtLaunch: languageAtLaunch,
+    session: model,
+    onRelaunch: { [weak self] in
+      self?.relaunchApplyingLanguage()
+    },
+    onLaunch: { [weak self] in
+      self?.launchFromSettings()
+    }
+  )
 
   override init() {
+    languageAtLaunch = AppLanguageSettings(store: UserDefaultsAppLanguageStore()).current()
     model = DiagnosticsSessionModel()
     super.init()
   }
@@ -53,21 +62,53 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     applyLaunchPlan()
   }
 
-  /// Premier lancement : enregistrer les défauts, puis ouvrir Sorties. Pas de session.
+  /// Premier lancement : enregistrer les défauts, puis ouvrir Sorties.
+  /// `--open-settings general` ouvre Général sans réécrire une configuration déjà là.
   private func applyLaunchPlan() {
     let store = BabyWorksConfigurationStore()
-    switch LaunchPlan.atLaunch(hasSavedConfiguration: store.hasSavedConfiguration) {
+    switch LaunchPlan.atLaunch(
+      hasSavedConfiguration: store.hasSavedConfiguration,
+      arguments: CommandLine.arguments
+    ) {
     case .idle:
       break
     case .openSettings(let section):
-      do {
-        try store.save(store.load())
-      } catch {
-        appLogger.error(
-          "Impossible d’enregistrer la configuration par défaut : \(error.localizedDescription, privacy: .public)"
-        )
+      if !store.hasSavedConfiguration {
+        do {
+          try store.save(store.load())
+        } catch {
+          appLogger.error(
+            "Impossible d’enregistrer la configuration par défaut : \(error.localizedDescription, privacy: .public)"
+          )
+        }
       }
       openSettings(section: SettingsSection(section))
+    }
+  }
+
+  /// Nouvelle instance avec les Réglages sur Général, puis on quitte celle-ci.
+  /// Les arguments sont ignorés si l’app est sandboxée.
+  private func relaunchApplyingLanguage() {
+    let configuration = NSWorkspace.OpenConfiguration()
+    configuration.createsNewApplicationInstance = true
+    configuration.arguments = ["--open-settings", "general"]
+    NSWorkspace.shared.openApplication(
+      at: Bundle.main.bundleURL,
+      configuration: configuration
+    ) { app, error in
+      if let error {
+        appLogger.error(
+          "Impossible de relancer BabyWorks : \(error.localizedDescription, privacy: .public)"
+        )
+        return
+      }
+      guard app != nil else {
+        appLogger.error("Impossible de relancer BabyWorks : instance absente")
+        return
+      }
+      Task { @MainActor in
+        NSApp.terminate(nil)
+      }
     }
   }
 
@@ -213,6 +254,8 @@ extension SettingsSection {
     switch section {
     case .exits:
       self = .exits
+    case .general:
+      self = .general
     }
   }
 }

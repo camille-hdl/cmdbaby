@@ -1,13 +1,14 @@
 import AppKit
 import BabyWorkDiagnosticsKit
 import Carbon
+import Combine
 import Foundation
 
 @MainActor
-final class DiagnosticsSessionModel {
+final class DiagnosticsSessionModel: ObservableObject {
   private(set) var filterStatus: InputFilterStatus = .inactive
   private(set) var kioskState = KioskSessionState()
-  private(set) var isTerminationBlocked = false
+  @Published private(set) var isTerminationBlocked = false
 
   private let environment: AppKitKioskEnvironment
   private let kioskController: KioskSessionController
