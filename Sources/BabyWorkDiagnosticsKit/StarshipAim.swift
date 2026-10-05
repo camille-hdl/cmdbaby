@@ -59,6 +59,30 @@ public enum StarshipAim: Sendable {
     return StarshipPoint(x: origin.x + t * dx, y: origin.y + t * dy)
   }
 
+  /// Cible traversée par un tir parti de `origin` dans la direction `angle` :
+  /// parmi les cibles devant le vaisseau (projection positive) dont le centre est à au plus
+  /// `radius` de la demi-droite, la plus proche de `origin`. `nil` sinon.
+  public static func firstHit(
+    origin: StarshipPoint,
+    angle: Double,
+    candidates: [(id: Int, center: StarshipPoint)],
+    radius: Double
+  ) -> Int? {
+    let directionX = cos(angle)
+    let directionY = sin(angle)
+    var closest: (id: Int, along: Double)?
+    for candidate in candidates {
+      let offsetX = candidate.center.x - origin.x
+      let offsetY = candidate.center.y - origin.y
+      let along = offsetX * directionX + offsetY * directionY
+      let across = abs(offsetX * directionY - offsetY * directionX)
+      guard along > 0, across <= radius else { continue }
+      if let closest, along >= closest.along { continue }
+      closest = (candidate.id, along)
+    }
+    return closest?.id
+  }
+
   /// Angle équivalent à `target` (à 2π près) le plus proche de `current`.
   /// Sert à faire tourner le vaisseau par le chemin le plus court.
   public static func nearestEquivalent(of target: Double, to current: Double) -> Double {

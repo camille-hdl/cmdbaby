@@ -220,6 +220,15 @@ final class StarshipPainter {
     currentAimRotation = rotation
   }
 
+  /// Rayon bleu de `start` à `end`. Invisible pendant `delay` (le vaisseau pivote), puis un flash qui s’éteint.
+  func fireBeam(from start: CGPoint, to end: CGPoint, delay: Double, duration: Double, now: TimeInterval) {
+    addEphemeral(
+      beamLayer(from: start, to: end, delay: delay, duration: duration),
+      lifetime: delay + duration + 0.05,
+      now: now
+    )
+  }
+
   /// Projectile bleu de `start` à `end`. Il attend au nez pendant `delay`, le temps de viser.
   func fireBolt(from start: CGPoint, to end: CGPoint, angle: Double, duration: Double, delay: Double) {
     let now = ProcessInfo.processInfo.systemUptime
@@ -472,6 +481,31 @@ final class StarshipPainter {
       let rounded = NSFont(descriptor: descriptor, size: size)
     else { return base }
     return rounded
+  }
+
+  private func beamLayer(from start: CGPoint, to end: CGPoint, delay: Double, duration: Double) -> CALayer {
+    let offsetX = Double(end.x - start.x)
+    let offsetY = Double(end.y - start.y)
+    let angle = atan2(offsetY, offsetX)
+    let beam = CALayer()
+    beam.contents = StarshipSprite.cgImage(named: StarshipCatalog.beamSprite)
+    beam.contentsGravity = .resize
+    beam.contentsScale = contentsScale
+    beam.anchorPoint = CGPoint(x: 0.5, y: 0)
+    beam.bounds = CGRect(x: 0, y: 0, width: Self.boltSize.width, height: hypot(offsetX, offsetY))
+    beam.position = start
+    beam.zPosition = 15
+    beam.opacity = 0
+    beam.setValue(angle - .pi / 2, forKeyPath: "transform.rotation.z")
+
+    let flash = CAKeyframeAnimation(keyPath: "opacity")
+    flash.values = [1, 1, 0]
+    flash.keyTimes = [0, 0.3, 1]
+    flash.beginTime = CACurrentMediaTime() + delay
+    flash.duration = duration
+    flash.fillMode = .removed
+    beam.add(flash, forKey: "beam")
+    return beam
   }
 
   private func boltLayer(

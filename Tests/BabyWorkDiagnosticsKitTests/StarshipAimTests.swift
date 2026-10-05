@@ -73,6 +73,23 @@ func starshipAimNearestEquivalentTakesTheShortWay() {
   expectAngle(StarshipAim.nearestEquivalent(of: 1, to: 1), 1)
 }
 
+@Test("Le tir au clic touche la cible la plus proche devant le vaisseau, sur la ligne de tir")
+func starshipAimFirstHitPicksTheClosestTargetOnTheLine() {
+  let origin = StarshipPoint(x: 0, y: 0)
+  let candidates: [(id: Int, center: StarshipPoint)] = [
+    (id: 1, center: StarshipPoint(x: 300, y: 40)),
+    (id: 2, center: StarshipPoint(x: 200, y: -10)),
+    (id: 3, center: StarshipPoint(x: -100, y: 0)),
+    (id: 4, center: StarshipPoint(x: 150, y: 80)),
+  ]
+
+  #expect(StarshipAim.firstHit(origin: origin, angle: 0, candidates: candidates, radius: 55) == 2)
+  let withoutTwo = candidates.filter { $0.id != 2 }
+  #expect(StarshipAim.firstHit(origin: origin, angle: 0, candidates: withoutTwo, radius: 55) == 1)
+  let behindOrWide = candidates.filter { $0.id == 3 || $0.id == 4 }
+  #expect(StarshipAim.firstHit(origin: origin, angle: 0, candidates: behindOrWide, radius: 55) == nil)
+}
+
 private func expectAngle(_ angle: Double, _ expected: Double) {
   #expect(abs(angle - expected) < 1e-6)
 }

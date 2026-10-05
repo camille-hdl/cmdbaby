@@ -72,6 +72,21 @@ public struct StarshipFlight: Equatable, Sendable {
     max(0, totalDistance - distance(at: elapsed))
   }
 
+  /// Temps pour parcourir `distance` points depuis le départ (inverse de `distance(at:)`). 0 si `distance ≤ 0`.
+  public func time(toTravel distance: Double) -> Double {
+    guard distance > 0 else { return 0 }
+    let coast = coastTime
+    if coast.isInfinite {
+      return distance / initialSpeed
+    }
+    let coasted = initialSpeed * coast + acceleration * coast * coast / 2
+    if distance <= coasted {
+      let discriminant = initialSpeed * initialSpeed + 2 * acceleration * distance
+      return (-initialSpeed + discriminant.squareRoot()) / acceleration
+    }
+    return coast + (distance - coasted) / maxSpeed
+  }
+
   /// Angle de la trajectoire (de `start` vers `goal`), comme `StarshipAim.angle`.
   public var heading: Double {
     StarshipAim.angle(from: start, to: goal) ?? 0

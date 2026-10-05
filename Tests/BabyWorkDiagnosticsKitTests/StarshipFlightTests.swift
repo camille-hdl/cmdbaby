@@ -56,6 +56,29 @@ func starshipFlightRandomStaysInsideTheTuningRanges() {
   }
 }
 
+@Test("Le temps pour parcourir une distance est l’inverse du vol, et zéro avant le départ")
+func starshipFlightTimeToTravelInvertsDistance() {
+  let flight = StarshipFlight(
+    start: StarshipPoint(x: 0, y: 0),
+    goal: StarshipPoint(x: 2000, y: 0),
+    initialSpeed: 100,
+    acceleration: 200,
+    maxSpeed: 600
+  )
+
+  #expect(abs(flight.time(toTravel: 0) - 0) < 1e-6)
+  #expect(abs(flight.time(toTravel: -10) - 0) < 1e-6)
+  #expect(abs(flight.time(toTravel: 200) - 1) < 1e-6)
+  #expect(abs(flight.time(toTravel: 875) - 2.5) < 1e-6)
+  #expect(abs(flight.time(toTravel: 1175) - 3) < 1e-6)
+  var elapsed = 0.0
+  while elapsed <= 5 {
+    let traveled = flight.distance(at: elapsed)
+    #expect(abs(flight.time(toTravel: traveled) - elapsed) < 1e-6)
+    elapsed += 0.25
+  }
+}
+
 private func expectPoint(_ point: StarshipPoint, _ x: Double, _ y: Double) {
   #expect(abs(point.x - x) < 1e-6)
   #expect(abs(point.y - y) < 1e-6)

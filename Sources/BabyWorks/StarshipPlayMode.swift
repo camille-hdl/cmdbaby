@@ -16,6 +16,18 @@ final class StarshipDirector {
     let kind: StarshipTargetKind
     let flight: StarshipFlight
     let spawnedAt: TimeInterval
+    /// Instant du tir automatique : apparition plus le délai tiré.
+    let fireAt: TimeInterval
+    /// Position figée une fois visée. `nil` tant que la cible vole.
+    var doomedAt: StarshipPoint?
+    /// Moment de l’explosion une fois visée. `nil` tant que la cible vole.
+    var explodeAt: TimeInterval?
+  }
+
+  /// Cibles à faire exploser ce tick, et rayons à tirer après les avoir figées.
+  private struct TargetStep {
+    var exploding: [LiveTarget] = []
+    var beams: [(from: CGPoint, to: CGPoint, angle: Double)] = []
   }
 
   let tuning: StarshipTuning
@@ -103,10 +115,12 @@ final class StarshipDirector {
       let painter = painter(at: screenIndex)
     else { return }
 
+    let now = ProcessInfo.processInfo.systemUptime
     let originPoint = StarshipPoint(x: Double(origin.x), y: Double(origin.y))
     let click = StarshipPoint(x: Double(point.x), y: Double(point.y))
     let angle = StarshipAim.angle(from: originPoint, to: click) ?? painter.aimAngle
     painter.aimShip(at: angle, duration: tuning.aimDuration)
+    doomTarget(along: angle, from: originPoint, now: now, painter: painter)
 
     let directionX = cos(angle)
     let directionY = sin(angle)
@@ -316,17 +330,30 @@ final class StarshipDirector {
     let rate = keyRate.perMinute(at: now)
     let level = StarshipGauge.level(perMinute: rate, cap: tuning.keyRateCap)
     gaugeLevel = StarshipGauge.eased(current: gaugeLevel, target: level, dt: dt)
-    let hits = targetsTouchingShield(now: now)
+    // Le tir automatique est décidé avant le bouclier : une cible visée reste figée.
+    let step = lockDueTargets(now: now)
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     paintGauge(rate: rate)
-    moveTargets(skipping: hits, now: now)
+    moveTargets(step: step, now: now)
     for slot in screens {
       slot.painter.tick(now: now)
     }
     CATransaction.commit()
-    for hit in hits {
-      explode(hit, now: now)
+    if let homeScreenIndex, let painter = painter(at: homeScreenIndex) {
+      for beam in step.beams {
+        painter.aimShip(at: beam.angle, duration: tuning.aimDuration)
+        painter.fireBeam(
+          from: beam.from,
+          to: beam.to,
+          delay: tuning.aimDuration,
+          duration: tuning.beamDuration,
+          now: now
+        )
+      }
+    }
+    for target in step.exploding {
+      explode(target, now: now)
     }
     installPendingGaugePulse()
   }
@@ -373,25 +400,104 @@ final class StarshipDirector {
       at: CGPoint(x: start.x, y: start.y),
       heading: flight.heading
     )
+    let delay = StarshipFireSchedule.delay(
+      for: flight,
+      tuning: tuning,
+      roll: Double.random(in: 0..<1)
+    )
     targets.append(
-      LiveTarget(id: id, kind: picked.kind, flight: flight, spawnedAt: now)
+      LiveTarget(
+        id: id,
+        kind: picked.kind,
+        flight: flight,
+        spawnedAt: now,
+        fireAt: now + delay
+      )
     )
   }
 
-  /// Cibles qui touchent le bouclier. Le déplacement des autres se fait dans la transaction du tick.
-  private func targetsTouchingShield(now: TimeInterval) -> [LiveTarget] {
-    targets.filter { target in
-      target.flight.remaining(at: now - target.spawnedAt) <= tuning.shieldRadius
+  /// Vise les cibles dont l’heure de tir est atteinte, et retient celles qui explosent maintenant.
+  /// Une cible déjà visée ne bouge plus : le bouclier ne la concerne plus.
+  private func lockDueTargets(now: TimeInterval) -> TargetStep {
+    var step = TargetStep()
+    let center = shipCenter
+    let ship = center.map { StarshipPoint(x: Double($0.x), y: Double($0.y)) }
+    let currentAim = homeScreenIndex.flatMap { painter(at: $0)?.aimAngle } ?? .pi / 2
+
+    for index in targets.indices {
+      if let explodeAt = targets[index].explodeAt {
+        if now >= explodeAt {
+          step.exploding.append(targets[index])
+        }
+        continue
+      }
+
+      if now >= targets[index].fireAt, let center, let ship {
+        let position = position(of: targets[index], at: now)
+        targets[index].doomedAt = position
+        let explodeAt = now + tuning.aimDuration
+        targets[index].explodeAt = explodeAt
+        let point = CGPoint(x: position.x, y: position.y)
+        let angle = StarshipAim.angle(from: ship, to: position) ?? currentAim
+        step.beams.append((from: center, to: point, angle: angle))
+        if now >= explodeAt {
+          step.exploding.append(targets[index])
+        }
+        continue
+      }
+
+      if targets[index].flight.remaining(at: now - targets[index].spawnedAt) <= tuning.shieldRadius {
+        step.exploding.append(targets[index])
+      }
+    }
+    return step
+  }
+
+  /// Le déplacement se fait dans la transaction du tick. Une cible visée reste sur `doomedAt`.
+  private func moveTargets(step: TargetStep, now: TimeInterval) {
+    guard let homeScreenIndex, let painter = painter(at: homeScreenIndex) else { return }
+    let explodingIDs = Set(step.exploding.map(\.id))
+    for target in targets {
+      if let doomed = target.doomedAt {
+        painter.moveTarget(id: target.id, to: CGPoint(x: doomed.x, y: doomed.y))
+        continue
+      }
+      if explodingIDs.contains(target.id) { continue }
+      let position = position(of: target, at: now)
+      painter.moveTarget(id: target.id, to: CGPoint(x: position.x, y: position.y))
     }
   }
 
-  private func moveTargets(skipping hits: [LiveTarget], now: TimeInterval) {
-    guard let homeScreenIndex, let painter = painter(at: homeScreenIndex) else { return }
-    let hitIDs = Set(hits.map(\.id))
-    for target in targets where !hitIDs.contains(target.id) {
-      let position = target.flight.position(at: now - target.spawnedAt)
-      painter.moveTarget(id: target.id, to: CGPoint(x: position.x, y: position.y))
+  /// Un tir au clic qui traverse une cible encore en vol la fige et la fait exploser à l’impact.
+  private func doomTarget(
+    along angle: Double,
+    from origin: StarshipPoint,
+    now: TimeInterval,
+    painter: StarshipPainter
+  ) {
+    let candidates: [(id: Int, center: StarshipPoint)] = targets.compactMap { target in
+      guard target.explodeAt == nil else { return nil }
+      return (id: target.id, center: position(of: target, at: now))
     }
+    guard let hit = StarshipAim.firstHit(
+      origin: origin,
+      angle: angle,
+      candidates: candidates,
+      radius: tuning.targetWidth / 2
+    ), let index = targets.firstIndex(where: { $0.id == hit }) else { return }
+
+    let doomed = position(of: targets[index], at: now)
+    targets[index].doomedAt = doomed
+    let separation = hypot(doomed.x - origin.x, doomed.y - origin.y)
+    targets[index].explodeAt = now + tuning.aimDuration + separation / tuning.boltSpeed
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    painter.moveTarget(id: hit, to: CGPoint(x: doomed.x, y: doomed.y))
+    CATransaction.commit()
+  }
+
+  private func position(of target: LiveTarget, at now: TimeInterval) -> StarshipPoint {
+    target.flight.position(at: now - target.spawnedAt)
   }
 
   private func explodeAllTargets(now: TimeInterval) {
