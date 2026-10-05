@@ -6,24 +6,37 @@ import Testing
 func playModeCatalogDefaultsToOcean() {
   #expect(KioskPlayModeCatalog.available == [.ocean, .terminal, .starship])
   #expect(KioskPlayModeCatalog.default == .ocean)
-  #expect(KioskPlayModeCatalog.displayName(.ocean) == "Océan")
-  #expect(KioskPlayModeCatalog.displayName(.terminal) == "Terminal")
-  #expect(KioskPlayModeCatalog.displayName(.starship) == "Vaisseau")
+}
+
+@Test("Les noms et les phrases des modes sont en anglais et en français")
+func playModeCatalogNamesAndTaglinesFollowTheLanguage() {
+  let french = L10nTable.language("fr")
+  let english = L10nTable.language("en")
+
+  #expect(KioskPlayModeCatalog.displayName(.ocean, in: french) == "Océan")
+  #expect(KioskPlayModeCatalog.displayName(.terminal, in: french) == "Terminal")
+  #expect(KioskPlayModeCatalog.displayName(.starship, in: french) == "Vaisseau")
+  #expect(KioskPlayModeCatalog.displayName(.ocean, in: english) == "Ocean")
+  #expect(KioskPlayModeCatalog.displayName(.terminal, in: english) == "Terminal")
+  #expect(KioskPlayModeCatalog.displayName(.starship, in: english) == "Starship")
+
+  #expect(KioskPlayModeCatalog.tagline(.ocean, in: french) == "Des poissons, du sable et des bulles à chaque touche.")
+  #expect(KioskPlayModeCatalog.tagline(.terminal, in: french) == "Tape au clavier et fais pleuvoir le code vert.")
+  #expect(
+    KioskPlayModeCatalog.tagline(.starship, in: french)
+      == "Chaque touche fait surgir un intrus, ton vaisseau le pulvérise au laser."
+  )
+  #expect(KioskPlayModeCatalog.tagline(.ocean, in: english) == "Fish, sand, and bubbles with every key.")
+  #expect(KioskPlayModeCatalog.tagline(.terminal, in: english) == "Type on the keyboard and make green code rain.")
+  #expect(
+    KioskPlayModeCatalog.tagline(.starship, in: english)
+      == "Every key summons an intruder, and your starship blasts it with a laser."
+  )
 }
 
 @Test("Les modes affichés suivent l’ordre des cas")
 func playModeCatalogAvailableMatchesAllCases() {
   #expect(KioskPlayModeCatalog.available == Array(KioskPlayModeID.allCases))
-}
-
-@Test("Chaque mode a une phrase courte pour la carte de Réglages")
-func playModeCatalogTaglineIsPresentForEveryMode() {
-  #expect(KioskPlayModeCatalog.tagline(.ocean) == "Des poissons, du sable et des bulles à chaque touche.")
-  #expect(KioskPlayModeCatalog.tagline(.terminal) == "Tape au clavier et fais pleuvoir le code vert.")
-  #expect(KioskPlayModeCatalog.tagline(.starship) == "Chaque touche fait surgir un intrus, ton vaisseau le pulvérise au laser.")
-  for id in KioskPlayModeID.allCases {
-    #expect(!KioskPlayModeCatalog.tagline(id).isEmpty)
-  }
 }
 
 @Test("Le registre résout Océan, Terminal et Vaisseau par identifiant")

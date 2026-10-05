@@ -1,11 +1,19 @@
 "menu.startSession" = "Lancer session";
 "menu.settings" = "Réglages…";
 "menu.quit" = "Quitter";
+"menu.quitApplication" = "Quitter BabyWorks";
+"menu.statusIcon.accessibility" = "BabyWorks";
 "settings.window.title" = "Réglages";
 "settings.mode.title" = "Mode de jeu";
 "settings.mode.subtitle" = "Choisis ce que l’enfant voit pendant la session.";
 "settings.mode.launch" = "Lancer";
 "settings.mode.launch.accessibility" = "Lancer %@";
+"playMode.ocean.name" = "Océan";
+"playMode.ocean.tagline" = "Des poissons, du sable et des bulles à chaque touche.";
+"playMode.terminal.name" = "Terminal";
+"playMode.terminal.tagline" = "Tape au clavier et fais pleuvoir le code vert.";
+"playMode.starship.name" = "Vaisseau";
+"playMode.starship.tagline" = "Chaque touche fait surgir un intrus, ton vaisseau le pulvérise au laser.";
 "settings.exits.title" = "Sorties";
 "settings.exits.subtitle" = "Ce qui met fin à une session.";
 "settings.exits.parent.title" = "Sorties parent";
@@ -76,3 +84,5 @@
 "settings.error.passphrase.tooShort" = "Au moins 3 lettres.";
 "settings.error.passphrase.tooLong" = "12 lettres au maximum.";
 "settings.error.passphrase.invalidCharacters" = "Uniquement des lettres, sans espace ni chiffre.";
+"cover.failsafe.accessibility" = "Sortie de secours";
+"cover.timer.accessibility" = "Minuteur de session";

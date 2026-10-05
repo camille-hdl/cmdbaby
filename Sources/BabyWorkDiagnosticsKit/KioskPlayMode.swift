@@ -16,26 +16,26 @@ public enum KioskPlayModeCatalog: Sendable {
   /// Identifiants retirés → mode qui les remplace.
   private static let retiredModes: [String: KioskPlayModeID] = ["galaxy": .starship]
 
-  public static func displayName(_ id: KioskPlayModeID) -> String {
+  public static func displayName(_ id: KioskPlayModeID, in table: L10nTable = .current) -> String {
     switch id {
     case .ocean:
-      "Océan"
+      table("playMode.ocean.name")
     case .terminal:
-      "Terminal"
+      table("playMode.terminal.name")
     case .starship:
-      "Vaisseau"
+      table("playMode.starship.name")
     }
   }
 
   /// Phrase courte pour la carte de Réglages.
-  public static func tagline(_ id: KioskPlayModeID) -> String {
+  public static func tagline(_ id: KioskPlayModeID, in table: L10nTable = .current) -> String {
     switch id {
     case .ocean:
-      "Des poissons, du sable et des bulles à chaque touche."
+      table("playMode.ocean.tagline")
     case .terminal:
-      "Tape au clavier et fais pleuvoir le code vert."
+      table("playMode.terminal.tagline")
     case .starship:
-      "Chaque touche fait surgir un intrus, ton vaisseau le pulvérise au laser."
+      table("playMode.starship.tagline")
     }
   }
 

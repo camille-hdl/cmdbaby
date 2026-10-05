@@ -322,6 +322,18 @@ func settingsWindowCopy() {
   )
 }
 
+@Test("Le menu principal, l’icône et les couvertures sont en anglais et en français")
+func applicationMenuIconAndCoverLabelsAreLocalized() {
+  #expect(L10nTable.language("fr")("menu.quitApplication") == "Quitter BabyWorks")
+  #expect(L10nTable.language("en")("menu.quitApplication") == "Quit BabyWorks")
+  #expect(L10nTable.language("fr")("menu.statusIcon.accessibility") == "BabyWorks")
+  #expect(L10nTable.language("en")("menu.statusIcon.accessibility") == "BabyWorks")
+  #expect(L10nTable.language("fr")("cover.failsafe.accessibility") == "Sortie de secours")
+  #expect(L10nTable.language("en")("cover.failsafe.accessibility") == "Failsafe exit")
+  #expect(L10nTable.language("fr")("cover.timer.accessibility") == "Minuteur de session")
+  #expect(L10nTable.language("en")("cover.timer.accessibility") == "Session timer")
+}
+
 @Test("Une clé absente renvoie la clé")
 func missingLocalizationKeyReturnsTheKey() {
   #expect(L10nTable.language("fr")("menu.absent") == "menu.absent")

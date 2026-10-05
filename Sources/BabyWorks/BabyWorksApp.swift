@@ -191,7 +191,7 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     mainMenu.addItem(appItem)
     let appMenu = NSMenu(title: "BabyWorks")
     appMenu.addItem(
-      withTitle: "Quitter BabyWorks",
+      withTitle: L10n.current("menu.quitApplication"),
       action: #selector(quitApplication(_:)),
       keyEquivalent: "q"
     )
@@ -203,7 +203,7 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     let image = NSImage(
       systemSymbolName: MenuBarAgent.systemSymbolName,
-      accessibilityDescription: "BabyWorks"
+      accessibilityDescription: L10n.current("menu.statusIcon.accessibility")
     )
     image?.isTemplate = MenuBarAgent.usesTemplateImage
     item.button?.image = image

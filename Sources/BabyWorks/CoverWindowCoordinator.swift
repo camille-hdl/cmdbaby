@@ -523,10 +523,10 @@ final class FailsafeClickView: NSView {
     layer?.addSublayer(progressLayer)
 
     if acceptsClicks {
-      setAccessibilityLabel("Sortie de secours")
+      setAccessibilityLabel(L10n.current("cover.failsafe.accessibility"))
       setAccessibilityRole(.button)
     } else {
-      setAccessibilityLabel("Minuteur de session")
+      setAccessibilityLabel(L10n.current("cover.timer.accessibility"))
       setAccessibilityRole(.staticText)
     }
   }

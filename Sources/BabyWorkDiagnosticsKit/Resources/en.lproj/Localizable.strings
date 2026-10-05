@@ -1,11 +1,19 @@
 "menu.startSession" = "Start Session";
 "menu.settings" = "Settings…";
 "menu.quit" = "Quit";
+"menu.quitApplication" = "Quit BabyWorks";
+"menu.statusIcon.accessibility" = "BabyWorks";
 "settings.window.title" = "Settings";
 "settings.mode.title" = "Play Mode";
 "settings.mode.subtitle" = "Choose what the child sees during the session.";
 "settings.mode.launch" = "Start";
 "settings.mode.launch.accessibility" = "Start %@";
+"playMode.ocean.name" = "Ocean";
+"playMode.ocean.tagline" = "Fish, sand, and bubbles with every key.";
+"playMode.terminal.name" = "Terminal";
+"playMode.terminal.tagline" = "Type on the keyboard and make green code rain.";
+"playMode.starship.name" = "Starship";
+"playMode.starship.tagline" = "Every key summons an intruder, and your starship blasts it with a laser.";
 "settings.exits.title" = "Exits";
 "settings.exits.subtitle" = "What ends a session.";
 "settings.exits.parent.title" = "Parent Exits";
@@ -76,3 +84,5 @@
 "settings.error.passphrase.tooShort" = "At least 3 letters.";
 "settings.error.passphrase.tooLong" = "12 letters at most.";
 "settings.error.passphrase.invalidCharacters" = "Letters only, with no spaces or digits.";
+"cover.failsafe.accessibility" = "Failsafe exit";
+"cover.timer.accessibility" = "Session timer";
