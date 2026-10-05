@@ -4,8 +4,8 @@ import QuartzCore
 
 enum OceanSprite {
   static func image(named name: String) -> NSImage? {
-    oceanBundle.image(forResource: name)
-      ?? oceanBundle.image(forResource: "\(name).png")
+    ResourceBundle.shared.image(forResource: name)
+      ?? ResourceBundle.shared.image(forResource: "\(name).png")
   }
 
   @MainActor
@@ -20,19 +20,6 @@ enum OceanSprite {
 
   @MainActor
   private static let cache = OceanSpriteCache()
-
-  /// `Bundle.module` SPM cherche le `.bundle` à la racine du `.app`, interdit par codesign.
-  /// Le script d’empaquetage le pose dans `Contents/Resources/`.
-  private static let oceanBundle: Bundle = {
-    let names = "BabyWork_BabyWorks.bundle"
-    if let resources = Bundle.main.resourceURL {
-      let packaged = resources.appendingPathComponent(names)
-      if let bundle = Bundle(url: packaged) {
-        return bundle
-      }
-    }
-    return Bundle.module
-  }()
 }
 
 @MainActor

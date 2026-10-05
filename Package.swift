@@ -35,6 +35,7 @@ let package = Package(
       dependencies: ["BabyWorkDiagnosticsKit", "BabyWorkAppKitBridge"],
       resources: [
         .process("Resources/Ocean"),
+        .process("Resources/Starship"),
       ],
       linkerSettings: [
         .linkedFramework("ApplicationServices"),

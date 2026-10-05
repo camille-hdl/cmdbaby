@@ -18,6 +18,8 @@ On launch, BabyWorks tries to go straight into kid mode. You only see the French
 
 Underwater sprites come from **[Kenney](https://www.kenney.nl) — Fish Pack 2.0** (CC0). See `Sources/BabyWorks/Resources/Ocean/License.txt` in the repo.
 
+Space sprites and skyboxes come from **[Kenney](https://www.kenney.nl) — Space Shooter Remastered, Alien UFO Pack and Skyboxes Space** (CC0). See `Sources/BabyWorks/Resources/Starship/License-Starship.txt`.
+
 ## Build & run
 
 Requirements: **macOS 13+**, **Swift 6.1** (Xcode or Swift toolchain).

@@ -7,6 +7,7 @@ public enum KioskPlayModeID: String, Codable, Sendable, CaseIterable, Equatable 
   case ocean
   case galaxy
   case terminal
+  case starship
 }
 
 public enum KioskPlayModeCatalog: Sendable {
@@ -23,6 +24,8 @@ public enum KioskPlayModeCatalog: Sendable {
       "Galaxie"
     case .terminal:
       "Terminal"
+    case .starship:
+      "Vaisseau"
     }
   }
 
@@ -35,6 +38,8 @@ public enum KioskPlayModeCatalog: Sendable {
       "Des lettres et des étoiles qui filent dans l’espace."
     case .terminal:
       "Tape au clavier et fais pleuvoir le code vert."
+    case .starship:
+      "Chaque touche fait surgir un intrus, ton vaisseau le pulvérise au laser."
     }
   }
 

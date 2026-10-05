@@ -24,6 +24,8 @@ enum PlayModeRegistry {
       GalaxyPlayMode()
     case .terminal:
       TerminalPlayMode()
+    case .starship:
+      StarshipPlayMode()
     }
   }
 
@@ -37,6 +39,8 @@ enum PlayModeRegistry {
       GalaxyModePreview()
     case .terminal:
       TerminalModePreview()
+    case .starship:
+      StarshipModePreview()
     }
   }
 }
