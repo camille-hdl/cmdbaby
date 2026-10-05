@@ -45,6 +45,14 @@ public struct TerminalScreenLayout: Equatable, Sendable {
     return best?.index
   }
 
+  /// Écran du prompt : le dernier cliqué s’il est encore là, sinon le plus grand.
+  public static func placement(lastClickedIndex: Int?, screens: [TerminalScreen]) -> Int? {
+    if let lastClickedIndex, screens.contains(where: { $0.index == lastClickedIndex }) {
+      return lastClickedIndex
+    }
+    return largestScreenIndex(screens)
+  }
+
   /// Écrans sans écran au-dessus, triés par index.
   public var topScreenIndices: [Int] {
     topScreens.map(\.index).sorted()

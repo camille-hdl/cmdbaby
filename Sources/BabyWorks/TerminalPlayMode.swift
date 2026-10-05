@@ -6,7 +6,7 @@ import QuartzCore
 
 private let terminalLog = Logger(subsystem: "fr.camille.babywork", category: "Terminal")
 
-/// Un par session, partagé entre les écrans. Un seul prompt, sur le plus grand écran.
+/// Un par session, partagé entre les écrans. Un seul prompt : dernier écran cliqué, sinon le plus grand.
 @MainActor
 final class TerminalDirector {
   private struct ScreenSlot {
@@ -40,6 +40,8 @@ final class TerminalDirector {
   private var nextColumnID = 0
   private var prompt = TerminalPrompt()
   private var promptScreenIndex: Int?
+  /// Dernier écran cliqué. `nil` tant que personne n’a cliqué.
+  private var lastClickedScreenIndex: Int?
   private var cursorOn = true
   private var blinkTimer: Timer?
   private var rainTimer: Timer?
@@ -97,9 +99,16 @@ final class TerminalDirector {
     publish()
   }
 
+  /// Place le prompt sur l’écran cliqué, puis fait tomber une colonne à cette abscisse.
+  func noteClick(screenIndex: Int, globalX: Double) {
+    lastClickedScreenIndex = screenIndex
+    choosePromptScreenIfReady()
+    spawnColumn(atGlobalX: globalX, screenIndex: screenIndex)
+  }
+
   /// Fait tomber une colonne depuis l’écran le plus haut au centre de sa cellule.
   /// Le clic est ramené sur la grille. `screenIndex` ignore le clic tant que cet écran n’a pas de cadre.
-  func spawnColumn(atGlobalX x: Double, screenIndex: Int) {
+  private func spawnColumn(atGlobalX x: Double, screenIndex: Int) {
     guard activeColumnCount < tuning.maxActiveColumns else { return }
     guard screens.contains(where: { $0.index == screenIndex && $0.frame != nil }) else { return }
     let columnX = TerminalStyle.snapToGrid(x: x)
@@ -131,6 +140,7 @@ final class TerminalDirector {
     atlas.reset()
     prompt = TerminalPrompt()
     promptScreenIndex = nil
+    lastClickedScreenIndex = nil
     cursorOn = true
     promptFont = nil
   }
@@ -155,7 +165,10 @@ final class TerminalDirector {
   private func choosePromptScreenIfReady() {
     let framed = framedScreens()
     guard framed.count == screens.count else { return }
-    guard let index = TerminalScreenLayout.largestScreenIndex(framed) else { return }
+    guard let index = TerminalScreenLayout.placement(
+      lastClickedIndex: lastClickedScreenIndex,
+      screens: framed
+    ) else { return }
     guard index != promptScreenIndex else { return }
     promptScreenIndex = index
     publish()
@@ -935,7 +948,7 @@ final class TerminalStageView: NSView {
     reportFrame()
     guard let window else { return }
     let x = Double(window.frame.minX + event.locationInWindow.x)
-    director.spawnColumn(atGlobalX: x, screenIndex: screenIndex)
+    director.noteClick(screenIndex: screenIndex, globalX: x)
   }
 
   override var acceptsFirstResponder: Bool { true }

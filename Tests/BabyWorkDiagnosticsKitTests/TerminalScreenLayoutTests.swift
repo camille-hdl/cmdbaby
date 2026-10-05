@@ -34,6 +34,35 @@ func largestScreenIndexOfEmptyListIsNil() {
   #expect(TerminalScreenLayout.largestScreenIndex(screens) == nil)
 }
 
+@Test("Sans clic, le prompt va sur le plus grand écran")
+func promptStaysOnTheLargestScreenUntilSomeoneClicks() {
+  let screens = [
+    TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900),
+    TerminalScreen(index: 1, x: 1440, y: 0, width: 800, height: 600),
+    TerminalScreen(index: 2, x: 2240, y: 0, width: 2560, height: 1440),
+  ]
+  #expect(TerminalScreenLayout.placement(lastClickedIndex: nil, screens: screens) == 2)
+}
+
+@Test("Un clic sur l’écran 1 y place le prompt")
+func promptMovesToTheClickedScreen() {
+  let screens = [
+    TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900),
+    TerminalScreen(index: 1, x: 1440, y: 0, width: 800, height: 600),
+    TerminalScreen(index: 2, x: 2240, y: 0, width: 2560, height: 1440),
+  ]
+  #expect(TerminalScreenLayout.placement(lastClickedIndex: 1, screens: screens) == 1)
+}
+
+@Test("Un clic sur un écran disparu ramène le prompt sur le plus grand")
+func promptReturnsToTheLargestScreenWhenTheClickedOneIsGone() {
+  let screens = [
+    TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900),
+    TerminalScreen(index: 2, x: 1440, y: 0, width: 2560, height: 1440),
+  ]
+  #expect(TerminalScreenLayout.placement(lastClickedIndex: 1, screens: screens) == 2)
+}
+
 @Test("Le centre de la cellule, pas le clic brut, décide si la colonne coule")
 func cellCenterDecidesWhetherAClickColumnFlows() {
   let offset = TerminalScreenLayout(screens: [
