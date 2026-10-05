@@ -10,3 +10,6 @@
 "settings.about.subtitle" = "BabyWorks and what makes it possible.";
 "settings.about.assets" = "Artwork";
 "settings.about.madeBy" = "Made by";
+"settings.about.name.fallback" = "BabyWorks";
+"settings.about.version.missing" = "—";
+"settings.about.asset.credit" = "%@ · %@";

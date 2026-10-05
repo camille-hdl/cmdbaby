@@ -901,38 +901,31 @@ struct SettingsView: View {
   }
 
   private func aboutAssetRow(_ asset: CreditedAsset) -> some View {
-    SettingsRow(help: "\(asset.author) · \(asset.license)") {
+    SettingsRow(help: L10n.current("settings.about.asset.credit", asset.author, asset.license)) {
       Link(asset.name, destination: asset.url)
         .font(.system(size: 13))
         .focused($focusedAboutLink, equals: asset.url)
     }
   }
 
-  /// Nom affiché de l’app. Repli « BabyWorks » hors bundle `.app`.
+  /// Nom affiché de l’app. Repli traduit hors bundle `.app`.
   private var installedAppName: String {
-    let candidates = ["CFBundleDisplayName", "CFBundleName"].compactMap { key -> String? in
-      guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String else { return nil }
-      let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-      return trimmed.isEmpty ? nil : trimmed
-    }
-    return candidates.first ?? "BabyWorks"
+    InstalledAppLabel.name(
+      displayName: bundleString("CFBundleDisplayName"),
+      bundleName: bundleString("CFBundleName")
+    ) ?? L10n.current("settings.about.name.fallback")
   }
 
-  /// `CFBundleShortVersionString` (`CFBundleVersion`). « — » si l’un des deux manque (`swift run`).
+  /// `CFBundleShortVersionString` (`CFBundleVersion`). Chaîne traduite si l’un des deux manque (`swift run`).
   private var installedAppVersion: String {
-    guard
-      let short = infoString("CFBundleShortVersionString"),
-      let build = infoString("CFBundleVersion")
-    else {
-      return "—"
-    }
-    return "\(short) (\(build))"
+    InstalledAppLabel.version(
+      shortVersion: bundleString("CFBundleShortVersionString"),
+      build: bundleString("CFBundleVersion")
+    ) ?? L10n.current("settings.about.version.missing")
   }
 
-  private func infoString(_ key: String) -> String? {
-    guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String else { return nil }
-    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-    return trimmed.isEmpty ? nil : trimmed
+  private func bundleString(_ key: String) -> String? {
+    Bundle.main.object(forInfoDictionaryKey: key) as? String
   }
 
   private var launchAtLogin: Binding<Bool> {

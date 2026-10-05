@@ -33,7 +33,7 @@ func launchModeButtonCopy() {
   #expect(L10nTable.language("fr")("settings.mode.launch.accessibility", "Océan") == "Lancer Océan")
 }
 
-@Test("À propos : titre, sous-titre, images, et « Made by » dans les deux langues")
+@Test("À propos : titres, Made by, repli du nom, version absente, crédit d’un pack")
 func aboutSectionCopy() {
   #expect(L10nTable.language("fr")("settings.about.title") == "À propos")
   #expect(L10nTable.language("en")("settings.about.title") == "About")
@@ -43,6 +43,12 @@ func aboutSectionCopy() {
   #expect(L10nTable.language("en")("settings.about.assets") == "Artwork")
   #expect(L10nTable.language("fr")("settings.about.madeBy") == "Made by")
   #expect(L10nTable.language("en")("settings.about.madeBy") == "Made by")
+  #expect(L10nTable.language("fr")("settings.about.name.fallback") == "BabyWorks")
+  #expect(L10nTable.language("en")("settings.about.name.fallback") == "BabyWorks")
+  #expect(L10nTable.language("fr")("settings.about.version.missing") == "—")
+  #expect(L10nTable.language("en")("settings.about.version.missing") == "—")
+  #expect(L10nTable.language("fr")("settings.about.asset.credit", "Kenney", "CC0") == "Kenney · CC0")
+  #expect(L10nTable.language("en")("settings.about.asset.credit", "Kenney", "CC0") == "Kenney · CC0")
 }
 
 @Test("Une clé absente renvoie la clé")
