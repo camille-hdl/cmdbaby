@@ -627,7 +627,7 @@ final class TerminalPainter {
     animation.values = [0, -10, 9, -7, 5, -3, 0].map { NSNumber(value: $0) }
     animation.duration = 0.3
     // Pluie, prompt et calque CRT sont frères : le tremblement porte sur leur parent.
-    let scene = promptLayer.superlayer ?? promptLayer
+    guard let scene = promptLayer.superlayer else { return }
     scene.add(animation, forKey: Self.shakeKey)
   }
 
@@ -939,6 +939,7 @@ final class TerminalStageView: NSView {
 
 /// Lignes de balayage, vignettage et coins noirs. Aucune animation sur ces calques.
 private final class TerminalCRTOverlay {
+  /// Débord hors de l’écran, pour couvrir le tremblement (±10 pt).
   static let bleed: CGFloat = 16
 
   /// Empêche toute animation implicite quand `layout()` pose le cadre.
@@ -954,6 +955,10 @@ private final class TerminalCRTOverlay {
       "zPosition": NSNull(),
       "opacity": NSNull(),
       "transform": NSNull(),
+      "startPoint": NSNull(),
+      "endPoint": NSNull(),
+      "colors": NSNull(),
+      "locations": NSNull(),
     ]
   }
 
@@ -961,6 +966,7 @@ private final class TerminalCRTOverlay {
   private let scanlines = CALayer()
   private let vignette = CAGradientLayer()
   private let corners = CAShapeLayer()
+  /// Échelle pour laquelle le motif de balayage est déjà construit.
   private var patternScale: CGFloat = 0
 
   init(scale: CGFloat) {
@@ -972,7 +978,6 @@ private final class TerminalCRTOverlay {
     corners.actions = frozen
     vignette.type = .radial
     vignette.startPoint = CGPoint(x: 0.5, y: 0.5)
-    vignette.endPoint = CGPoint(x: 1, y: 1)
     let clear = NSColor.black.withAlphaComponent(0).cgColor
     let edge = NSColor.black.withAlphaComponent(CGFloat(TerminalStyle.vignetteEdgeOpacity)).cgColor
     vignette.colors = [clear, clear, edge]
@@ -993,6 +998,7 @@ private final class TerminalCRTOverlay {
     let local = CGRect(origin: .zero, size: frame.size)
     scanlines.frame = local
     vignette.frame = local
+    vignette.endPoint = Self.vignetteEndPoint(size: local.size)
     corners.frame = local
     applyScale(scale)
     corners.path = Self.cornerPath(overlayBounds: local)
@@ -1007,6 +1013,14 @@ private final class TerminalCRTOverlay {
     vignette.contentsScale = scale
     corners.contentsScale = scale
     scanlines.backgroundColor = Self.scanlinePattern(scale: scale)
+  }
+
+  /// (1, 1) arrête l’ellipse au milieu des côtés. On la pousse jusqu’au coin
+  /// pour que `vignetteInnerRadius` soit une fraction de la demi-diagonale.
+  private static func vignetteEndPoint(size: CGSize) -> CGPoint {
+    guard size.width > 0, size.height > 0 else { return CGPoint(x: 1, y: 1) }
+    let radius = hypot(size.width, size.height) / 2
+    return CGPoint(x: 0.5 + radius / size.width, y: 0.5 + radius / size.height)
   }
 
   private static func cornerPath(overlayBounds: CGRect) -> CGPath {
