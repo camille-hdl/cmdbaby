@@ -22,6 +22,20 @@ struct TerminalModePreview: View {
               .foregroundStyle(Self.prompt)
               .shadow(color: Self.prompt, radius: 3)
               .position(x: size.width / 2, y: size.height / 2)
+            if TerminalStyle.crtEffectEnabled {
+              RadialGradient(
+                stops: [
+                  .init(color: .black.opacity(0), location: 0),
+                  .init(color: .black.opacity(0), location: TerminalStyle.vignetteInnerRadius),
+                  .init(color: .black.opacity(TerminalStyle.vignetteEdgeOpacity), location: 1),
+                ],
+                center: .center,
+                startRadius: 0,
+                endRadius: hypot(size.width, size.height) / 2
+              )
+              .frame(width: size.width, height: size.height)
+              .allowsHitTesting(false)
+            }
           }
         }
       }

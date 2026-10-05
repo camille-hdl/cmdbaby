@@ -32,6 +32,18 @@ public enum TerminalStyle: Sendable {
   /// Largeur d’une cellule de pluie, en points (0,6 × hauteur, arrondi).
   public static let cellWidth: Double = 17
 
+  /// `false` retire lignes de balayage, vignettage et coins arrondis.
+  public static let crtEffectEnabled = true
+  /// Une ligne sombre d’un pixel physique tous les `scanlinePeriodPixels` pixels.
+  public static let scanlinePeriodPixels = 3
+  public static let scanlineOpacity = 0.15
+  /// Opacité du noir dans les coins du vignettage.
+  public static let vignetteEdgeOpacity = 0.35
+  /// Fraction de la demi-diagonale sous laquelle le vignettage est nul.
+  public static let vignetteInnerRadius = 0.6
+  /// Rayon des coins arrondis noirs, en points.
+  public static let crtCornerRadius: Double = 48
+
   /// Bord gauche de la cellule de grille qui contient `x` (coordonnées globales).
   public static func snapToGrid(x: Double) -> Double {
     (x / cellWidth).rounded(.down) * cellWidth

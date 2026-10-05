@@ -532,7 +532,9 @@ final class TerminalPainter {
     let animation = CAKeyframeAnimation(keyPath: "transform.translation.x")
     animation.values = [0, -10, 9, -7, 5, -3, 0].map { NSNumber(value: $0) }
     animation.duration = 0.3
-    promptLayer.add(animation, forKey: Self.shakeKey)
+    // Pluie, prompt et calque CRT sont frères : le tremblement porte sur leur parent.
+    let scene = promptLayer.superlayer ?? promptLayer
+    scene.add(animation, forKey: Self.shakeKey)
   }
 
   private func layoutPrompt() {
@@ -740,8 +742,11 @@ final class TerminalStageView: NSView {
   private let inputBridge: KioskInputBridge
   private let director: TerminalDirector
   private let screenIndex: Int
+  /// Parent de la pluie, du prompt et du CRT. C’est lui qui tremble.
+  private let sceneLayer = CALayer()
   /// Créé après `wantsLayer`, une fois le calque racine de la vue disponible.
   private var painter: TerminalPainter!
+  private var crtOverlay: TerminalCRTOverlay?
 
   init(
     inputBridge: KioskInputBridge,
@@ -759,6 +764,8 @@ final class TerminalStageView: NSView {
     }
     root.backgroundColor = Self.backgroundColor.cgColor
     root.contentsScale = scale
+    sceneLayer.actions = TerminalCRTOverlay.frozenActions()
+    root.addSublayer(sceneLayer)
     let rainHost = CALayer()
     let promptLayer = CATextLayer()
     painter = TerminalPainter(
@@ -768,8 +775,13 @@ final class TerminalStageView: NSView {
       tuning: director.tuning,
       atlas: director.atlas
     )
-    root.addSublayer(rainHost)
-    root.addSublayer(promptLayer)
+    sceneLayer.addSublayer(rainHost)
+    sceneLayer.addSublayer(promptLayer)
+    if TerminalStyle.crtEffectEnabled {
+      let overlay = TerminalCRTOverlay(scale: scale)
+      sceneLayer.addSublayer(overlay.layer)
+      crtOverlay = overlay
+    }
     director.register(screenIndex: screenIndex, painter: painter)
   }
 
@@ -788,7 +800,13 @@ final class TerminalStageView: NSView {
     guard painter != nil else { return }
     let scale = window?.backingScaleFactor ?? 2
     layer?.contentsScale = scale
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    sceneLayer.frame = bounds
+    sceneLayer.contentsScale = scale
+    CATransaction.commit()
     painter.setBounds(bounds, globalFrame: window?.frame ?? .zero, scale: scale)
+    crtOverlay?.layout(in: bounds, scale: scale)
     reportFrame()
   }
 
@@ -822,6 +840,118 @@ final class TerminalStageView: NSView {
   private func reportFrame() {
     guard let frame = window?.frame else { return }
     director.noteFrame(screenIndex: screenIndex, frame: frame)
+  }
+}
+
+/// Lignes de balayage, vignettage et coins noirs. Aucune animation sur ces calques.
+private final class TerminalCRTOverlay {
+  static let bleed: CGFloat = 16
+
+  /// Empêche toute animation implicite quand `layout()` pose le cadre.
+  static func frozenActions() -> [String: any CAAction] {
+    [
+      "bounds": NSNull(),
+      "position": NSNull(),
+      "contents": NSNull(),
+      "backgroundColor": NSNull(),
+      "path": NSNull(),
+      "contentsScale": NSNull(),
+      "sublayers": NSNull(),
+      "zPosition": NSNull(),
+      "opacity": NSNull(),
+      "transform": NSNull(),
+    ]
+  }
+
+  let layer = CALayer()
+  private let scanlines = CALayer()
+  private let vignette = CAGradientLayer()
+  private let corners = CAShapeLayer()
+  private var patternScale: CGFloat = 0
+
+  init(scale: CGFloat) {
+    layer.zPosition = 2
+    let frozen = Self.frozenActions()
+    layer.actions = frozen
+    scanlines.actions = frozen
+    vignette.actions = frozen
+    corners.actions = frozen
+    vignette.type = .radial
+    vignette.startPoint = CGPoint(x: 0.5, y: 0.5)
+    vignette.endPoint = CGPoint(x: 1, y: 1)
+    let clear = NSColor.black.withAlphaComponent(0).cgColor
+    let edge = NSColor.black.withAlphaComponent(CGFloat(TerminalStyle.vignetteEdgeOpacity)).cgColor
+    vignette.colors = [clear, clear, edge]
+    vignette.locations = [0, NSNumber(value: TerminalStyle.vignetteInnerRadius), 1]
+    corners.fillColor = NSColor.black.cgColor
+    corners.fillRule = .evenOdd
+    layer.addSublayer(scanlines)
+    layer.addSublayer(vignette)
+    layer.addSublayer(corners)
+    applyScale(scale)
+  }
+
+  func layout(in bounds: CGRect, scale: CGFloat) {
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    let frame = bounds.insetBy(dx: -Self.bleed, dy: -Self.bleed)
+    layer.frame = frame
+    let local = CGRect(origin: .zero, size: frame.size)
+    scanlines.frame = local
+    vignette.frame = local
+    corners.frame = local
+    applyScale(scale)
+    corners.path = Self.cornerPath(overlayBounds: local)
+    CATransaction.commit()
+  }
+
+  private func applyScale(_ scale: CGFloat) {
+    guard scale > 0, scale != patternScale else { return }
+    patternScale = scale
+    layer.contentsScale = scale
+    scanlines.contentsScale = scale
+    vignette.contentsScale = scale
+    corners.contentsScale = scale
+    scanlines.backgroundColor = Self.scanlinePattern(scale: scale)
+  }
+
+  private static func cornerPath(overlayBounds: CGRect) -> CGPath {
+    let radius = CGFloat(TerminalStyle.crtCornerRadius)
+    let path = CGMutablePath()
+    path.addPath(CGPath(rect: overlayBounds, transform: nil))
+    path.addPath(
+      CGPath(
+        roundedRect: overlayBounds.insetBy(dx: bleed, dy: bleed),
+        cornerWidth: radius,
+        cornerHeight: radius,
+        transform: nil
+      )
+    )
+    return path
+  }
+
+  /// Image 1 × `scanlinePeriodPixels` pixels, taille en points = pixels / échelle.
+  private static func scanlinePattern(scale: CGFloat) -> CGColor? {
+    let period = TerminalStyle.scanlinePeriodPixels
+    guard period >= 1, scale > 0 else { return nil }
+    guard
+      let context = CGContext(
+        data: nil,
+        width: 1,
+        height: period,
+        bitsPerComponent: 8,
+        bytesPerRow: 0,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+      )
+    else { return nil }
+    context.setFillColor(
+      NSColor.black.withAlphaComponent(CGFloat(TerminalStyle.scanlineOpacity)).cgColor
+    )
+    context.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
+    guard let image = context.makeImage() else { return nil }
+    let pointSize = NSSize(width: 1 / scale, height: CGFloat(period) / scale)
+    return NSColor(patternImage: NSImage(cgImage: image, size: pointSize)).cgColor
   }
 }
 

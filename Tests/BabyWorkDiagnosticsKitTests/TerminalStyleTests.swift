@@ -18,6 +18,16 @@ func terminalStyleMatchesMatrixPalette() {
   #expect(TerminalStyle.cellWidth == 17)
 }
 
+@Test("TerminalStyle fixe l’effet CRT : balayage, vignettage et coins")
+func terminalStyleDefinesCRTEffect() {
+  #expect(TerminalStyle.crtEffectEnabled == true)
+  #expect(TerminalStyle.scanlinePeriodPixels == 3)
+  #expect(TerminalStyle.scanlineOpacity == 0.15)
+  #expect(TerminalStyle.vignetteEdgeOpacity == 0.35)
+  #expect(TerminalStyle.vignetteInnerRadius == 0.6)
+  #expect(TerminalStyle.crtCornerRadius == 48)
+}
+
 @Test("snapToGrid aligne un x positif ou négatif sur le bord gauche de la cellule")
 func terminalStyleSnapsXToGlobalGrid() {
   #expect(TerminalStyle.snapToGrid(x: 0) == 0)
