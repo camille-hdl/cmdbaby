@@ -8,7 +8,7 @@ public struct SetupFacts: Equatable, Sendable {
   /// Vrai quand la configuration demande le démarrage automatique.
   public var launchAtLoginRequested: Bool
   public var loginItemStatus: LoginItemStatus
-  /// Vrai quand la sortie phrase est active.
+  /// Vrai quand la phrase de sortie est active.
   public var passphraseEnabled: Bool
   public var passphraseTypability: PassphraseTypability
   /// Nom localisé de la disposition active.
@@ -189,7 +189,7 @@ public struct SetupChecklist: Equatable, Sendable {
     }
   }
 
-  /// Seulement si la sortie phrase est active.
+  /// Seulement si la phrase de sortie est active.
   private static func passphrase(
     enabled: Bool,
     typability: PassphraseTypability,
