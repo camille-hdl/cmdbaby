@@ -315,28 +315,12 @@ private struct SettingsGroupDivider: View {
   }
 }
 
-private var keepOneManualExitHelp: String {
-  L10n.current("settings.exits.keepOne")
-}
-
-private var passphraseHelp: String {
-  L10n.current("settings.exits.passphrase.help")
-}
-
-private var timeLimitHelp: String {
-  L10n.current("settings.exits.timer.help")
-}
-
 private var timeLimitRejectionMessage: String {
   L10n.current(
     "settings.exits.timer.rejection",
     Int64(AdultExitSettings.timeLimitRange.lowerBound),
     Int64(AdultExitSettings.timeLimitRange.upperBound)
   )
-}
-
-private var launchAtLoginHelp: String {
-  L10n.current("settings.general.launchAtLogin.help")
 }
 
 struct SettingsView: View {
@@ -804,7 +788,10 @@ struct SettingsView: View {
 
   private func exitToggleRow(method: AdultExitMethod, label: String, help: String?) -> some View {
     let isLast = isLastEnabledManualExit(method)
-    return SettingsRow(label: label, help: isLast ? keepOneManualExitHelp : help) {
+    return SettingsRow(
+      label: label,
+      help: isLast ? L10n.current("settings.exits.keepOne") : help
+    ) {
       settingsSwitch(label, isOn: manualExitEnabled(method))
         .focused($focusedExit, equals: method)
         .disabled(isLast)
@@ -816,7 +803,7 @@ struct SettingsView: View {
     let label = L10n.current("settings.exits.passphrase.label")
     return SettingsRow(
       label: label,
-      help: passphraseHelp,
+      help: L10n.current("settings.exits.passphrase.help"),
       rejection: passphraseRejection
     ) {
       TextField(label, text: $passphraseDraft)
@@ -884,7 +871,7 @@ struct SettingsView: View {
     return SettingsGroup(title: L10n.current("settings.exits.timer.title")) {
       SettingsRow(
         label: label,
-        help: timeLimitHelp,
+        help: L10n.current("settings.exits.timer.help"),
         rejection: timeLimitRejection
       ) {
         HStack(spacing: 6) {
@@ -967,7 +954,10 @@ struct SettingsView: View {
       languageRow
       SettingsGroupDivider()
       let launchLabel = L10n.current("settings.general.launchAtLogin.label")
-      SettingsRow(label: launchLabel, help: launchAtLoginHelp) {
+      SettingsRow(
+        label: launchLabel,
+        help: L10n.current("settings.general.launchAtLogin.help")
+      ) {
         settingsSwitch(launchLabel, isOn: launchAtLogin)
           .focused($launchAtLoginFocused)
       }
