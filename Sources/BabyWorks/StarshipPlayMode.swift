@@ -292,6 +292,8 @@ final class StarshipPainter {
   private var warpToken = 0
   /// Compteur de tours, pour que chaque appui ait sa propre animation.
   private var spinCounter = 0
+  /// Fin de la file de tours, dans le temps local de `shipSpin`.
+  private var spinQueue = StarshipSpinQueue()
   /// Fin du fondu en cours. `nil` quand le ciel du dessous est le ciel courant.
   private var skyboxFadeEndsAt: TimeInterval?
 
@@ -356,14 +358,20 @@ final class StarshipPainter {
     CATransaction.commit()
   }
 
-  /// Un tour complet sur `shipSpin`, dans le sens horaire. Les tours s’additionnent.
+  /// Un tour complet sur `shipSpin`, sens horaire. Les tours s’enchaînent :
+  /// un nouvel appui allonge la toupie, il ne la remplace pas et ne l’accélère pas.
   func spin(duration: Double) {
+    let now = shipSpin.convertTime(CACurrentMediaTime(), from: nil)
+    let start = spinQueue.addTurn(now: now, duration: duration)
     let turn = CABasicAnimation(keyPath: "transform.rotation.z")
     turn.fromValue = 0
     turn.toValue = -2 * Double.pi
     turn.duration = duration
     turn.isAdditive = true
     turn.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+    if start > now {
+      turn.beginTime = start
+    }
     shipSpin.add(turn, forKey: "spin-\(spinCounter)")
     spinCounter += 1
   }
