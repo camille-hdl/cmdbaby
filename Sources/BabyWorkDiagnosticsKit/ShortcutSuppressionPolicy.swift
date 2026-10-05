@@ -22,6 +22,8 @@ public struct InputModifierMask: OptionSet, Sendable, Hashable {
 public enum MonitoredShortcut: String, CaseIterable, Sendable, Equatable, Hashable {
   case commandSpace
   case optionSpace
+  case controlSpace
+  case controlOptionSpace
   case commandTab
   case commandQ
   case commandH
@@ -37,6 +39,10 @@ public enum MonitoredShortcut: String, CaseIterable, Sendable, Equatable, Hashab
       "Commande-Espace"
     case .optionSpace:
       "Option-Espace"
+    case .controlSpace:
+      "Contrôle-Espace"
+    case .controlOptionSpace:
+      "Contrôle-Option-Espace"
     case .commandTab:
       "Commande-Tab"
     case .commandQ:
@@ -87,6 +93,13 @@ public enum ShortcutSuppressionPolicy {
   private static let rules: [Rule] = [
     Rule(shortcut: .commandSpace, keyCode: MacVirtualKeyCode.space, letter: nil, modifiers: [.command]),
     Rule(shortcut: .optionSpace, keyCode: MacVirtualKeyCode.space, letter: nil, modifiers: [.option]),
+    Rule(shortcut: .controlSpace, keyCode: MacVirtualKeyCode.space, letter: nil, modifiers: [.control]),
+    Rule(
+      shortcut: .controlOptionSpace,
+      keyCode: MacVirtualKeyCode.space,
+      letter: nil,
+      modifiers: [.control, .option]
+    ),
     Rule(shortcut: .commandTab, keyCode: MacVirtualKeyCode.tab, letter: nil, modifiers: [.command]),
     Rule(shortcut: .commandQ, keyCode: MacVirtualKeyCode.ansiQ, letter: "q", modifiers: [.command]),
     Rule(shortcut: .commandH, keyCode: MacVirtualKeyCode.ansiH, letter: "h", modifiers: [.command]),

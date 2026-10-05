@@ -7,6 +7,8 @@ func policySuppressesMonitoredShortcuts() {
   let cases: [(MonitoredShortcut, UInt16, InputModifierMask)] = [
     (.commandSpace, MacVirtualKeyCode.space, [.command]),
     (.optionSpace, MacVirtualKeyCode.space, [.option]),
+    (.controlSpace, MacVirtualKeyCode.space, [.control]),
+    (.controlOptionSpace, MacVirtualKeyCode.space, [.control, .option]),
     (.commandTab, MacVirtualKeyCode.tab, [.command]),
     (.commandQ, MacVirtualKeyCode.ansiQ, [.command]),
     (.commandH, MacVirtualKeyCode.ansiH, [.command]),
@@ -57,6 +59,9 @@ func policyAllowsOrdinaryKeyPresses() {
     ShortcutSuppressionPolicy.decision(keyCode: MacVirtualKeyCode.ansiQ, modifiers: []) == .allow
   )
   #expect(
+    ShortcutSuppressionPolicy.decision(keyCode: MacVirtualKeyCode.space, modifiers: []) == .allow
+  )
+  #expect(
     ShortcutSuppressionPolicy.decision(
       keyCode: MacVirtualKeyCode.space,
       modifiers: [.shift]
@@ -95,6 +100,8 @@ func policyMatchesLettersIndependentOfAnsiPosition() {
 @Test("Les libellés des raccourcis surveillés restent stables")
 func monitoredShortcutDisplayNamesAreStable() {
   #expect(MonitoredShortcut.commandSpace.displayName == "Commande-Espace")
+  #expect(MonitoredShortcut.controlSpace.displayName == "Contrôle-Espace")
+  #expect(MonitoredShortcut.controlOptionSpace.displayName == "Contrôle-Option-Espace")
   #expect(MonitoredShortcut.optionCommandEscape.displayName == "Option-Commande-Échap")
-  #expect(MonitoredShortcut.allCases.count == 10)
+  #expect(MonitoredShortcut.allCases.count == 12)
 }
