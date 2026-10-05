@@ -63,6 +63,18 @@ final class StarshipDirector {
     chooseHomeScreenIfReady()
   }
 
+  /// Barre d’espace : un tour du vaisseau sur son écran. Les répétitions et les autres touches
+  /// ne font rien pour l’instant.
+  func handleKey(_ event: NSEvent) {
+    switch StarshipKey.action(keyCode: event.keyCode, isARepeat: event.isARepeat) {
+    case .spin:
+      guard let homeScreenIndex else { return }
+      painter(at: homeScreenIndex)?.spin(duration: tuning.spinDuration)
+    case .other, .ignored:
+      break
+    }
+  }
+
   /// Centre du vaisseau, en coordonnées locales à l’écran du vaisseau.
   /// `nil` tant qu’aucun écran n’a de cadre.
   var shipCenter: CGPoint? {
@@ -278,6 +290,8 @@ final class StarshipPainter {
   private let shipSprite = CALayer()
   private var ephemerals: [(layer: CALayer, endsAt: TimeInterval)] = []
   private var warpToken = 0
+  /// Compteur de tours, pour que chaque appui ait sa propre animation.
+  private var spinCounter = 0
   /// Fin du fondu en cours. `nil` quand le ciel du dessous est le ciel courant.
   private var skyboxFadeEndsAt: TimeInterval?
 
@@ -340,6 +354,18 @@ final class StarshipPainter {
     }
     shipRoot.add(Self.disappearWarp(duration: tuning.shipWarpDuration), forKey: Self.warpKey)
     CATransaction.commit()
+  }
+
+  /// Un tour complet sur `shipSpin`, dans le sens horaire. Les tours s’additionnent.
+  func spin(duration: Double) {
+    let turn = CABasicAnimation(keyPath: "transform.rotation.z")
+    turn.fromValue = 0
+    turn.toValue = -2 * Double.pi
+    turn.duration = duration
+    turn.isAdditive = true
+    turn.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+    shipSpin.add(turn, forKey: "spin-\(spinCounter)")
+    spinCounter += 1
   }
 
   /// Ajoute `layer` à la scène et le retire automatiquement après `lifetime` secondes.
@@ -519,7 +545,7 @@ final class StarshipPainter {
   }
 }
 
-/// Ciel et vaisseau de la session sur un écran. La frappe ne fait encore que remonter les sorties adultes.
+/// Ciel et vaisseau de la session sur un écran. La frappe remonte d’abord les sorties adultes.
 final class StarshipStageView: NSView {
   static let backgroundColor = NSColor(
     srgbRed: 0x0B / 255,
@@ -638,5 +664,6 @@ final class StarshipStageView: NSView {
       isEscape: isEscape,
       shiftDown: shiftDown
     )
+    director.handleKey(event)
   }
 }
