@@ -119,6 +119,59 @@ func permissionsAccessibilityCopy() {
   )
 }
 
+@Test("Permissions : emplacement, démarrage automatique, et Afficher dans le Finder")
+func permissionsLocationAndLaunchAtLoginCopy() {
+  #expect(L10nTable.language("fr")("settings.permissions.location.title") == "Emplacement")
+  #expect(L10nTable.language("en")("settings.permissions.location.title") == "Location")
+  #expect(
+    L10nTable.language("fr")("settings.permissions.location.ok")
+      == "BabyWorks est dans le dossier Applications."
+  )
+  #expect(
+    L10nTable.language("en")("settings.permissions.location.ok")
+      == "BabyWorks is in the Applications folder."
+  )
+  #expect(
+    L10nTable.language("fr")("settings.permissions.location.attention")
+      == "Déplacez BabyWorks dans le dossier Applications, puis rouvrez-la depuis là. L’autorisation Accessibilité est liée à cet emplacement."
+  )
+  #expect(
+    L10nTable.language("en")("settings.permissions.location.attention")
+      == "Move BabyWorks to the Applications folder, then open it again from there. The Accessibility permission is tied to this location."
+  )
+  #expect(
+    L10nTable.language("fr")("settings.permissions.action.revealInFinder") == "Afficher dans le Finder"
+  )
+  #expect(L10nTable.language("en")("settings.permissions.action.revealInFinder") == "Show in Finder")
+  #expect(
+    L10nTable.language("fr")("settings.permissions.launchAtLogin.title") == "Démarrage automatique"
+  )
+  #expect(L10nTable.language("en")("settings.permissions.launchAtLogin.title") == "Launch at Login")
+  #expect(
+    L10nTable.language("fr")("settings.permissions.launchAtLogin.ok")
+      == "BabyWorks s’ouvrira à la connexion."
+  )
+  #expect(
+    L10nTable.language("en")("settings.permissions.launchAtLogin.ok") == "BabyWorks will open at login."
+  )
+  #expect(
+    L10nTable.language("fr")("settings.permissions.launchAtLogin.requiresApproval")
+      == "macOS attend votre accord pour ouvrir BabyWorks à la connexion."
+  )
+  #expect(
+    L10nTable.language("en")("settings.permissions.launchAtLogin.requiresApproval")
+      == "macOS is waiting for your approval to open BabyWorks at login."
+  )
+  #expect(
+    L10nTable.language("fr")("settings.permissions.launchAtLogin.notRegistered")
+      == "Le démarrage automatique n’a pas pu être enregistré. Désactivez-le puis réactivez-le dans Général."
+  )
+  #expect(
+    L10nTable.language("en")("settings.permissions.launchAtLogin.notRegistered")
+      == "Launch at login could not be registered. Turn it off, then turn it on again in General."
+  )
+}
+
 @Test("L’alerte de phrase intapable nomme les lettres manquantes")
 func passphraseNotTypableAlertCopy() {
   #expect(

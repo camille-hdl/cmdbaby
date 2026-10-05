@@ -1,6 +1,7 @@
 import AppKit
 import BabyWorkDiagnosticsKit
 import OSLog
+import ServiceManagement
 import SwiftUI
 
 private let settingsLogger = Logger(subsystem: "fr.camille.babywork", category: "Settings")
@@ -357,10 +358,11 @@ struct SettingsView: View {
   @State private var passphraseRejection: String?
   @State private var keyboardLayoutName: String?
   @State private var keyboardLayoutLetters: [UInt16: Set<Character>]
-  @StateObject private var permissions = PermissionsMonitor()
+  @StateObject private var permissions: PermissionsMonitor
 
   init(
     model: SettingsModel,
+    loginItem: any LoginItemRegistration,
     session: DiagnosticsSessionModel,
     presence: SettingsWindowPresence,
     initialSection: SettingsSection,
@@ -372,6 +374,12 @@ struct SettingsView: View {
     self.presence = presence
     self.onLaunch = onLaunch
     self.onRelaunch = onRelaunch
+    _permissions = StateObject(
+      wrappedValue: PermissionsMonitor(
+        loginItem: loginItem,
+        launchAtLoginRequested: { model.configuration.launchAtLogin }
+      )
+    )
     _section = State(initialValue: initialSection)
     _keyboardLayoutName = State(initialValue: KeyboardLayoutLetter.shared.layoutName)
     _keyboardLayoutLetters = State(initialValue: KeyboardLayoutLetter.shared.snapshot())
@@ -1042,8 +1050,10 @@ struct SettingsView: View {
     switch action {
     case .requestAccessibility:
       L10n.current("settings.permissions.action.request")
-    case .openAccessibilitySettings:
+    case .openAccessibilitySettings, .openLoginItemsSettings:
       L10n.current("settings.permissions.action.openSettings")
+    case .revealInFinder:
+      L10n.current("settings.permissions.action.revealInFinder")
     }
   }
 
@@ -1053,6 +1063,10 @@ struct SettingsView: View {
       AccessibilitySettings.requestAccess()
     case .openAccessibilitySettings:
       AccessibilitySettings.openSystemSettings()
+    case .revealInFinder:
+      NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
+    case .openLoginItemsSettings:
+      SMAppService.openSystemSettingsLoginItems()
     }
   }
 
@@ -1179,16 +1193,26 @@ private extension View {
   }
 }
 
-/// TCC ne notifie pas : relire Accessibilité tant que Permissions est visible.
+/// TCC et le Login Item ne notifient pas : relire les faits tant que Permissions est visible.
 @MainActor
 private final class PermissionsMonitor: ObservableObject {
   @Published private(set) var checklist: SetupChecklist
   private var timer: Timer?
   private var sectionVisible = false
   private var windowVisible = false
+  private let loginItem: any LoginItemRegistration
+  private let launchAtLoginRequested: @MainActor () -> Bool
 
-  init() {
-    checklist = Self.currentChecklist()
+  init(
+    loginItem: any LoginItemRegistration,
+    launchAtLoginRequested: @escaping @MainActor () -> Bool
+  ) {
+    self.loginItem = loginItem
+    self.launchAtLoginRequested = launchAtLoginRequested
+    checklist = Self.checklist(
+      loginItem: loginItem,
+      launchAtLoginRequested: launchAtLoginRequested()
+    )
   }
 
   isolated deinit {
@@ -1224,13 +1248,27 @@ private final class PermissionsMonitor: ObservableObject {
   }
 
   private func refresh() {
-    let checklist = Self.currentChecklist()
+    let checklist = Self.checklist(
+      loginItem: loginItem,
+      launchAtLoginRequested: launchAtLoginRequested()
+    )
     guard checklist != self.checklist else { return }
     self.checklist = checklist
   }
 
-  private static func currentChecklist() -> SetupChecklist {
-    SetupChecklist(facts: SetupFacts(accessibilityGranted: AccessibilitySettings.isProcessTrusted()))
+  private static func checklist(
+    loginItem: any LoginItemRegistration,
+    launchAtLoginRequested: Bool
+  ) -> SetupChecklist {
+    SetupChecklist(
+      facts: SetupFacts(
+        accessibilityGranted: AccessibilitySettings.isProcessTrusted(),
+        bundlePath: Bundle.main.bundlePath,
+        homeDirectory: FileManager.default.homeDirectoryForCurrentUser.path,
+        launchAtLoginRequested: launchAtLoginRequested,
+        loginItemStatus: loginItem.status
+      )
+    )
   }
 }
 
@@ -1355,6 +1393,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     let hosting = NSHostingView(
       rootView: SettingsView(
         model: model,
+        loginItem: loginItem,
         session: session,
         presence: presence,
         initialSection: section,

@@ -27,4 +27,12 @@
 "settings.permissions.accessibility.attention" = "Cochez BabyWorks dans Réglages Système › Confidentialité et sécurité › Accessibilité. Si BabyWorks y est déjà cochée, retirez-la avec « – », puis ajoutez-la de nouveau : l’entrée est périmée après une mise à jour ou une copie.";
 "settings.permissions.action.request" = "Demander l’accès";
 "settings.permissions.action.openSettings" = "Ouvrir Réglages Système";
+"settings.permissions.action.revealInFinder" = "Afficher dans le Finder";
+"settings.permissions.location.title" = "Emplacement";
+"settings.permissions.location.ok" = "BabyWorks est dans le dossier Applications.";
+"settings.permissions.location.attention" = "Déplacez BabyWorks dans le dossier Applications, puis rouvrez-la depuis là. L’autorisation Accessibilité est liée à cet emplacement.";
+"settings.permissions.launchAtLogin.title" = "Démarrage automatique";
+"settings.permissions.launchAtLogin.ok" = "BabyWorks s’ouvrira à la connexion.";
+"settings.permissions.launchAtLogin.requiresApproval" = "macOS attend votre accord pour ouvrir BabyWorks à la connexion.";
+"settings.permissions.launchAtLogin.notRegistered" = "Le démarrage automatique n’a pas pu être enregistré. Désactivez-le puis réactivez-le dans Général.";
 "alert.passphraseNotTypable" = "La phrase de sortie ne peut pas être tapée avec la disposition clavier active (lettres absentes : %@). Changez de phrase ou activez Maj-Échap.";

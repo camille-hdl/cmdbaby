@@ -1,16 +1,33 @@
 import Foundation
 
-/// Faits système lus par l’app. Les tickets suivants ajoutent l’emplacement, le Login Item et la phrase.
+/// Faits système que l’app lit pour la section Permissions.
 public struct SetupFacts: Equatable, Sendable {
   public var accessibilityGranted: Bool
+  public var bundlePath: String
+  public var homeDirectory: String
+  /// Vrai quand la configuration demande le démarrage automatique.
+  public var launchAtLoginRequested: Bool
+  public var loginItemStatus: LoginItemStatus
 
-  public init(accessibilityGranted: Bool) {
+  public init(
+    accessibilityGranted: Bool,
+    bundlePath: String,
+    homeDirectory: String,
+    launchAtLoginRequested: Bool,
+    loginItemStatus: LoginItemStatus
+  ) {
     self.accessibilityGranted = accessibilityGranted
+    self.bundlePath = bundlePath
+    self.homeDirectory = homeDirectory
+    self.launchAtLoginRequested = launchAtLoginRequested
+    self.loginItemStatus = loginItemStatus
   }
 }
 
 public enum SetupCheckID: Equatable, Sendable, Hashable {
   case accessibility
+  case location
+  case launchAtLogin
 }
 
 public enum SetupCheckState: Equatable, Sendable {
@@ -21,6 +38,8 @@ public enum SetupCheckState: Equatable, Sendable {
 public enum SetupAction: Equatable, Sendable, Hashable {
   case requestAccessibility
   case openAccessibilitySettings
+  case revealInFinder
+  case openLoginItemsSettings
 }
 
 /// Une vérification de la section Permissions.
@@ -55,7 +74,17 @@ public struct SetupChecklist: Equatable, Sendable {
   }
 
   public init(facts: SetupFacts) {
-    checks = [Self.accessibility(granted: facts.accessibilityGranted)]
+    var checks = [
+      Self.accessibility(granted: facts.accessibilityGranted),
+      Self.location(bundlePath: facts.bundlePath, homeDirectory: facts.homeDirectory),
+    ]
+    if let launchAtLogin = Self.launchAtLogin(
+      requested: facts.launchAtLoginRequested,
+      status: facts.loginItemStatus
+    ) {
+      checks.append(launchAtLogin)
+    }
+    self.checks = checks
   }
 
   private static func accessibility(granted: Bool) -> SetupCheck {
@@ -75,5 +104,60 @@ public struct SetupChecklist: Equatable, Sendable {
       detailKey: "settings.permissions.accessibility.attention",
       actions: [.requestAccessibility, .openAccessibilitySettings]
     )
+  }
+
+  private static func location(bundlePath: String, homeDirectory: String) -> SetupCheck {
+    if isInApplicationsFolder(bundlePath: bundlePath, homeDirectory: homeDirectory) {
+      return SetupCheck(
+        id: .location,
+        state: .ok,
+        titleKey: "settings.permissions.location.title",
+        detailKey: "settings.permissions.location.ok",
+        actions: []
+      )
+    }
+    return SetupCheck(
+      id: .location,
+      state: .attention,
+      titleKey: "settings.permissions.location.title",
+      detailKey: "settings.permissions.location.attention",
+      actions: [.revealInFinder]
+    )
+  }
+
+  /// `/Applications/` ou `<home>/Applications/`. Le slash final évite un préfixe trop court.
+  private static func isInApplicationsFolder(bundlePath: String, homeDirectory: String) -> Bool {
+    bundlePath.hasPrefix("/Applications/")
+      || bundlePath.hasPrefix(homeDirectory + "/Applications/")
+  }
+
+  private static func launchAtLogin(requested: Bool, status: LoginItemStatus) -> SetupCheck? {
+    guard requested else { return nil }
+    switch status {
+    case .enabled:
+      return SetupCheck(
+        id: .launchAtLogin,
+        state: .ok,
+        titleKey: "settings.permissions.launchAtLogin.title",
+        detailKey: "settings.permissions.launchAtLogin.ok",
+        actions: []
+      )
+    case .requiresApproval:
+      return SetupCheck(
+        id: .launchAtLogin,
+        state: .attention,
+        titleKey: "settings.permissions.launchAtLogin.title",
+        detailKey: "settings.permissions.launchAtLogin.requiresApproval",
+        actions: [.openLoginItemsSettings]
+      )
+    case .notRegistered, .notFound:
+      return SetupCheck(
+        id: .launchAtLogin,
+        state: .attention,
+        titleKey: "settings.permissions.launchAtLogin.title",
+        detailKey: "settings.permissions.launchAtLogin.notRegistered",
+        actions: []
+      )
+    }
   }
 }

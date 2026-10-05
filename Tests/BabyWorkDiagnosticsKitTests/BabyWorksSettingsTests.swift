@@ -266,6 +266,7 @@ private struct TemporarySettingsFile {
 
 private final class FakeLoginItemRegistration: LoginItemRegistration, @unchecked Sendable {
   var isRegistered = false
+  var status: LoginItemStatus = .notRegistered
   var registerError: (any Error)?
 
   func register() throws {
@@ -273,9 +274,11 @@ private final class FakeLoginItemRegistration: LoginItemRegistration, @unchecked
       throw registerError
     }
     isRegistered = true
+    status = .enabled
   }
 
   func unregister() throws {
     isRegistered = false
+    status = .notRegistered
   }
 }

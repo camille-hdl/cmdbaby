@@ -3,6 +3,7 @@ import Foundation
 /// Login Item du process principal (`SMAppService.mainApp` côté app).
 public protocol LoginItemRegistration: Sendable {
   var isRegistered: Bool { get }
+  var status: LoginItemStatus { get }
   func register() throws
   func unregister() throws
 }
