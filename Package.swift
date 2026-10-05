@@ -4,7 +4,7 @@ import PackageDescription
 
 let package = Package(
   name: "BabyWork",
-  defaultLocalization: "fr",
+  defaultLocalization: "en",
   platforms: [
     .macOS(.v13)
   ],
@@ -19,7 +19,12 @@ let package = Package(
     ),
   ],
   targets: [
-    .target(name: "BabyWorkDiagnosticsKit"),
+    .target(
+      name: "BabyWorkDiagnosticsKit",
+      resources: [
+        .process("Resources"),
+      ]
+    ),
     .target(
       name: "BabyWorkAppKitBridge",
       publicHeadersPath: "include",

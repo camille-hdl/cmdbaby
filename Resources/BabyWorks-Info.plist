@@ -7,7 +7,12 @@
     <key>BabyWorkSandboxMode</key>
     <string>Non renseigné</string>
     <key>CFBundleDevelopmentRegion</key>
-    <string>fr</string>
+    <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>fr</string>
+    </array>
     <key>CFBundleDisplayName</key>
     <string>BabyWorks</string>
     <key>CFBundleExecutable</key>

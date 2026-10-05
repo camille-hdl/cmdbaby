@@ -40,14 +40,20 @@ mkdir -p "$contents_path/MacOS" "$contents_path/Resources"
 install -m 755 "$binary_dir/BabyWorks" "$executable_path"
 install -m 644 "$project_dir/Resources/BabyWorks-Info.plist" "$info_path"
 
-resource_bundle="$binary_dir/BabyWork_BabyWorks.bundle"
-if [[ ! -d "$resource_bundle" ]]; then
-    print -u2 "Bundle de ressources introuvable : $resource_bundle"
-    exit 1
-fi
-rm -rf "$app_path/BabyWork_BabyWorks.bundle"
-rm -rf "$contents_path/Resources/BabyWork_BabyWorks.bundle"
-cp -R "$resource_bundle" "$contents_path/Resources/BabyWork_BabyWorks.bundle"
+copy_resource_bundle() {
+    local name="$1"
+    local source="$binary_dir/$name"
+    if [[ ! -d "$source" ]]; then
+        print -u2 "Bundle de ressources introuvable : $source"
+        exit 1
+    fi
+    rm -rf "$app_path/$name"
+    rm -rf "$contents_path/Resources/$name"
+    cp -R "$source" "$contents_path/Resources/$name"
+}
+
+copy_resource_bundle "BabyWork_BabyWorks.bundle"
+copy_resource_bundle "BabyWork_BabyWorkDiagnosticsKit.bundle"
 /usr/bin/plutil -replace BabyWorkSigningIdentity -string "$signing_label" "$info_path"
 /usr/bin/plutil -replace BabyWorkSandboxMode -string "$sandbox_label" "$info_path"
 

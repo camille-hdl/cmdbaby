@@ -143,7 +143,7 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     item.button?.image = image
 
     let menu = NSMenu()
-    for spec in MenuBarAgent.items {
+    for spec in MenuBarAgent.items() {
       let menuItem = NSMenuItem(
         title: spec.title,
         action: selector(for: spec.action),

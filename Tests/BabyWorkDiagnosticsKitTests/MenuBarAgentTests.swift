@@ -14,12 +14,26 @@ func menuBarAgentStatusItemIsTemplateSymbol() {
   #expect(MenuBarAgent.systemSymbolName.unicodeScalars.allSatisfy { $0.isASCII })
 }
 
-@Test("Le menu fixe a Lancer session, Réglages… et Quitter")
-func menuBarAgentMenuHasThreeFixedEntries() {
-  #expect(MenuBarAgent.items.map(\.title) == ["Lancer session", "Réglages…", "Quitter"])
+@Test("Le menu de la barre de menus est en français")
+func menuBarAgentMenuTitlesAreFrench() {
+  #expect(
+    MenuBarAgent.items(.language("fr")).map(\.title)
+      == ["Lancer session", "Réglages…", "Quitter"]
+  )
+}
+
+@Test("Le menu de la barre de menus est en anglais")
+func menuBarAgentMenuTitlesAreEnglish() {
+  #expect(
+    MenuBarAgent.items(.language("en")).map(\.title)
+      == ["Start Session", "Settings…", "Quit"]
+  )
 }
 
 @Test("Lancer session démarre le kiosque ; Réglages ouvre la fenêtre ; seul Quitter termine")
 func menuBarAgentLaunchStartsSessionSettingsOpenAndOnlyQuitTerminates() {
-  #expect(MenuBarAgent.items.map(\.action) == [.startSession, .openSettings, .terminate])
+  #expect(
+    MenuBarAgent.items(.language("en")).map(\.action)
+      == [.startSession, .openSettings, .terminate]
+  )
 }

@@ -7,11 +7,13 @@ public enum MenuBarAgent {
   public static let systemSymbolName = "fish"
   public static let usesTemplateImage = true
 
-  public static let items: [Item] = [
-    Item(title: "Lancer session", action: .startSession),
-    Item(title: "Réglages…", action: .openSettings),
-    Item(title: "Quitter", action: .terminate),
-  ]
+  public static func items(_ table: L10nTable = .current) -> [Item] {
+    [
+      Item(title: table("menu.startSession"), action: .startSession),
+      Item(title: table("menu.settings"), action: .openSettings),
+      Item(title: table("menu.quit"), action: .terminate),
+    ]
+  }
 
   public enum ActivationPolicy: Equatable, Sendable {
     /// Correspond à `NSApplication.ActivationPolicy.accessory`.
