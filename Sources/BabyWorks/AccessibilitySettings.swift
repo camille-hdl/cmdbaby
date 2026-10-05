@@ -4,6 +4,7 @@ import BabyWorkDiagnosticsKit
 
 /// Demande d’Accessibilité et ouverture de la page Réglages Système.
 /// L’alerte d’échec de session fait les deux ; la section Permissions les sépare.
+@MainActor
 enum AccessibilitySettings {
   static func isProcessTrusted() -> Bool {
     AXIsProcessTrusted()
