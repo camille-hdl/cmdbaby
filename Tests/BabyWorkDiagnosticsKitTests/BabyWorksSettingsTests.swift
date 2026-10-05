@@ -234,15 +234,31 @@ func currentReconcilesLaunchAtLoginChangedOutsideTheApp() throws {
   try store.save(BabyWorksConfiguration(mode: .starship, launchAtLogin: false))
   let loginItem = FakeLoginItemRegistration()
   loginItem.isRegistered = true
+  loginItem.status = .enabled
 
   let settings = BabyWorksSettings(store: store, loginItem: loginItem)
 
   #expect(settings.current() == BabyWorksConfiguration(mode: .starship, launchAtLogin: true))
   #expect(store.load() == BabyWorksConfiguration(mode: .starship, launchAtLogin: true))
+}
 
-  loginItem.isRegistered = false
-  #expect(settings.current() == BabyWorksConfiguration(mode: .starship, launchAtLogin: false))
-  #expect(store.load() == BabyWorksConfiguration(mode: .starship, launchAtLogin: false))
+@Test("Un Login Item introuvable ou non enregistré ne retire pas une demande de démarrage")
+func missingLoginItemKeepsLaunchAtLoginRequest() throws {
+  for status in [LoginItemStatus.notFound, .notRegistered] {
+    let file = TemporarySettingsFile()
+    defer { file.remove() }
+
+    let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+    try store.save(BabyWorksConfiguration(mode: .ocean, launchAtLogin: true))
+    let loginItem = FakeLoginItemRegistration()
+    loginItem.isRegistered = false
+    loginItem.status = status
+
+    let settings = BabyWorksSettings(store: store, loginItem: loginItem)
+
+    #expect(settings.current() == BabyWorksConfiguration(mode: .ocean, launchAtLogin: true))
+    #expect(store.load().launchAtLogin == true)
+  }
 }
 
 private struct LoginItemFailure: Error {}

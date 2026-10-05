@@ -50,10 +50,18 @@ public struct BabyWorksSettings: Sendable {
     self.loginItem = loginItem
   }
 
-  /// Config sur disque. `launchAtLogin` est réconcilié avec l’état réel du Login Item.
+  /// Config sur disque. Un Login Item activé hors de l’app allume le réglage.
+  /// Une demande déjà enregistrée reste si l’item est introuvable ou non enregistré,
+  /// pour que Permissions puisse l’expliquer.
   public func current() -> BabyWorksConfiguration {
     let registered = loginItem.isRegistered
     var configuration = store.load()
+    let keepUnregisteredRequest = configuration.launchAtLogin
+      && !registered
+      && (loginItem.status == .notRegistered || loginItem.status == .notFound)
+    if keepUnregisteredRequest {
+      return configuration
+    }
     if configuration.launchAtLogin != registered {
       configuration.launchAtLogin = registered
       try? store.save(configuration)
