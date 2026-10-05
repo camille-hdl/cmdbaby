@@ -28,9 +28,13 @@ final class StarshipDirector {
   /// Le premier affichage attend la fin du tour : les écrans s’enregistrent un par un.
   private var initialChoiceScheduled = false
   private var placementGeneration = 0
+  private var keyRate: StarshipKeyRate
+  private var gaugeLevel = 0.0
+  private var lastTick: TimeInterval = 0
 
   init(tuning: StarshipTuning = .standard) {
     self.tuning = tuning
+    keyRate = StarshipKeyRate(window: tuning.keyRateWindow, cap: tuning.keyRateCap)
   }
 
   func register(screenIndex: Int, painter: StarshipPainter) {
@@ -63,10 +67,13 @@ final class StarshipDirector {
     chooseHomeScreenIfReady()
   }
 
-  /// Barre d’espace : un tour du vaisseau sur son écran. Les répétitions et les autres touches
-  /// ne font rien pour l’instant.
+  /// Barre d’espace : un tour du vaisseau. Chaque frappe réelle, espace compris, compte pour la jauge.
   func handleKey(_ event: NSEvent) {
-    switch StarshipKey.action(keyCode: event.keyCode, isARepeat: event.isARepeat) {
+    let action = StarshipKey.action(keyCode: event.keyCode, isARepeat: event.isARepeat)
+    if action != .ignored {
+      keyRate.record(at: ProcessInfo.processInfo.systemUptime)
+    }
+    switch action {
     case .spin:
       guard let homeScreenIndex else { return }
       painter(at: homeScreenIndex)?.spin(duration: tuning.spinDuration)
@@ -144,6 +151,9 @@ final class StarshipDirector {
     rng = SystemRandomNumberGenerator()
     lastPointerScreenIndex = nil
     homeScreenIndex = nil
+    keyRate = StarshipKeyRate(window: tuning.keyRateWindow, cap: tuning.keyRateCap)
+    gaugeLevel = 0
+    lastTick = 0
   }
 
   private func framedScreens() -> [TerminalScreen] {
@@ -205,17 +215,40 @@ final class StarshipDirector {
     let previous = homeScreenIndex
     if let previous {
       painter(at: previous)?.hideShip(animated: true)
+      painter(at: previous)?.hideGauge()
     }
-    painter(at: index)?.showShip(animated: previous != nil)
     homeScreenIndex = index
+    let rate = keyRate.perMinute(at: ProcessInfo.processInfo.systemUptime)
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    paintGauge(rate: rate)
+    CATransaction.commit()
+    installPendingGaugePulse()
+    painter(at: index)?.showShip(animated: previous != nil)
+    painter(at: index)?.showGauge()
   }
 
   private func painter(at index: Int) -> StarshipPainter? {
     screens.first { $0.index == index }?.painter
   }
 
+  private func paintGauge(rate: Double) {
+    guard let homeScreenIndex else { return }
+    painter(at: homeScreenIndex)?.updateGauge(
+      level: gaugeLevel,
+      color: StarshipGauge.color(level: gaugeLevel),
+      atCap: rate >= tuning.keyRateCap
+    )
+  }
+
+  private func installPendingGaugePulse() {
+    guard let homeScreenIndex else { return }
+    painter(at: homeScreenIndex)?.installPendingGaugePulse()
+  }
+
   private func startTicker() {
     guard ticker == nil else { return }
+    lastTick = ProcessInfo.processInfo.systemUptime
     let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
       MainActor.assumeIsolated {
         self?.tick()
@@ -259,16 +292,23 @@ final class StarshipDirector {
 
   private func tick() {
     let now = ProcessInfo.processInfo.systemUptime
+    let dt = lastTick == 0 ? 1.0 / 60.0 : min(0.05, max(1.0 / 120.0, now - lastTick))
+    lastTick = now
     if let pending = skyboxToForget, now >= pending.at {
       StarshipSprite.forget(named: pending.name)
       skyboxToForget = nil
     }
+    let rate = keyRate.perMinute(at: now)
+    let target = StarshipGauge.level(perMinute: rate, cap: tuning.keyRateCap)
+    gaugeLevel = StarshipGauge.eased(current: gaugeLevel, target: target, dt: dt)
     CATransaction.begin()
     CATransaction.setDisableActions(true)
+    paintGauge(rate: rate)
     for slot in screens {
       slot.painter.tick(now: now)
     }
     CATransaction.commit()
+    installPendingGaugePulse()
   }
 }
 
@@ -355,6 +395,7 @@ final class StarshipStageView: NSView {
     sceneLayer.addSublayer(painter.skyboxBack)
     sceneLayer.addSublayer(painter.skyboxFront)
     sceneLayer.addSublayer(painter.shipRoot)
+    sceneLayer.addSublayer(painter.gaugeTrack)
     director.register(screenIndex: screenIndex, painter: painter)
   }
 

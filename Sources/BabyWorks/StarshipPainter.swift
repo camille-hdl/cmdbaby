@@ -2,12 +2,13 @@ import AppKit
 import BabyWorkDiagnosticsKit
 import QuartzCore
 
-/// Ciel et vaisseau d’un écran. Le `contentsRect` choisit le morceau du ciel.
+/// Ciel, vaisseau et jauge d’un écran. Le `contentsRect` choisit le morceau du ciel.
 @MainActor
 final class StarshipPainter {
   let skyboxBack = CALayer()
   let skyboxFront = CALayer()
   let shipRoot = CALayer()
+  let gaugeTrack = CALayer()
 
   private let tuning: StarshipTuning
   private let shipBob = CALayer()
@@ -24,6 +25,11 @@ final class StarshipPainter {
   private var skyboxFadeEndsAt: TimeInterval?
   /// Rotation z déjà posée sur `shipAim`. 0 : nez vers le haut.
   private var currentAimRotation = 0.0
+  private let gaugeFill = CALayer()
+  /// Dernier plafond connu, pour ne pas relancer la pulsation à chaque frame.
+  private var gaugeAtCap = false
+  /// La pulsation s’ajoute après la transaction : dedans, `setDisableActions` la jette au commit.
+  private var gaugePulsePending = false
   private var contentsScale: CGFloat
 
   private static let warpKey = "warp"
@@ -32,6 +38,15 @@ final class StarshipPainter {
   private static let boltSize = CGSize(width: 14, height: 86)
   private static let muzzleSide: CGFloat = 28
   private static let muzzleDuration = 0.12
+  private static let gaugeSize = CGSize(width: 28, height: 220)
+  private static let gaugeFromRight: CGFloat = 70
+  private static let gaugeBottom: CGFloat = 116
+  private static let gaugeCornerRadius: CGFloat = 14
+  private static let gaugeFillOrigin = CGPoint(x: 4, y: 4)
+  private static let gaugeFillWidth: CGFloat = 20
+  private static let gaugeFillSpan: CGFloat = 212
+  private static let gaugeFillCornerRadius: CGFloat = 10
+  private static let gaugePulseKey = "pulse"
 
   init(tuning: StarshipTuning, scale: CGFloat) {
     self.tuning = tuning
@@ -40,6 +55,7 @@ final class StarshipPainter {
     configureSkybox(skyboxFront, zPosition: 1)
     skyboxFront.opacity = 0
     installShip(scale: scale)
+    installGauge()
   }
 
   func setBounds(_ bounds: CGRect, scale: CGFloat) {
@@ -48,8 +64,60 @@ final class StarshipPainter {
     skyboxBack.frame = bounds
     skyboxFront.frame = bounds
     shipRoot.position = CGPoint(x: bounds.midX, y: bounds.midY)
+    gaugeTrack.frame = CGRect(
+      x: bounds.width - Self.gaugeFromRight,
+      y: Self.gaugeBottom,
+      width: Self.gaugeSize.width,
+      height: Self.gaugeSize.height
+    )
     contentsScale = scale
     shipSprite.contentsScale = scale
+    gaugeTrack.contentsScale = scale
+    gaugeFill.contentsScale = scale
+    CATransaction.commit()
+  }
+
+  /// Hauteur et couleur à chaque tick. La pulsation ne redémarre que si `atCap` change.
+  func updateGauge(level: Double, color: StarshipRGB, atCap: Bool) {
+    let clamped = min(1, max(0, level))
+    let shown = atCap ? StarshipRGB(hex: 0xFF0000) : color
+    gaugeFill.frame = CGRect(
+      x: Self.gaugeFillOrigin.x,
+      y: Self.gaugeFillOrigin.y,
+      width: Self.gaugeFillWidth,
+      height: Self.gaugeFillSpan * CGFloat(clamped)
+    )
+    gaugeFill.backgroundColor = Self.cgColor(shown)
+    guard atCap != gaugeAtCap else { return }
+    gaugeAtCap = atCap
+    if atCap {
+      gaugeTrack.shadowOpacity = 0.9
+      gaugePulsePending = true
+    } else {
+      gaugeTrack.shadowOpacity = 0
+      gaugePulsePending = false
+      gaugeTrack.removeAnimation(forKey: Self.gaugePulseKey)
+    }
+  }
+
+  /// À appeler une fois les actions réactivées.
+  func installPendingGaugePulse() {
+    guard gaugePulsePending else { return }
+    gaugePulsePending = false
+    gaugeTrack.add(Self.gaugePulse(), forKey: Self.gaugePulseKey)
+  }
+
+  func showGauge() {
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    gaugeTrack.isHidden = false
+    CATransaction.commit()
+  }
+
+  func hideGauge() {
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    gaugeTrack.isHidden = true
     CATransaction.commit()
   }
 
@@ -176,6 +244,7 @@ final class StarshipPainter {
     skyboxFadeEndsAt = nil
     shipRoot.removeAnimation(forKey: Self.warpKey)
     skyboxFront.removeAnimation(forKey: Self.skyboxFadeKey)
+    gaugeTrack.removeAnimation(forKey: Self.gaugePulseKey)
     for item in ephemerals {
       item.layer.removeFromSuperlayer()
     }
@@ -187,6 +256,7 @@ final class StarshipPainter {
     skyboxFront.opacity = 0
     CATransaction.commit()
     shipRoot.removeFromSuperlayer()
+    gaugeTrack.removeFromSuperlayer()
     skyboxFront.removeFromSuperlayer()
     skyboxBack.removeFromSuperlayer()
   }
@@ -246,6 +316,48 @@ final class StarshipPainter {
     burst.beginTime = departsAt
     flash.add(burst, forKey: "muzzle")
     return flash
+  }
+
+  private func installGauge() {
+    gaugeTrack.bounds = CGRect(origin: .zero, size: Self.gaugeSize)
+    gaugeTrack.cornerRadius = Self.gaugeCornerRadius
+    gaugeTrack.backgroundColor = NSColor.white.withAlphaComponent(0.12).cgColor
+    gaugeTrack.borderWidth = 2
+    gaugeTrack.borderColor = NSColor.white.withAlphaComponent(0.40).cgColor
+    gaugeTrack.zPosition = 40
+    gaugeTrack.isHidden = true
+    gaugeTrack.shadowColor = NSColor(srgbRed: 1, green: 0, blue: 0, alpha: 1).cgColor
+    gaugeTrack.shadowRadius = 12
+    gaugeTrack.shadowOffset = .zero
+    gaugeTrack.shadowOpacity = 0
+    gaugeTrack.shadowPath = CGPath(
+      roundedRect: CGRect(origin: .zero, size: Self.gaugeSize),
+      cornerWidth: Self.gaugeCornerRadius,
+      cornerHeight: Self.gaugeCornerRadius,
+      transform: nil
+    )
+    gaugeFill.cornerRadius = Self.gaugeFillCornerRadius
+    gaugeFill.frame = CGRect(
+      x: Self.gaugeFillOrigin.x,
+      y: Self.gaugeFillOrigin.y,
+      width: Self.gaugeFillWidth,
+      height: 0
+    )
+    gaugeTrack.addSublayer(gaugeFill)
+  }
+
+  private static func gaugePulse() -> CABasicAnimation {
+    let pulse = CABasicAnimation(keyPath: "transform.scale")
+    pulse.fromValue = 1.0
+    pulse.toValue = 1.08
+    pulse.duration = 0.35
+    pulse.autoreverses = true
+    pulse.repeatCount = .infinity
+    return pulse
+  }
+
+  private static func cgColor(_ color: StarshipRGB) -> CGColor {
+    NSColor(srgbRed: color.red, green: color.green, blue: color.blue, alpha: 1).cgColor
   }
 
   private func configureSkybox(_ layer: CALayer, zPosition: CGFloat) {
