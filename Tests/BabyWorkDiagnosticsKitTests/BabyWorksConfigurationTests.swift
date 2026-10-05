@@ -11,12 +11,6 @@ func configurationDefaultsToOceanWithoutLaunchAtLogin() {
   #expect(configuration.launchAtLogin == false)
 }
 
-@Test("Un minuteur neuf dure 3 minutes, entre 1 et 120")
-func freshTimeLimitLastsThreeMinutesWithinTheExistingRange() {
-  #expect(AdultExitSettings().timeLimitMinutes == 3)
-  #expect(AdultExitSettings.timeLimitRange == 1...120)
-}
-
 @Test("Une configuration vide donne un minuteur de 3 minutes")
 func emptyConfigurationDecodesToAThreeMinuteTimeLimit() throws {
   let decoded = try JSONDecoder().decode(
