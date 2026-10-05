@@ -260,6 +260,7 @@ private let launchAtLoginHelp =
 
 struct SettingsView: View {
   @ObservedObject var model: SettingsModel
+  let onLaunch: () -> Void
   @Environment(\.colorScheme) private var colorScheme
   @State private var section: SettingsSection
   @State private var hoveredSection: SettingsSection?
@@ -279,8 +280,9 @@ struct SettingsView: View {
   @State private var passphraseDraft = ""
   @State private var passphraseRejection: String?
 
-  init(model: SettingsModel, initialSection: SettingsSection) {
+  init(model: SettingsModel, initialSection: SettingsSection, onLaunch: @escaping () -> Void) {
     self.model = model
+    self.onLaunch = onLaunch
     _section = State(initialValue: initialSection)
   }
 
@@ -488,7 +490,7 @@ struct SettingsView: View {
 
   private var modeGrid: some View {
     LazyVGrid(
-      columns: [GridItem(.adaptive(minimum: 220), spacing: 16)],
+      columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)],
       spacing: 16
     ) {
       ForEach(KioskPlayModeCatalog.available, id: \.self) { mode in
@@ -503,51 +505,68 @@ struct SettingsView: View {
     let focused = focusedMode == mode
     let stroke = modeCardStroke(selected: selected, focused: focused)
     let name = KioskPlayModeCatalog.displayName(mode)
-    return Button {
-      model.apply(.mode(mode))
-    } label: {
-      VStack(alignment: .leading, spacing: 8) {
-        PlayModeRegistry.preview(mode)
-        Text(name)
-          .font(.system(size: 15, weight: .semibold))
-          .foregroundStyle(color(SettingsPalette.ink))
-        Text(KioskPlayModeCatalog.tagline(mode))
-          .font(.system(size: 12))
-          .foregroundStyle(color(SettingsPalette.inkMuted))
-          .lineLimit(2)
-          .multilineTextAlignment(.leading)
-          .frame(maxWidth: .infinity, minHeight: 32, alignment: .topLeading)
-      }
-      .padding(12)
-      .background(
-        RoundedRectangle(cornerRadius: SettingsWindowMetrics.cornerRadius, style: .continuous)
-          .fill(color(SettingsPalette.paperRaised))
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: SettingsWindowMetrics.cornerRadius, style: .continuous)
-          .strokeBorder(
-            color(stroke.swatch).opacity(stroke.opacity),
-            lineWidth: stroke.width
-          )
-      )
-      .overlay(alignment: .topTrailing) {
-        if selected {
-          Image(systemName: "checkmark")
-            .font(.system(size: 10, weight: .bold))
-            .foregroundStyle(color(SettingsPalette.paper))
-            .frame(width: 20, height: 20)
-            .background(Circle().fill(color(SettingsPalette.claret)))
-            .padding(10)
-            .accessibilityHidden(true)
+    return VStack(alignment: .leading, spacing: 8) {
+      Button {
+        model.apply(.mode(mode))
+      } label: {
+        VStack(alignment: .leading, spacing: 8) {
+          PlayModeRegistry.preview(mode)
+          Text(name)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(color(SettingsPalette.ink))
+          Text(KioskPlayModeCatalog.tagline(mode))
+            .font(.system(size: 12))
+            .foregroundStyle(color(SettingsPalette.inkMuted))
+            .lineLimit(2)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, minHeight: 32, alignment: .topLeading)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .buttonStyle(.plain)
+      .focused($focusedMode, equals: mode)
+      .settingsFocusRingHidden()
+      .accessibilityLabel(name)
+      .accessibilityAddTraits(selected ? .isSelected : [])
+      .accessibilityRemoveTraits(selected ? [] : .isSelected)
+
+      Button {
+        model.apply(.mode(mode))
+        onLaunch()
+      } label: {
+        Text(L10n.current("settings.mode.launch"))
+      }
+      .buttonStyle(.borderedProminent)
+      .controlSize(.small)
+      .tint(color(SettingsPalette.claret))
+      .accessibilityLabel(L10n.current("settings.mode.launch.accessibility", name))
+    }
+    .padding(12)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+      RoundedRectangle(cornerRadius: SettingsWindowMetrics.cornerRadius, style: .continuous)
+        .fill(color(SettingsPalette.paperRaised))
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: SettingsWindowMetrics.cornerRadius, style: .continuous)
+        .strokeBorder(
+          color(stroke.swatch).opacity(stroke.opacity),
+          lineWidth: stroke.width
+        )
+        .allowsHitTesting(false)
+    )
+    .overlay(alignment: .topTrailing) {
+      if selected {
+        Image(systemName: "checkmark")
+          .font(.system(size: 10, weight: .bold))
+          .foregroundStyle(color(SettingsPalette.paper))
+          .frame(width: 20, height: 20)
+          .background(Circle().fill(color(SettingsPalette.claret)))
+          .padding(10)
+          .accessibilityHidden(true)
+          .allowsHitTesting(false)
       }
     }
-    .buttonStyle(.plain)
-    .focused($focusedMode, equals: mode)
-    .settingsFocusRingHidden()
-    .accessibilityLabel(name)
-    .accessibilityAddTraits(selected ? .isSelected : [])
-    .accessibilityRemoveTraits(selected ? [] : .isSelected)
   }
 
   /// Carte sélectionnée : bord `claret`. Carte focalisée : `oxford` 2 pt.
@@ -841,6 +860,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
   private let store: BabyWorksConfigurationStore
   private let loginItem: any LoginItemRegistration
   private let log: LifecycleLogRecorder
+  private let onLaunch: () -> Void
   private var window: NSWindow?
   private var model: SettingsModel?
   private var showSequence: SettingsShowSequence?
@@ -852,11 +872,13 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
   init(
     store: BabyWorksConfigurationStore = BabyWorksConfigurationStore(),
     loginItem: any LoginItemRegistration = SMAppServiceLoginItem(),
-    log: LifecycleLogRecorder = .shared
+    log: LifecycleLogRecorder = .shared,
+    onLaunch: @escaping () -> Void
   ) {
     self.store = store
     self.loginItem = loginItem
     self.log = log
+    self.onLaunch = onLaunch
     super.init()
   }
 
@@ -877,7 +899,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     self.model = model
     let window = existingOrMakeWindow()
     let hosting = NSHostingView(
-      rootView: SettingsView(model: model, initialSection: section)
+      rootView: SettingsView(model: model, initialSection: section, onLaunch: onLaunch)
     )
     hosting.sizingOptions = []
     window.contentView = hosting

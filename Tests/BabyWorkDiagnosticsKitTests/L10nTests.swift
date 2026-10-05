@@ -9,6 +9,14 @@ func settingsMenuTitleMatchesLanguage() {
   #expect(L10nTable.language("en")("menu.settings") == "Settings…")
 }
 
+@Test("Lancer un mode : Start en anglais, Lancer en français")
+func launchModeButtonCopy() {
+  #expect(L10nTable.language("en")("settings.mode.launch") == "Start")
+  #expect(L10nTable.language("fr")("settings.mode.launch") == "Lancer")
+  #expect(L10nTable.language("en")("settings.mode.launch.accessibility", "Ocean") == "Start Ocean")
+  #expect(L10nTable.language("fr")("settings.mode.launch.accessibility", "Océan") == "Lancer Océan")
+}
+
 @Test("Une clé absente renvoie la clé")
 func missingLocalizationKeyReturnsTheKey() {
   #expect(L10nTable.language("fr")("menu.absent") == "menu.absent")

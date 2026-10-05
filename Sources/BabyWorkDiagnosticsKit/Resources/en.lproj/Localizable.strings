@@ -1,3 +1,5 @@
 "menu.startSession" = "Start Session";
 "menu.settings" = "Settings…";
 "menu.quit" = "Quit";
+"settings.mode.launch" = "Start";
+"settings.mode.launch.accessibility" = "Start %@";

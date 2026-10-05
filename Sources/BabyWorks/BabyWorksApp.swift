@@ -22,11 +22,19 @@ enum BabyWorksMain {
 final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
   private let model: DiagnosticsSessionModel
   private var statusItem: NSStatusItem?
-  private let settingsWindowController = SettingsWindowController()
+  private lazy var settingsWindowController = SettingsWindowController { [weak self] in
+    self?.launchFromSettings()
+  }
 
   override init() {
     model = DiagnosticsSessionModel()
     super.init()
+  }
+
+  /// « Lancer » sur une carte : ferme les Réglages, puis le même départ que le menu.
+  private func launchFromSettings() {
+    settingsWindowController.hide()
+    model.startKiosk()
   }
 
   func applicationDidFinishLaunching(_ notification: Notification) {

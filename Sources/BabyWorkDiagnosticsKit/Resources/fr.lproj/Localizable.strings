@@ -1,3 +1,5 @@
 "menu.startSession" = "Lancer session";
 "menu.settings" = "Réglages…";
 "menu.quit" = "Quitter";
+"settings.mode.launch" = "Lancer";
+"settings.mode.launch.accessibility" = "Lancer %@";
