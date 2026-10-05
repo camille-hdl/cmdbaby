@@ -34,6 +34,40 @@ func largestScreenIndexOfEmptyListIsNil() {
   #expect(TerminalScreenLayout.largestScreenIndex(screens) == nil)
 }
 
+@Test("Le centre de la cellule, pas le clic brut, décide si la colonne coule")
+func cellCenterDecidesWhetherAClickColumnFlows() {
+  let offset = TerminalScreenLayout(screens: [
+    TerminalScreen(index: 0, x: 0, y: 0, width: 1920, height: 1080),
+    TerminalScreen(index: 1, x: 1500, y: 1080, width: 1440, height: 900),
+  ])
+  let onTheEdge = 1920.0
+  let columnX = TerminalStyle.snapToGrid(x: onTheEdge)
+  let centerX = columnX + TerminalStyle.cellWidth / 2
+  #expect(columnX == 1904)
+  #expect(offset.highestScreen(atX: centerX)?.index == 1)
+  #expect(offset.fallFloor(atX: centerX, fromTopY: 1980) == 0)
+  #expect(offset.fallFloor(atX: onTheEdge, fromTopY: 1980) == 1080)
+
+  let sideBySide = TerminalScreenLayout(screens: [
+    TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900),
+    TerminalScreen(index: 1, x: 1440, y: 0, width: 1920, height: 1080),
+  ])
+  let boundary = 1440.0
+  let boundaryCenter = TerminalStyle.snapToGrid(x: boundary) + TerminalStyle.cellWidth / 2
+  #expect(sideBySide.highestScreen(atX: boundaryCenter)?.index == 0)
+  #expect(sideBySide.highestScreen(atX: boundary)?.index == 1)
+}
+
+@Test("Un point couvert par deux écrans appartient au plus haut")
+func pointCoveredByTwoScreensBelongsToTheHigherOne() {
+  let layout = TerminalScreenLayout(screens: [
+    TerminalScreen(index: 0, x: 0, y: 0, width: 1920, height: 1081),
+    TerminalScreen(index: 1, x: 240, y: 1080, width: 1440, height: 900),
+  ])
+  #expect(layout.screen(atX: 500, y: 1080.5)?.index == 1)
+  #expect(layout.screen(atX: 100, y: 500)?.index == 0)
+}
+
 @Test("Un seul écran est du haut et la colonne s’arrête à son bas")
 func singleScreenIsTheTopAndTheColumnStopsAtItsFloor() {
   let layout = TerminalScreenLayout(screens: [
@@ -97,6 +131,7 @@ func onePointGapFlowsAndFiftyPointGapStops() {
   ])
   #expect(flowing.topScreenIndices == [1])
   #expect(flowing.fallFloor(atX: 100, fromTopY: 1801) == 0)
+  #expect(flowing.screen(atX: 100, y: 900.5) == nil)
 
   let stopped = TerminalScreenLayout(screens: [
     TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900),

@@ -97,23 +97,19 @@ final class TerminalDirector {
     publish()
   }
 
-  /// Fait tomber une colonne depuis l’écran le plus haut à cette abscisse.
-  /// Ignorée si le plafond de colonnes est atteint.
+  /// Fait tomber une colonne depuis l’écran le plus haut au centre de sa cellule.
+  /// Le clic est ramené sur la grille. `screenIndex` ignore le clic tant que cet écran n’a pas de cadre.
   func spawnColumn(atGlobalX x: Double, screenIndex: Int) {
     guard activeColumnCount < tuning.maxActiveColumns else { return }
     guard screens.contains(where: { $0.index == screenIndex && $0.frame != nil }) else { return }
-    guard let highest = layout.highestScreen(atX: x) else { return }
-    let topY = highest.y + highest.height
+    let columnX = TerminalStyle.snapToGrid(x: x)
+    guard let highest = layout.highestScreen(atX: columnCenterX(columnX)) else { return }
     let id = nextColumnID
     nextColumnID += 1
     columns.append(
       FallingColumn(
         id: id,
-        column: makeColumn(
-          x: TerminalStyle.snapToGrid(x: x),
-          topY: topY,
-          floorY: layout.fallFloor(atX: x, fromTopY: topY)
-        )
+        column: columnOnGrid(x: columnX, topY: highest.y + highest.height)
       )
     )
     startRainTicker()
@@ -259,11 +255,7 @@ final class TerminalDirector {
     for spawn in spawns {
       let id = nextColumnID
       nextColumnID += 1
-      let column = makeColumn(
-        x: spawn.x,
-        topY: spawn.topY,
-        floorY: layout.fallFloor(atX: spawn.x, fromTopY: spawn.topY)
-      )
+      let column = columnOnGrid(x: spawn.x, topY: spawn.topY)
       let delay = startDelay(for: request)
       if delay <= 0 {
         columns.append(FallingColumn(id: id, column: column))
@@ -285,6 +277,19 @@ final class TerminalDirector {
     }
   }
 
+  /// Le sol suit le centre de la cellule, le même point que le painter qui la dessine.
+  private func columnOnGrid(x: Double, topY: Double) -> TerminalRainColumn {
+    makeColumn(
+      x: x,
+      topY: topY,
+      floorY: layout.fallFloor(atX: columnCenterX(x), fromTopY: topY)
+    )
+  }
+
+  private func columnCenterX(_ x: Double) -> Double {
+    x + TerminalStyle.cellWidth / 2
+  }
+
   private func makeColumn(x: Double, topY: Double, floorY: Double) -> TerminalRainColumn {
     TerminalRainColumn(
       x: x,
@@ -299,7 +304,7 @@ final class TerminalDirector {
   /// la colonne continue, elle n’est juste pas dessinée.
   private func deliver(_ bottoms: [Double], of column: FallingColumn, now: TimeInterval) {
     for bottomY in bottoms {
-      let centerX = column.column.x + TerminalStyle.cellWidth / 2
+      let centerX = columnCenterX(column.column.x)
       let centerY = bottomY + TerminalStyle.cellHeight / 2
       guard let painter = painterContaining(x: centerX, y: centerY) else { continue }
       releaseColumnHead(column.id)
@@ -320,16 +325,8 @@ final class TerminalDirector {
   }
 
   private func painterContaining(x: Double, y: Double) -> TerminalPainter? {
-    let point = CGPoint(x: x, y: y)
-    var match: (top: CGFloat, index: Int, painter: TerminalPainter)?
-    for slot in screens {
-      guard let frame = slot.frame, frame.contains(point) else { continue }
-      if let match, frame.maxY < match.top || (frame.maxY == match.top && slot.index >= match.index) {
-        continue
-      }
-      match = (frame.maxY, slot.index, slot.painter)
-    }
-    return match?.painter
+    guard let screen = layout.screen(atX: x, y: y) else { return nil }
+    return screens.first { $0.index == screen.index }?.painter
   }
 
   private func launchDueColumns(at now: TimeInterval) {

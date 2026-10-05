@@ -55,10 +55,17 @@ public struct TerminalScreenLayout: Equatable, Sendable {
     highest(among: screens.filter { containsHorizontally($0, x: x) })
   }
 
+  /// Écran dont le cadre demi-ouvert contient le point. S’il y en a plusieurs, le plus haut.
+  public func screen(atX x: Double, y: Double) -> TerminalScreen? {
+    highest(among: screens.filter { screen in
+      containsHorizontally(screen, x: x) && y >= screen.y && y < top(of: screen)
+    })
+  }
+
   /// Bas du dernier écran atteint en descendant depuis `(x, topY - 1)`.
   /// Un trou plus grand que `edgeTolerance` arrête la colonne. Sans écran de départ, renvoie `topY`.
   public func fallFloor(atX x: Double, fromTopY topY: Double) -> Double {
-    guard var current = screenContaining(x: x, y: topY - 1) else { return topY }
+    guard var current = screen(atX: x, y: topY - 1) else { return topY }
     var steps = 0
     while steps < screens.count, let below = screenBelow(current, atX: x) {
       current = below
@@ -112,12 +119,6 @@ public struct TerminalScreenLayout: Equatable, Sendable {
 
   private func containsHorizontally(_ screen: TerminalScreen, x: Double) -> Bool {
     x >= screen.x && x < screen.x + screen.width
-  }
-
-  private func screenContaining(x: Double, y: Double) -> TerminalScreen? {
-    highest(among: screens.filter { screen in
-      containsHorizontally(screen, x: x) && y >= screen.y && y < top(of: screen)
-    })
   }
 
   /// Écran qui contient `x` et dont le haut touche le bas de `current`, à la tolérance près.
