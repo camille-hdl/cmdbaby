@@ -119,6 +119,18 @@ func permissionsAccessibilityCopy() {
   )
 }
 
+@Test("L’alerte de phrase intapable nomme les lettres manquantes")
+func passphraseNotTypableAlertCopy() {
+  #expect(
+    L10nTable.language("fr")("alert.passphraseNotTypable", "é")
+      == "La phrase de sortie ne peut pas être tapée avec la disposition clavier active (lettres absentes : é). Changez de phrase ou activez Maj-Échap."
+  )
+  #expect(
+    L10nTable.language("en")("alert.passphraseNotTypable", "é")
+      == "The exit phrase can't be typed with the active keyboard layout (missing letters: é). Change the phrase or turn on Shift-Escape."
+  )
+}
+
 @Test("Une clé absente renvoie la clé")
 func missingLocalizationKeyReturnsTheKey() {
   #expect(L10nTable.language("fr")("menu.absent") == "menu.absent")

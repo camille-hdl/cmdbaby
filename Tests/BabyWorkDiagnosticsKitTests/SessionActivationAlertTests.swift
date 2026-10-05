@@ -44,6 +44,22 @@ func accessibilityFailureAlertIdentifiesRunningBinaryAndGuidesTCCRegrant() {
   #expect(alert.actions.contains(.openAccessibilitySettings))
 }
 
+@Test("Une phrase intapable nomme les lettres absentes et propose les Réglages")
+func passphraseNotTypableAlertNamesTheMissingLetters() {
+  let alert = SessionActivationAlert.forFailedActivation(
+    .passphraseNotTypable(["é", "ü"]),
+    table: .language("fr")
+  )
+
+  #expect(alert.title == "La session n’a pas pu démarrer")
+  #expect(
+    alert.informativeText
+      == "La phrase de sortie ne peut pas être tapée avec la disposition clavier active (lettres absentes : é ü). Changez de phrase ou activez Maj-Échap."
+  )
+  #expect(alert.actions == [.openAppSettings, .dismiss])
+  #expect(alert.settingsSection == .exits)
+}
+
 @Test("Un échec d’activation oriente vers Réglages, pas vers les outils parents")
 func activationFailureAlertDoesNotPresentDiagnostics() {
   let alert = SessionActivationAlert.forFailedActivation(.noScreens)
@@ -54,4 +70,5 @@ func activationFailureAlertDoesNotPresentDiagnostics() {
   #expect(!alert.informativeText.contains("Outils parents"))
   #expect(!alert.informativeText.localizedCaseInsensitiveContains("défaillance"))
   #expect(alert.actions == [.openAppSettings, .dismiss])
+  #expect(alert.settingsSection == nil)
 }

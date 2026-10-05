@@ -27,3 +27,4 @@
 "settings.permissions.accessibility.attention" = "Turn on BabyWorks in System Settings › Privacy & Security › Accessibility. If BabyWorks is already on, remove it with “–”, then add it again: the entry is stale after an update or a copy.";
 "settings.permissions.action.request" = "Request Access";
 "settings.permissions.action.openSettings" = "Open System Settings";
+"alert.passphraseNotTypable" = "The exit phrase can't be typed with the active keyboard layout (missing letters: %@). Change the phrase or turn on Shift-Escape.";

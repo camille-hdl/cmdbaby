@@ -72,10 +72,26 @@ final class DiagnosticsSessionModel: ObservableObject {
     }
 
     KeyboardLayoutLetter.shared.refreshFromCurrentLayout()
+    let configuration = BabyWorksConfigurationStore().load()
+    let typability = PassphraseTypability.check(
+      configuration.exits.passphrase,
+      layoutLetters: KeyboardLayoutLetter.shared.snapshot()
+    )
+    if case .blocked(let missingLetters) = SessionLaunchCheck.evaluate(
+      exits: configuration.exits,
+      typability: typability
+    ) {
+      // L’alerte est modale : au tour suivant, le menu ou les Réglages sont déjà refermés.
+      Task { @MainActor [weak self] in
+        self?.presentActivationFailure?(.passphraseNotTypable(missingLetters))
+      }
+      return
+    }
+
     kioskController.injectedFailure = nil
     isTerminationBlocked = true
     endRequest = nil
-    environment.prepareSession(BabyWorksConfigurationStore().load())
+    environment.prepareSession(configuration)
 
     kioskTask = Task { [weak self] in
       guard let self else { return }

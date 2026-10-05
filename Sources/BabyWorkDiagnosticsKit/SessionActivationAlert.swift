@@ -6,6 +6,8 @@ public struct SessionActivationAlert: Equatable, Sendable {
   public let title: String
   public let informativeText: String
   public let actions: [Action]
+  /// Section ouverte par « Réglages… ». `nil` garde le routage actuel, Mode de jeu.
+  public let settingsSection: InitialSettingsSection?
 
   public enum Action: Equatable, Sendable {
     case openAccessibilitySettings
@@ -31,18 +33,25 @@ public struct SessionActivationAlert: Equatable, Sendable {
 
   public static func forFailedActivation(
     _ error: KioskSessionError,
-    runningBinaryURL: URL? = nil
+    runningBinaryURL: URL? = nil,
+    table: L10nTable = .current
   ) -> SessionActivationAlert {
     SessionActivationAlert(
       title: "La session n’a pas pu démarrer",
-      informativeText: informativeText(for: error, runningBinaryURL: runningBinaryURL),
-      actions: actions(for: error)
+      informativeText: informativeText(
+        for: error,
+        runningBinaryURL: runningBinaryURL,
+        table: table
+      ),
+      actions: actions(for: error),
+      settingsSection: settingsSection(for: error)
     )
   }
 
   private static func informativeText(
     for error: KioskSessionError,
-    runningBinaryURL: URL?
+    runningBinaryURL: URL?,
+    table: L10nTable
   ) -> String {
     switch error {
     case .filterUnavailable(let reason):
@@ -53,6 +62,8 @@ public struct SessionActivationAlert: Equatable, Sendable {
       "Les options de présentation kiosque ont été refusées. Relancez l’application et réessayez."
     case .injectedFailure:
       "La session n’a pas pu démarrer. Réessayez depuis le menu."
+    case .passphraseNotTypable(let letters):
+      passphraseNotTypableText(letters, table: table)
     }
   }
 
@@ -76,8 +87,24 @@ public struct SessionActivationAlert: Equatable, Sendable {
     switch error {
     case .filterUnavailable:
       [.openAccessibilitySettings, .openAppSettings, .dismiss]
-    case .noScreens, .presentationRejected, .injectedFailure:
+    case .noScreens, .presentationRejected, .injectedFailure, .passphraseNotTypable:
       [.openAppSettings, .dismiss]
     }
+  }
+
+  private static func settingsSection(for error: KioskSessionError) -> InitialSettingsSection? {
+    switch error {
+    case .passphraseNotTypable:
+      .exits
+    case .filterUnavailable, .noScreens, .presentationRejected, .injectedFailure:
+      nil
+    }
+  }
+
+  static func passphraseNotTypableText(_ letters: [Character], table: L10nTable) -> String {
+    table(
+      "alert.passphraseNotTypable",
+      letters.map(String.init).joined(separator: " ")
+    )
   }
 }

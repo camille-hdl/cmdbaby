@@ -27,3 +27,4 @@
 "settings.permissions.accessibility.attention" = "Cochez BabyWorks dans Réglages Système › Confidentialité et sécurité › Accessibilité. Si BabyWorks y est déjà cochée, retirez-la avec « – », puis ajoutez-la de nouveau : l’entrée est périmée après une mise à jour ou une copie.";
 "settings.permissions.action.request" = "Demander l’accès";
 "settings.permissions.action.openSettings" = "Ouvrir Réglages Système";
+"alert.passphraseNotTypable" = "La phrase de sortie ne peut pas être tapée avec la disposition clavier active (lettres absentes : %@). Changez de phrase ou activez Maj-Échap.";

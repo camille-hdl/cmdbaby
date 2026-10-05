@@ -170,7 +170,11 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     case .openAccessibilitySettings:
       openAccessibilitySettings()
     case .openAppSettings:
-      openSettings(nil)
+      if let section = spec.settingsSection {
+        openSettings(section: SettingsSection(section))
+      } else {
+        openSettings(nil)
+      }
     case .dismiss:
       break
     }
