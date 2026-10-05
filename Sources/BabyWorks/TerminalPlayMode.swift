@@ -949,6 +949,8 @@ final class TerminalStageView: NSView {
     guard let window else { return }
     let x = Double(window.frame.minX + event.locationInWindow.x)
     director.noteClick(screenIndex: screenIndex, globalX: x)
+    // Sans ça, la fenêtre cliquée devient key sans first responder : la frappe suivante se perd.
+    window.makeFirstResponder(self)
   }
 
   override var acceptsFirstResponder: Bool { true }
