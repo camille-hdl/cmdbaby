@@ -34,7 +34,13 @@ final class KeyboardLayoutLetter: @unchecked Sendable {
     let cached = letters(for: keyCode)
     let typed = charactersIgnoringModifiers.lowercased().first { $0.isLetter }
     var recognized = cached.merged
-    if let typed { recognized.insert(typed) }
+    if recognized.isEmpty {
+      if let typed { recognized = [typed] }
+    } else if let typed, let active = cached.active, typed != active {
+      // L’événement prime sur la disposition active, comme avant ; la lettre ASCII reste.
+      recognized.remove(active)
+      recognized.insert(typed)
+    }
     return (recognized, typed ?? cached.active)
   }
 
@@ -50,11 +56,9 @@ final class KeyboardLayoutLetter: @unchecked Sendable {
     defer {
       NotificationCenter.default.post(name: Self.didChangeNotification, object: self)
     }
-    guard let inputSource = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue() else {
-      return
-    }
-    layoutName = localizedName(of: inputSource)
-    let active = unicodeLetters(of: inputSource)
+    let inputSource = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue()
+    layoutName = inputSource.flatMap { localizedName(of: $0) }
+    let active = inputSource.flatMap { unicodeLetters(of: $0) }
     let asciiSource = TISCopyCurrentASCIICapableKeyboardLayoutInputSource()?.takeRetainedValue()
     let ascii = asciiSource.flatMap { unicodeLetters(of: $0) }
     replaceTables(merged: merge(active: active, ascii: ascii), active: active ?? [:])

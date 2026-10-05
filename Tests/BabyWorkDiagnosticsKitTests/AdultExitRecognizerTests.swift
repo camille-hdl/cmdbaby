@@ -2,6 +2,16 @@ import Testing
 
 @testable import BabyWorkDiagnosticsKit
 
+/// Touches ЙЦУКЕН de « parent » : lettre cyrillique de la disposition, lettre latine ASCII.
+private let russianAndLatinParentKeys: [Set<Character>] = [
+  ["з", "p"],
+  ["ф", "a"],
+  ["к", "r"],
+  ["у", "e"],
+  ["т", "n"],
+  ["е", "t"],
+]
+
 @Test("parent puis Entrée dans la fenêtre arrête la session")
 func passphraseThenReturnWithinWindowExits() {
   let clock = ManualClock(now: 10)
@@ -16,15 +26,7 @@ func passphraseThenReturnWithinWindowExits() {
 @Test("Chaque touche cyrillique et latine reconnaît parent puis Entrée")
 func cyrillicAndLatinLettersRecognizeParent() {
   let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: ManualClock(now: 0))
-  let keys: [Set<Character>] = [
-    ["з", "p"],
-    ["ф", "a"],
-    ["к", "r"],
-    ["у", "e"],
-    ["т", "n"],
-    ["е", "t"],
-  ]
-  for letters in keys {
+  for letters in russianAndLatinParentKeys {
     #expect(recognizer.handleKeyDown(letters: letters, isReturn: false) == nil)
   }
   #expect(recognizer.handleKeyDown(letters: [], isReturn: true) == .passphrase)
@@ -48,15 +50,7 @@ func lettersOutsideTheExpectedOneClearTheBuffer() {
   #expect(recognizer.prefixLength == 1)
   #expect(recognizer.handleKeyDown(letters: ["ы", "s"], isReturn: false) == nil)
   #expect(recognizer.prefixLength == 0)
-  let keys: [Set<Character>] = [
-    ["з", "p"],
-    ["ф", "a"],
-    ["к", "r"],
-    ["у", "e"],
-    ["т", "n"],
-    ["е", "t"],
-  ]
-  for letters in keys {
+  for letters in russianAndLatinParentKeys {
     #expect(recognizer.handleKeyDown(letters: letters, isReturn: false) == nil)
   }
   #expect(recognizer.handleKeyDown(letters: [], isReturn: true) == .passphrase)

@@ -235,9 +235,8 @@ final class SessionInputFilter: @unchecked Sendable {
     let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
     let modifiers = InputModifierMask(cgEventFlags: event.flags)
     let cached = KeyboardLayoutLetter.shared.letters(for: keyCode)
-    let fallback = cached.merged.isEmpty || cached.active == nil ? unicodeLetter(from: event) : nil
-    let letters = letterFromEvent(cached: cached.merged, fallback: fallback)
-    let shown = cached.active ?? fallback
+    let letters = letterFromEvent(event, cached: cached.merged)
+    let shown = cached.active ?? unicodeLetter(from: event)
     let isReturn = keyCode == 0x24 || keyCode == 0x4C
     let isEscape = keyCode == 0x35
     let shiftDown = modifiers.contains(.shift)
@@ -293,11 +292,11 @@ final class SessionInputFilter: @unchecked Sendable {
     onCountsChange([:])
   }
 
-  private func letterFromEvent(cached: Set<Character>, fallback: Character?) -> Set<Character> {
+  private func letterFromEvent(_ event: CGEvent, cached: Set<Character>) -> Set<Character> {
     if !cached.isEmpty {
       return cached
     }
-    if let fallback {
+    if let fallback = unicodeLetter(from: event) {
       return [fallback]
     }
     return []
