@@ -14,6 +14,40 @@ func skyboxRotationFirstDrawStaysInTheCatalog() {
   #expect(seen.count == StarshipCatalog.skyboxes.count)
 }
 
+@Test("La skybox suivante n’est jamais celle affichée et reste dans le catalogue")
+func skyboxRotationNextSkipsTheCurrentSky() {
+  for current in StarshipCatalog.skyboxes {
+    var rng = SplitMix64(seed: 1)
+    for _ in 0..<100 {
+      let name = StarshipSkyboxRotation.next(after: current, using: &rng)
+      #expect(name != current)
+      #expect(StarshipCatalog.skyboxes.contains(name))
+    }
+  }
+}
+
+@Test("Quatre cents tirages après skybox-space-band couvrent les quatre autres ciels")
+func skyboxRotationNextCoversTheOtherSkies() {
+  var rng = SplitMix64(seed: 1)
+  var seen: Set<String> = []
+  for _ in 0..<400 {
+    seen.insert(StarshipSkyboxRotation.next(after: "skybox-space-band", using: &rng))
+  }
+  #expect(seen == [
+    "skybox-space-dark",
+    "skybox-space-day",
+    "skybox-space-galaxy",
+    "skybox-space-nebula",
+  ])
+}
+
+@Test("Une skybox inconnue laisse place à un ciel du catalogue")
+func skyboxRotationNextDrawsFromTheCatalogWhenCurrentIsUnknown() {
+  var rng = SplitMix64(seed: 1)
+  let name = StarshipSkyboxRotation.next(after: "inconnu", using: &rng)
+  #expect(StarshipCatalog.skyboxes.contains(name))
+}
+
 private struct SplitMix64: RandomNumberGenerator {
   private var state: UInt64
 

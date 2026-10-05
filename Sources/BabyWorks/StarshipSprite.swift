@@ -21,6 +21,11 @@ enum StarshipSprite {
     return cgImage
   }
 
+  /// Retire une image du cache. Un calque qui l’affiche encore la retient jusqu’à la fin du fondu.
+  static func forget(named name: String) {
+    cache.removeValue(forKey: name)
+  }
+
   static func purge() {
     cache.removeAll(keepingCapacity: false)
   }
