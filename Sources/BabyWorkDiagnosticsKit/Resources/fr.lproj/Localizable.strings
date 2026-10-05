@@ -35,4 +35,8 @@
 "settings.permissions.launchAtLogin.ok" = "BabyWorks s’ouvrira à la connexion.";
 "settings.permissions.launchAtLogin.requiresApproval" = "macOS attend votre accord pour ouvrir BabyWorks à la connexion.";
 "settings.permissions.launchAtLogin.notRegistered" = "Le démarrage automatique n’a pas pu être enregistré. Désactivez-le puis réactivez-le dans Général.";
+"settings.permissions.passphrase.title" = "Phrase de sortie";
+"settings.permissions.passphrase.ok" = "La phrase de sortie se tape avec la disposition « %@ ».";
+"settings.permissions.passphrase.attention" = "Lettres absentes de la disposition « %@ » : %@.";
+"settings.permissions.action.changePhrase" = "Modifier la phrase";
 "alert.passphraseNotTypable" = "La phrase de sortie ne peut pas être tapée avec la disposition clavier active (lettres absentes : %@). Changez de phrase ou activez Maj-Échap.";

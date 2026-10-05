@@ -18,6 +18,10 @@ public struct L10nTable: Sendable {
 
   /// Chaîne de la clé, formatée avec `arguments`. Clé absente : renvoie la clé.
   public func callAsFunction(_ key: String, _ arguments: CVarArg...) -> String {
+    format(key, arguments: arguments)
+  }
+
+  func format(_ key: String, arguments: [CVarArg]) -> String {
     guard let format = entries[key] else { return key }
     guard !arguments.isEmpty else { return format }
     return String(format: format, locale: Locale(identifier: languageCode), arguments: arguments)

@@ -8,19 +8,30 @@ public struct SetupFacts: Equatable, Sendable {
   /// Vrai quand la configuration demande le démarrage automatique.
   public var launchAtLoginRequested: Bool
   public var loginItemStatus: LoginItemStatus
+  /// Vrai quand la sortie phrase est active.
+  public var passphraseEnabled: Bool
+  public var passphraseTypability: PassphraseTypability
+  /// Nom localisé de la disposition active.
+  public var layoutName: String?
 
   public init(
     accessibilityGranted: Bool,
     bundlePath: String,
     homeDirectory: String,
     launchAtLoginRequested: Bool,
-    loginItemStatus: LoginItemStatus
+    loginItemStatus: LoginItemStatus,
+    passphraseEnabled: Bool,
+    passphraseTypability: PassphraseTypability,
+    layoutName: String?
   ) {
     self.accessibilityGranted = accessibilityGranted
     self.bundlePath = bundlePath
     self.homeDirectory = homeDirectory
     self.launchAtLoginRequested = launchAtLoginRequested
     self.loginItemStatus = loginItemStatus
+    self.passphraseEnabled = passphraseEnabled
+    self.passphraseTypability = passphraseTypability
+    self.layoutName = layoutName
   }
 }
 
@@ -28,6 +39,7 @@ public enum SetupCheckID: Equatable, Sendable, Hashable {
   case accessibility
   case location
   case launchAtLogin
+  case passphrase
 }
 
 public enum SetupCheckState: Equatable, Sendable {
@@ -40,6 +52,7 @@ public enum SetupAction: Equatable, Sendable, Hashable {
   case openAccessibilitySettings
   case revealInFinder
   case openLoginItemsSettings
+  case showExitsSection
 }
 
 /// Une vérification de la section Permissions.
@@ -48,6 +61,7 @@ public struct SetupCheck: Equatable, Sendable {
   public let state: SetupCheckState
   public let titleKey: String
   public let detailKey: String
+  public let detailArguments: [String]
   public let actions: [SetupAction]
 
   public init(
@@ -55,13 +69,20 @@ public struct SetupCheck: Equatable, Sendable {
     state: SetupCheckState,
     titleKey: String,
     detailKey: String,
+    detailArguments: [String] = [],
     actions: [SetupAction]
   ) {
     self.id = id
     self.state = state
     self.titleKey = titleKey
     self.detailKey = detailKey
+    self.detailArguments = detailArguments
     self.actions = actions
+  }
+
+  /// Détail tel que le parent le lit, arguments compris.
+  public func localizedDetail(in table: L10nTable) -> String {
+    table.format(detailKey, arguments: detailArguments.map { $0 as CVarArg })
   }
 }
 
@@ -83,6 +104,13 @@ public struct SetupChecklist: Equatable, Sendable {
       status: facts.loginItemStatus
     ) {
       checks.append(launchAtLogin)
+    }
+    if let passphrase = Self.passphrase(
+      enabled: facts.passphraseEnabled,
+      typability: facts.passphraseTypability,
+      layoutName: facts.layoutName
+    ) {
+      checks.append(passphrase)
     }
     self.checks = checks
   }
@@ -159,5 +187,34 @@ public struct SetupChecklist: Equatable, Sendable {
         actions: []
       )
     }
+  }
+
+  /// Seulement si la sortie phrase est active.
+  private static func passphrase(
+    enabled: Bool,
+    typability: PassphraseTypability,
+    layoutName: String?
+  ) -> SetupCheck? {
+    guard enabled else { return nil }
+    let name = layoutName ?? ""
+    if typability.isTypable {
+      return SetupCheck(
+        id: .passphrase,
+        state: .ok,
+        titleKey: "settings.permissions.passphrase.title",
+        detailKey: "settings.permissions.passphrase.ok",
+        detailArguments: [name],
+        actions: []
+      )
+    }
+    let missing = typability.missingLetters.map(String.init).joined(separator: " ")
+    return SetupCheck(
+      id: .passphrase,
+      state: .attention,
+      titleKey: "settings.permissions.passphrase.title",
+      detailKey: "settings.permissions.passphrase.attention",
+      detailArguments: [name, missing],
+      actions: [.showExitsSection]
+    )
   }
 }

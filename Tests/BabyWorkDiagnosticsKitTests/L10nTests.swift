@@ -172,6 +172,30 @@ func permissionsLocationAndLaunchAtLoginCopy() {
   )
 }
 
+@Test("Permissions : phrase de sortie tapable, intapable, et Modifier la phrase")
+func permissionsPassphraseCopy() {
+  #expect(L10nTable.language("fr")("settings.permissions.passphrase.title") == "Phrase de sortie")
+  #expect(L10nTable.language("en")("settings.permissions.passphrase.title") == "Exit Phrase")
+  #expect(
+    L10nTable.language("fr")("settings.permissions.passphrase.ok", "Français")
+      == "La phrase de sortie se tape avec la disposition « Français »."
+  )
+  #expect(
+    L10nTable.language("en")("settings.permissions.passphrase.ok", "French")
+      == "The exit phrase is typed with the “French” layout."
+  )
+  #expect(
+    L10nTable.language("fr")("settings.permissions.passphrase.attention", "U.S.", "é")
+      == "Lettres absentes de la disposition « U.S. » : é."
+  )
+  #expect(
+    L10nTable.language("en")("settings.permissions.passphrase.attention", "U.S.", "é")
+      == "Letters missing from the “U.S.” layout: é."
+  )
+  #expect(L10nTable.language("fr")("settings.permissions.action.changePhrase") == "Modifier la phrase")
+  #expect(L10nTable.language("en")("settings.permissions.action.changePhrase") == "Change Phrase")
+}
+
 @Test("L’alerte de phrase intapable nomme les lettres manquantes")
 func passphraseNotTypableAlertCopy() {
   #expect(

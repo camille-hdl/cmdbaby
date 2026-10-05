@@ -377,7 +377,11 @@ struct SettingsView: View {
     _permissions = StateObject(
       wrappedValue: PermissionsMonitor(
         loginItem: loginItem,
-        launchAtLoginRequested: { model.configuration.launchAtLogin }
+        launchAtLoginRequested: { model.configuration.launchAtLogin },
+        passphraseEnabled: {
+          model.configuration.exits.enabledMethods.contains(.passphrase)
+        },
+        passphrase: { model.configuration.exits.passphrase }
       )
     )
     _section = State(initialValue: initialSection)
@@ -408,6 +412,14 @@ struct SettingsView: View {
     .onAppear {
       permissions.setSectionVisible(section == .permissions)
       permissions.setWindowVisible(presence.isVisible)
+    }
+    .onChange(of: model.configuration) { _ in
+      permissions.refresh()
+    }
+    .onReceive(
+      NotificationCenter.default.publisher(for: KeyboardLayoutLetter.didChangeNotification)
+    ) { _ in
+      permissions.refresh()
     }
     .onChange(of: section) { newSection in
       permissions.setSectionVisible(newSection == .permissions)
@@ -1002,7 +1014,7 @@ struct SettingsView: View {
   private func permissionsGroup(_ check: SetupCheck) -> some View {
     let symbol = permissionsSymbol(check.state)
     return SettingsGroup {
-      SettingsRow(help: L10n.current(check.detailKey)) {
+      SettingsRow(help: check.localizedDetail(in: L10n.current)) {
         HStack(spacing: 8) {
           Image(systemName: symbol.name)
             .font(.system(size: 16))
@@ -1054,6 +1066,8 @@ struct SettingsView: View {
       L10n.current("settings.permissions.action.openSettings")
     case .revealInFinder:
       L10n.current("settings.permissions.action.revealInFinder")
+    case .showExitsSection:
+      L10n.current("settings.permissions.action.changePhrase")
     }
   }
 
@@ -1067,6 +1081,8 @@ struct SettingsView: View {
       NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
     case .openLoginItemsSettings:
       SMAppService.openSystemSettingsLoginItems()
+    case .showExitsSection:
+      section = .exits
     }
   }
 
@@ -1202,16 +1218,24 @@ private final class PermissionsMonitor: ObservableObject {
   private var windowVisible = false
   private let loginItem: any LoginItemRegistration
   private let launchAtLoginRequested: @MainActor () -> Bool
+  private let passphraseEnabled: @MainActor () -> Bool
+  private let passphrase: @MainActor () -> ExitPassphrase
 
   init(
     loginItem: any LoginItemRegistration,
-    launchAtLoginRequested: @escaping @MainActor () -> Bool
+    launchAtLoginRequested: @escaping @MainActor () -> Bool,
+    passphraseEnabled: @escaping @MainActor () -> Bool,
+    passphrase: @escaping @MainActor () -> ExitPassphrase
   ) {
     self.loginItem = loginItem
     self.launchAtLoginRequested = launchAtLoginRequested
+    self.passphraseEnabled = passphraseEnabled
+    self.passphrase = passphrase
     checklist = Self.checklist(
       loginItem: loginItem,
-      launchAtLoginRequested: launchAtLoginRequested()
+      launchAtLoginRequested: launchAtLoginRequested(),
+      passphraseEnabled: passphraseEnabled(),
+      passphrase: passphrase()
     )
   }
 
@@ -1247,10 +1271,12 @@ private final class PermissionsMonitor: ObservableObject {
     }
   }
 
-  private func refresh() {
+  fileprivate func refresh() {
     let checklist = Self.checklist(
       loginItem: loginItem,
-      launchAtLoginRequested: launchAtLoginRequested()
+      launchAtLoginRequested: launchAtLoginRequested(),
+      passphraseEnabled: passphraseEnabled(),
+      passphrase: passphrase()
     )
     guard checklist != self.checklist else { return }
     self.checklist = checklist
@@ -1258,7 +1284,9 @@ private final class PermissionsMonitor: ObservableObject {
 
   private static func checklist(
     loginItem: any LoginItemRegistration,
-    launchAtLoginRequested: Bool
+    launchAtLoginRequested: Bool,
+    passphraseEnabled: Bool,
+    passphrase: ExitPassphrase
   ) -> SetupChecklist {
     SetupChecklist(
       facts: SetupFacts(
@@ -1266,7 +1294,13 @@ private final class PermissionsMonitor: ObservableObject {
         bundlePath: Bundle.main.bundlePath,
         homeDirectory: FileManager.default.homeDirectoryForCurrentUser.path,
         launchAtLoginRequested: launchAtLoginRequested,
-        loginItemStatus: loginItem.status
+        loginItemStatus: loginItem.status,
+        passphraseEnabled: passphraseEnabled,
+        passphraseTypability: PassphraseTypability.check(
+          passphrase,
+          layoutLetters: KeyboardLayoutLetter.shared.snapshot()
+        ),
+        layoutName: KeyboardLayoutLetter.shared.layoutName
       )
     )
   }

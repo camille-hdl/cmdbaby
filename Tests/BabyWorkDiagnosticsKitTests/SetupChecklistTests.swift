@@ -130,6 +130,74 @@ func launchAtLoginMissingNeedsAttentionWithoutAction() throws {
   }
 }
 
+@Test("Phrase tapable : vérification ok, après le démarrage automatique")
+func typablePassphraseIsOkAfterLaunchAtLogin() throws {
+  let checklist = SetupChecklist(
+    facts: facts(
+      accessibilityGranted: true,
+      launchAtLoginRequested: true,
+      loginItemStatus: .enabled,
+      passphraseEnabled: true,
+      passphraseTypability: PassphraseTypability(missingLetters: []),
+      layoutName: "Français"
+    )
+  )
+
+  #expect(checklist.needsAttention == false)
+  #expect(checklist.checks.map(\.id) == [.accessibility, .location, .launchAtLogin, .passphrase])
+  let check = try #require(checklist.checks.first { $0.id == .passphrase })
+  #expect(check.state == .ok)
+  #expect(check.actions.isEmpty)
+  #expect(
+    check.localizedDetail(in: L10nTable.language("fr"))
+      == "La phrase de sortie se tape avec la disposition « Français »."
+  )
+}
+
+@Test("Phrase de sortie désactivée : pas de vérification, même intapable")
+func disabledPassphraseOmitsTheCheck() {
+  let checklist = SetupChecklist(
+    facts: facts(
+      accessibilityGranted: true,
+      passphraseEnabled: false,
+      passphraseTypability: PassphraseTypability(missingLetters: ["é"]),
+      layoutName: "U.S."
+    )
+  )
+
+  #expect(checklist.checks.map(\.id) == [.accessibility, .location])
+  #expect(checklist.needsAttention == false)
+}
+
+@Test("« été » sans é : attention, lettres dans le détail, modifier la phrase")
+func untypableEteAsksToChangeThePhrase() throws {
+  let phrase = try ExitPassphrase.parse("été")
+  let us: [UInt16: Set<Character>] = [
+    0: ["e"],
+    1: ["t"],
+    2: ["a"],
+  ]
+  let typability = PassphraseTypability.check(phrase, layoutLetters: us)
+  let checklist = SetupChecklist(
+    facts: facts(
+      accessibilityGranted: true,
+      passphraseEnabled: true,
+      passphraseTypability: typability,
+      layoutName: "U.S."
+    )
+  )
+
+  #expect(checklist.needsAttention == true)
+  #expect(checklist.checks.map(\.id) == [.accessibility, .location, .passphrase])
+  let check = try #require(checklist.checks.first { $0.id == .passphrase })
+  #expect(check.state == .attention)
+  #expect(check.actions == [.showExitsSection])
+  #expect(
+    check.localizedDetail(in: L10nTable.language("fr"))
+      == "Lettres absentes de la disposition « U.S. » : é."
+  )
+}
+
 @Test("Chaque titre et détail de la liste existe en français et en anglais")
 func checklistKeysExistInBothLanguages() {
   let lists = [
@@ -147,6 +215,22 @@ func checklistKeysExistInBothLanguages() {
     ),
     SetupChecklist(
       facts: facts(accessibilityGranted: true, launchAtLoginRequested: true, loginItemStatus: .notFound)
+    ),
+    SetupChecklist(
+      facts: facts(
+        accessibilityGranted: true,
+        passphraseEnabled: true,
+        passphraseTypability: PassphraseTypability(missingLetters: []),
+        layoutName: "Français"
+      )
+    ),
+    SetupChecklist(
+      facts: facts(
+        accessibilityGranted: true,
+        passphraseEnabled: true,
+        passphraseTypability: PassphraseTypability(missingLetters: ["é"]),
+        layoutName: "U.S."
+      )
     ),
   ]
   for checklist in lists {
@@ -166,13 +250,19 @@ private func facts(
   bundlePath: String = "/Applications/BabyWorks.app",
   homeDirectory: String = "/Users/ada",
   launchAtLoginRequested: Bool = false,
-  loginItemStatus: LoginItemStatus = .notRegistered
+  loginItemStatus: LoginItemStatus = .notRegistered,
+  passphraseEnabled: Bool = false,
+  passphraseTypability: PassphraseTypability = PassphraseTypability(missingLetters: []),
+  layoutName: String? = nil
 ) -> SetupFacts {
   SetupFacts(
     accessibilityGranted: accessibilityGranted,
     bundlePath: bundlePath,
     homeDirectory: homeDirectory,
     launchAtLoginRequested: launchAtLoginRequested,
-    loginItemStatus: loginItemStatus
+    loginItemStatus: loginItemStatus,
+    passphraseEnabled: passphraseEnabled,
+    passphraseTypability: passphraseTypability,
+    layoutName: layoutName
   )
 }
