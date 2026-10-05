@@ -11,4 +11,16 @@ public enum StarshipFireSchedule: Sendable {
     let latest = flight.time(toTravel: travel)
     return max(tuning.minimumFireDelay, min(desired, latest))
   }
+
+  /// Le bouclier ne retire la cible qu’une fois l’instant du tir atteint.
+  /// Avant `fireDelay`, elle reste visible même si elle a pénétré le bouclier.
+  public static func shieldDestroys(
+    flight: StarshipFlight,
+    elapsed: Double,
+    fireDelay: Double,
+    tuning: StarshipTuning
+  ) -> Bool {
+    guard elapsed >= fireDelay else { return false }
+    return flight.remaining(at: elapsed) <= tuning.shieldRadius
+  }
 }

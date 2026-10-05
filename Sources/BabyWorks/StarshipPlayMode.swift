@@ -40,6 +40,8 @@ final class StarshipDirector {
   private var lastPointerScreenIndex: Int?
   /// Écran où se trouve le vaisseau. `nil` tant qu’aucun cadre n’est connu.
   private(set) var homeScreenIndex: Int?
+  /// Début de la session, pour `tuning.screenChangeDelay`.
+  private var sessionStartedAt: TimeInterval
   private var ticker: Timer?
   private var skyboxTimer: Timer?
   /// Image précédente, à sortir du cache une fois le fondu terminé.
@@ -57,6 +59,7 @@ final class StarshipDirector {
   init(tuning: StarshipTuning = .standard) {
     self.tuning = tuning
     keyRate = StarshipKeyRate(window: tuning.keyRateWindow, cap: tuning.keyRateCap)
+    sessionStartedAt = ProcessInfo.processInfo.systemUptime
   }
 
   func register(screenIndex: Int, painter: StarshipPainter) {
@@ -81,10 +84,12 @@ final class StarshipDirector {
   }
 
   /// Le curseur est sur l’écran `screenIndex`. Ne fait rien si c’est déjà l’écran du vaisseau,
-  /// ni avant le premier affichage : au lancement, le vaisseau naît sur le plus grand.
+  /// ni avant le premier affichage, ni pendant `tuning.screenChangeDelay` :
+  /// au lancement, le vaisseau naît sur le plus grand, sans warp.
   func notePointer(screenIndex: Int) {
     guard let homeScreenIndex else { return }
     guard screenIndex != homeScreenIndex else { return }
+    guard StarshipScreenChoice.followsPointer(sessionAge: sessionAge, tuning: tuning) else { return }
     lastPointerScreenIndex = screenIndex
     chooseHomeScreenIfReady()
   }
@@ -177,6 +182,7 @@ final class StarshipDirector {
     rng = SystemRandomNumberGenerator()
     lastPointerScreenIndex = nil
     homeScreenIndex = nil
+    sessionStartedAt = ProcessInfo.processInfo.systemUptime
     keyRate = StarshipKeyRate(window: tuning.keyRateWindow, cap: tuning.keyRateCap)
     gaugeLevel = 0
     lastTick = 0
@@ -210,7 +216,8 @@ final class StarshipDirector {
 
   /// Copie l’idée de `TerminalDirector.choosePromptScreenIfReady`.
   /// Tant que le curseur n’a pas choisi d’écran, le premier affichage est différé
-  /// d’un tour pour naître sur le plus grand, sans warp.
+  /// d’un tour pour naître sur le plus grand, sans warp. Pendant `screenChangeDelay`,
+  /// un curseur déjà noté ne compte pas non plus.
   private func chooseHomeScreenIfReady() {
     if homeScreenIndex == nil && lastPointerScreenIndex == nil {
       scheduleInitialChoice()
@@ -235,9 +242,11 @@ final class StarshipDirector {
   private func applyHomeScreenChoice() {
     let framed = framedScreens()
     guard framed.count == screens.count else { return }
-    guard let index = TerminalScreenLayout.placement(
-      lastClickedIndex: lastPointerScreenIndex,
-      screens: framed
+    guard let index = StarshipScreenChoice.index(
+      sessionAge: sessionAge,
+      pointerScreenIndex: lastPointerScreenIndex,
+      screens: framed,
+      tuning: tuning
     ) else { return }
     guard index != homeScreenIndex else { return }
     let previous = homeScreenIndex
@@ -255,6 +264,10 @@ final class StarshipDirector {
     installPendingGaugePulse()
     painter(at: index)?.showShip(animated: previous != nil)
     painter(at: index)?.showGauge()
+  }
+
+  private var sessionAge: Double {
+    ProcessInfo.processInfo.systemUptime - sessionStartedAt
   }
 
   private func painter(at index: Int) -> StarshipPainter? {
@@ -418,6 +431,7 @@ final class StarshipDirector {
 
   /// Fige les cibles dues et note les explosions de ce tick : tir arrivé à échéance, ou bouclier.
   /// Une cible déjà visée ne bouge plus : le bouclier ne la concerne plus.
+  /// Le bouclier ne la retire pas avant le tir prévu.
   private func advanceTargets(now: TimeInterval) -> TargetStep {
     var step = TargetStep()
     let center = shipCenter
@@ -446,7 +460,13 @@ final class StarshipDirector {
         continue
       }
 
-      if targets[index].flight.remaining(at: now - targets[index].spawnedAt) <= tuning.shieldRadius {
+      let elapsed = now - targets[index].spawnedAt
+      if StarshipFireSchedule.shieldDestroys(
+        flight: targets[index].flight,
+        elapsed: elapsed,
+        fireDelay: targets[index].fireAt - targets[index].spawnedAt,
+        tuning: tuning
+      ) {
         step.exploding.append(targets[index])
       }
     }

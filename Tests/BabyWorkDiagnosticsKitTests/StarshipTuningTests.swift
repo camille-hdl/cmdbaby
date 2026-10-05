@@ -9,6 +9,7 @@ func starshipTuningStandardShip() {
   #expect(abs(tuning.shipWarpDuration - 0.25) < 1e-6)
   #expect(abs(tuning.spinDuration - 0.6) < 1e-6)
   #expect(abs(tuning.aimDuration - 0.1) < 1e-6)
+  #expect(abs(tuning.screenChangeDelay - 3) < 1e-6)
 }
 
 @Test("Les cibles standard font 110 pt, accélèrent et explosent au bouclier")
@@ -25,12 +26,12 @@ func starshipTuningStandardTargets() {
   #expect(tuning.maxTargets == 30)
 }
 
-@Test("Le tir standard attend au moins 0,5 s et file à 1800 pt/s")
+@Test("Le tir standard attend au moins 2 s et file à 1800 pt/s")
 func starshipTuningStandardFire() {
   let tuning = StarshipTuning.standard
-  #expect(abs(tuning.fireDelayRange.lowerBound - 0.5) < 1e-6)
-  #expect(abs(tuning.fireDelayRange.upperBound - 1.1) < 1e-6)
-  #expect(abs(tuning.minimumFireDelay - 0.5) < 1e-6)
+  #expect(abs(tuning.fireDelayRange.lowerBound - 2) < 1e-6)
+  #expect(abs(tuning.fireDelayRange.upperBound - 2.6) < 1e-6)
+  #expect(abs(tuning.minimumFireDelay - 2) < 1e-6)
   #expect(abs(tuning.fireSafetyMargin - 80) < 1e-6)
   #expect(abs(tuning.boltSpeed - 1800) < 1e-6)
   #expect(abs(tuning.boltOvershoot - 80) < 1e-6)

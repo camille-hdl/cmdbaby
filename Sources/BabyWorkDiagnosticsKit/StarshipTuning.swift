@@ -7,6 +7,9 @@ public struct StarshipTuning: Equatable, Sendable {
   // Vaisseau
   public var shipWidth: Double = 140
   public var shipWarpDuration: Double = 0.25
+  /// Secondes de session avant d’autoriser un changement d’écran.
+  /// Avant cela, le vaisseau reste sur le plus grand, sans warp.
+  public var screenChangeDelay: Double = 3
   public var spinDuration: Double = 0.6
   public var aimDuration: Double = 0.1
 
@@ -20,8 +23,8 @@ public struct StarshipTuning: Equatable, Sendable {
   public var maxTargets: Int = 30
 
   // Tir
-  public var fireDelayRange: ClosedRange<Double> = 0.5...1.1
-  public var minimumFireDelay: Double = 0.5
+  public var fireDelayRange: ClosedRange<Double> = 2.0...2.6
+  public var minimumFireDelay: Double = 2
   public var fireSafetyMargin: Double = 80
   public var boltSpeed: Double = 1800
   public var boltOvershoot: Double = 80
