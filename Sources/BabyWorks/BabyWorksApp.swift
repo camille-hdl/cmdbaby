@@ -66,13 +66,18 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     model.startKiosk()
   }
 
-  /// Réglages : fenêtre native avec le choix du mode.
+  /// Menu « Réglages… » : toujours Mode de jeu, en attendant la fin du menu.
   @objc func openSettings(_ sender: Any?) {
     if let item = sender as? NSMenuItem {
       settingsWindowController.show(fromStatusItemMenu: true, trackingMenu: item.menu)
     } else {
-      settingsWindowController.show(fromStatusItemMenu: false)
+      openSettings(section: .mode)
     }
+  }
+
+  /// Ouvre les Réglages sur une section. Hors menu : pas d’attente de tracking.
+  private func openSettings(section: SettingsSection) {
+    settingsWindowController.show(fromStatusItemMenu: false, section: section)
   }
 
   private func presentActivationFailure(_ error: KioskSessionError) {

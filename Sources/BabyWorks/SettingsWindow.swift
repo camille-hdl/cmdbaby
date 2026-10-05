@@ -80,14 +80,14 @@ private struct SettingsSectionCopy {
   var symbolName: String
 }
 
-private enum SettingsSection: CaseIterable, Identifiable {
+enum SettingsSection: CaseIterable, Identifiable {
   case mode
   case exits
   case general
 
   var id: Self { self }
 
-  var copy: SettingsSectionCopy {
+  fileprivate var copy: SettingsSectionCopy {
     switch self {
     case .mode:
       SettingsSectionCopy(
@@ -111,7 +111,7 @@ private enum SettingsSection: CaseIterable, Identifiable {
   }
 
   /// Section voisine dans l’ordre de la barre. Les extrémités ne bouclent pas.
-  func neighbor(moving direction: MoveCommandDirection) -> SettingsSection? {
+  fileprivate func neighbor(moving direction: MoveCommandDirection) -> SettingsSection? {
     let delta: Int
     switch direction {
     case .up:
@@ -261,7 +261,7 @@ private let launchAtLoginHelp =
 struct SettingsView: View {
   @ObservedObject var model: SettingsModel
   @Environment(\.colorScheme) private var colorScheme
-  @State private var section: SettingsSection = .mode
+  @State private var section: SettingsSection
   @State private var hoveredSection: SettingsSection?
   /// Vrai seulement après Tab, une flèche ou un clic : à l’ouverture le système
   /// focalise une entrée sans que personne ait rien demandé.
@@ -278,6 +278,11 @@ struct SettingsView: View {
   @State private var timeLimitRejection: String?
   @State private var passphraseDraft = ""
   @State private var passphraseRejection: String?
+
+  init(model: SettingsModel, initialSection: SettingsSection) {
+    self.model = model
+    _section = State(initialValue: initialSection)
+  }
 
   var body: some View {
     HStack(alignment: .top, spacing: SettingsWindowMetrics.inset) {
@@ -859,7 +864,11 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     NotificationCenter.default.removeObserver(self)
   }
 
-  func show(fromStatusItemMenu: Bool = true, trackingMenu: NSMenu? = nil) {
+  func show(
+    fromStatusItemMenu: Bool = true,
+    trackingMenu: NSMenu? = nil,
+    section: SettingsSection = .mode
+  ) {
     cancelPendingShow()
     log.emit(.settingsShowRequest)
     let model = SettingsModel(
@@ -867,7 +876,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     )
     self.model = model
     let window = existingOrMakeWindow()
-    let hosting = NSHostingView(rootView: SettingsView(model: model))
+    let hosting = NSHostingView(
+      rootView: SettingsView(model: model, initialSection: section)
+    )
     hosting.sizingOptions = []
     window.contentView = hosting
     self.trackingMenu = trackingMenu
