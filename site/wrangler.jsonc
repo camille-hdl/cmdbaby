@@ -1,0 +1,14 @@
+{
+  // Worker « assets only » : aucun code serveur, seulement les fichiers de ./public.
+  // Pas d’account_id : Wrangler prend le compte connecté.
+  "name": "cmdbaby-site",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./public",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    { "pattern": "cmdbaby.app", "custom_domain": true }
+  ]
+}

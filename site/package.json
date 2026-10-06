@@ -1,0 +1,8 @@
+{
+  "name": "cmdbaby-site",
+  "private": true,
+  "description": "Site statique de cmdbaby.app, servi par Cloudflare Workers.",
+  "devDependencies": {
+    "wrangler": "4.147.0"
+  }
+}
