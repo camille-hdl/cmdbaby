@@ -39,6 +39,7 @@ public final class AdultExitRecognizer {
   private var bufferStartedAt: TimeInterval?
   private var failsafeCount = 0
   private var failsafeWindowStart: TimeInterval?
+  private var escapeHoldStartedAt: TimeInterval?
 
   private static let failsafeClickCount = 5
   private static let failsafeClickWindow: TimeInterval = 3
@@ -54,6 +55,33 @@ public final class AdultExitRecognizer {
   public func reset() {
     buffer = []
     bufferStartedAt = nil
+  }
+
+  /// Vrai pendant un appui Maj-Échap en cours : l’appelant doit appeler `tick()` à l’échéance.
+  public var isHoldingShiftEscape: Bool { escapeHoldStartedAt != nil }
+
+  /// `.shiftEscape` quand Maj-Échap est maintenu depuis `AdultExitSettings.shiftEscapeHoldDuration`.
+  public func tick() -> AdultExitKind? {
+    guard let start = escapeHoldStartedAt,
+      clock.now - start >= AdultExitSettings.shiftEscapeHoldDuration
+    else {
+      return nil
+    }
+    escapeHoldStartedAt = nil
+    return .shiftEscape
+  }
+
+  public func handleKeyUp(isEscape: Bool) {
+    if isEscape {
+      escapeHoldStartedAt = nil
+    }
+  }
+
+  /// Un modificateur ajouté ou relâché pendant l’appui l’annule : Maj seul, de bout en bout.
+  public func handleModifiersChanged(_ modifiers: InputModifierMask) {
+    if modifiers != [.shift] {
+      escapeHoldStartedAt = nil
+    }
   }
 
   public var prefixLength: Int { buffer.count }
@@ -80,14 +108,11 @@ public final class AdultExitRecognizer {
     letters: Set<Character>,
     isReturn: Bool,
     isEscape: Bool = false,
-    shiftDown: Bool = false
+    modifiers: InputModifierMask = []
   ) -> AdultExitKind? {
-    if isEscape && shiftDown {
-      clearBuffer()
-      return settings.enabledMethods.contains(.shiftEscape) ? .shiftEscape : nil
-    }
     if isEscape {
       clearBuffer()
+      holdEscape(modifiers: modifiers)
       return nil
     }
 
@@ -126,6 +151,17 @@ public final class AdultExitRecognizer {
     }
     buffer.append(expected)
     return nil
+  }
+
+  /// Les répétitions automatiques d’Échap ne relancent pas un appui en cours.
+  private func holdEscape(modifiers: InputModifierMask) {
+    guard settings.enabledMethods.contains(.shiftEscape), modifiers == [.shift] else {
+      escapeHoldStartedAt = nil
+      return
+    }
+    if escapeHoldStartedAt == nil {
+      escapeHoldStartedAt = clock.now
+    }
   }
 
   private func passphraseLetter(_ letter: Character) -> Character? {

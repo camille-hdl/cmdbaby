@@ -21,7 +21,7 @@
 "settings.exits.passphrase.label" = "Exit Phrase";
 "settings.exits.passphrase.help" = "3 to 12 letters, typed in under 5 seconds, then Return.";
 "settings.exits.shiftEscape.label" = "Shift-Escape";
-"settings.exits.shiftEscape.help" = "Shift + Escape";
+"settings.exits.shiftEscape.help" = "Hold Shift-Escape";
 "settings.exits.failsafe.label" = "Failsafe clicks";
 "settings.exits.failsafe.help" = "5 quick clicks on the square at the bottom right";
 "settings.exits.keepOne" = "Keep at least one exit on.";

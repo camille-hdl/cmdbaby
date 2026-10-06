@@ -979,7 +979,6 @@ final class TerminalStageView: NSView {
     let code = UInt16(event.keyCode)
     let isReturn = code == 0x24 || code == 0x4C
     let isEscape = code == 0x35
-    let shiftDown = event.modifierFlags.contains(.shift)
     let letters = KeyboardLayoutLetter.shared.keyDownLetters(
       keyCode: code,
       charactersIgnoringModifiers: event.charactersIgnoringModifiers ?? ""
@@ -987,8 +986,7 @@ final class TerminalStageView: NSView {
     inputBridge.noteKeyDown(
       letters: letters,
       isReturn: isReturn,
-      isEscape: isEscape,
-      shiftDown: shiftDown
+      isEscape: isEscape
     )
     director.handleKey(event)
   }

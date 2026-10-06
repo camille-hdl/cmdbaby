@@ -24,6 +24,15 @@ Piste non retenue pour l’instant : depuis le thread du tap, terminer le proces
 
 Quand une autre app active Secure Event Input (champ de mot de passe, Terminal avec « Secure Keyboard Entry »), le tap ne voit plus aucune frappe. CmdBaby refuse de lancer une session dans cet état. Si cela arrive en cours de session, le chien de garde affiche un bandeau pour l’adulte. Il ne peut pas rétablir le filtre : il faut utiliser une sortie adulte, à la souris (cinq clics sur le carré de secours) si le clavier ne répond plus.
 
+### Sorties adulte : limites assumées
+
+Décision du 2026-10-06 (#121). Pour qu’un enfant ne sorte pas par hasard, Maj-Échap n’est reconnu qu’après un appui maintenu de 1,5 s, Maj seul enfoncé, sans retour visuel. Le reste est assumé, sans correctif :
+
+- à la fin du minuteur, la session se ferme et rend le bureau, sans verrou ;
+- en mode Terminal, les lettres tapées s’affichent dans le prompt jusqu’à Entrée, phrase de sortie comprise : un enfant plus grand peut la lire ;
+- le carré de secours reste visible ; cinq clics en trois secondes suffisent ;
+- la phrase par défaut est `parent`.
+
 ### Impossible à bloquer depuis une app
 
 Ces actions relèvent du matériel ou du système, hors de portée d’un tap clavier ou des options de présentation. CmdBaby ne cherche pas à les contourner :

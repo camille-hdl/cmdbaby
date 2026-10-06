@@ -234,8 +234,8 @@ func settingsWindowCopy() {
   #expect(L10nTable.language("en")("settings.exits.passphrase.toggle") == "Phrase + Return")
   #expect(L10nTable.language("fr")("settings.exits.shiftEscape.label") == "Maj-Échap")
   #expect(L10nTable.language("en")("settings.exits.shiftEscape.label") == "Shift-Escape")
-  #expect(L10nTable.language("fr")("settings.exits.shiftEscape.help") == "Majuscule + Échap")
-  #expect(L10nTable.language("en")("settings.exits.shiftEscape.help") == "Shift + Escape")
+  #expect(L10nTable.language("fr")("settings.exits.shiftEscape.help") == "Maintenir Maj-Échap")
+  #expect(L10nTable.language("en")("settings.exits.shiftEscape.help") == "Hold Shift-Escape")
   #expect(L10nTable.language("fr")("settings.exits.failsafe.label") == "Clics de secours")
   #expect(L10nTable.language("en")("settings.exits.failsafe.label") == "Failsafe clicks")
   #expect(

@@ -13,6 +13,8 @@ public struct InputModifierMask: OptionSet, Sendable, Hashable {
   public static let option = InputModifierMask(rawValue: 1 << 1)
   public static let control = InputModifierMask(rawValue: 1 << 2)
   public static let shift = InputModifierMask(rawValue: 1 << 3)
+  /// fn/Globe enfoncée.
+  public static let function = InputModifierMask(rawValue: 1 << 4)
 
   /// Modificateurs qui distinguent les raccourcis surveillés (Majuscule exclu).
   public static let distinguishing: InputModifierMask = [.command, .option, .control]

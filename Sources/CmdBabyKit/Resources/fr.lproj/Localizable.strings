@@ -21,7 +21,7 @@
 "settings.exits.passphrase.label" = "Phrase de sortie";
 "settings.exits.passphrase.help" = "3 à 12 lettres, à taper en moins de 5 secondes puis Entrée.";
 "settings.exits.shiftEscape.label" = "Maj-Échap";
-"settings.exits.shiftEscape.help" = "Majuscule + Échap";
+"settings.exits.shiftEscape.help" = "Maintenir Maj-Échap";
 "settings.exits.failsafe.label" = "Clics de secours";
 "settings.exits.failsafe.help" = "5 clics rapides sur le carré en bas à droite";
 "settings.exits.keepOne" = "Gardez au moins une sortie active.";

@@ -70,21 +70,94 @@ func passphraseWindowExpirationPreventsExit() {
   #expect(recognizer.handleKeyDown(letters: [], isReturn: true) == nil)
 }
 
-@Test("Majuscule-Échap produit la sortie de secours")
-func shiftEscapeExitsImmediately() {
-  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: ManualClock(now: 0))
-  #expect(
-    recognizer.handleKeyDown(letters: [], isReturn: false, isEscape: true, shiftDown: true)
-      == .shiftEscape
-  )
+@Test("Maj-Échap maintenu 1,5 s avec Maj seul produit la sortie de secours")
+func shiftEscapeHeldExits() {
+  let clock = ManualClock(now: 0)
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: clock)
+  #expect(pressEscape(recognizer, modifiers: [.shift]) == nil)
+  #expect(recognizer.isHoldingShiftEscape)
+  clock.now = AdultExitSettings.shiftEscapeHoldDuration
+  #expect(recognizer.tick() == .shiftEscape)
+  #expect(!recognizer.isHoldingShiftEscape)
+}
+
+@Test("Maj-Échap maintenu 1,4 s ne sort pas")
+func shiftEscapeHeldTooShortDoesNotExit() {
+  let clock = ManualClock(now: 0)
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: clock)
+  _ = pressEscape(recognizer, modifiers: [.shift])
+  clock.now = 1.4
+  #expect(recognizer.tick() == nil)
+}
+
+@Test("Relâcher Échap ou Maj annule ; un nouvel appui repart de zéro")
+func releasingRestartsTheHold() {
+  let clock = ManualClock(now: 0)
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: clock)
+  _ = pressEscape(recognizer, modifiers: [.shift])
+  clock.now = 1
+  recognizer.handleKeyUp(isEscape: true)
+  _ = pressEscape(recognizer, modifiers: [.shift])
+  clock.now = 2
+  #expect(recognizer.tick() == nil)
+  clock.now = 2.5
+  #expect(recognizer.tick() == .shiftEscape)
+
+  clock.now = 10
+  _ = pressEscape(recognizer, modifiers: [.shift])
+  clock.now = 11
+  recognizer.handleModifiersChanged([])
+  clock.now = 12
+  #expect(recognizer.tick() == nil)
+}
+
+@Test("Cmd, Ctrl, Option ou fn pendant l’appui l’annulent")
+func extraModifierCancelsTheHold() {
+  for extra: InputModifierMask in [.command, .control, .option, .function] {
+    let clock = ManualClock(now: 0)
+    let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: clock)
+    _ = pressEscape(recognizer, modifiers: [.shift])
+    clock.now = 0.5
+    recognizer.handleModifiersChanged([.shift, extra])
+    clock.now = 2
+    #expect(recognizer.tick() == nil, "Pas annulé avec \(extra.rawValue)")
+  }
+}
+
+@Test("Échap avec Maj et un autre modificateur ne commence pas d’appui")
+func escapeWithExtraModifierDoesNotStartAHold() {
+  let clock = ManualClock(now: 0)
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: clock)
+  _ = pressEscape(recognizer, modifiers: [.shift, .command])
+  clock.now = 2
+  #expect(recognizer.tick() == nil)
+  #expect(!recognizer.isHoldingShiftEscape)
+}
+
+@Test("Les répétitions automatiques d’Échap ne relancent pas le compte")
+func autorepeatDoesNotRestartTheHold() {
+  let clock = ManualClock(now: 0)
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: clock)
+  _ = pressEscape(recognizer, modifiers: [.shift])
+  for step in 1...10 {
+    clock.now = Double(step) * 0.1
+    _ = pressEscape(recognizer, modifiers: [.shift])
+  }
+  clock.now = 1.5
+  #expect(recognizer.tick() == .shiftEscape)
 }
 
 @Test("Échap sans Majuscule n’est pas une sortie")
 func escapeWithoutShiftIsNotAnExit() {
-  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: ManualClock(now: 0))
-  #expect(
-    recognizer.handleKeyDown(letters: [], isReturn: false, isEscape: true, shiftDown: false) == nil
-  )
+  let clock = ManualClock(now: 0)
+  let recognizer = AdultExitRecognizer(settings: AdultExitSettings(), clock: clock)
+  #expect(pressEscape(recognizer, modifiers: []) == nil)
+  clock.now = 2
+  #expect(recognizer.tick() == nil)
+}
+
+private func pressEscape(_ recognizer: AdultExitRecognizer, modifiers: InputModifierMask) -> AdultExitKind? {
+  recognizer.handleKeyDown(letters: [], isReturn: false, isEscape: true, modifiers: modifiers)
 }
 
 @Test("Commande-Q n’est pas une sortie adulte")
@@ -125,9 +198,15 @@ func shiftEscapeWhenDisabledDoesNotExit() {
     settings: AdultExitSettings(enabledMethods: [.passphrase, .failsafeClick]),
     clock: ManualClock(now: 0)
   )
-  #expect(
-    recognizer.handleKeyDown(letters: [], isReturn: false, isEscape: true, shiftDown: true) == nil
+  let clock = ManualClock(now: 0)
+  let held = AdultExitRecognizer(
+    settings: AdultExitSettings(enabledMethods: [.passphrase, .failsafeClick]),
+    clock: clock
   )
+  _ = pressEscape(held, modifiers: [.shift])
+  clock.now = 5
+  #expect(held.tick() == nil)
+  #expect(pressEscape(recognizer, modifiers: [.shift]) == nil)
 }
 
 @Test("Une phrase inactive ne se tamponne pas et Entrée ne sort pas")

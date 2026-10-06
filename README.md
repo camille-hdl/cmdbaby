@@ -10,7 +10,7 @@ Made by [Camille](https://camillehdl.dev). **Every line of code in this repo was
 
 - **Full-screen kiosk** across your displays — calm underwater scene by default (fish, sand, bubbles), plus a green-rain terminal and a spaceship that zaps whatever key your kid presses.
 - **Keyboard shielding** during play: common shortcuts get swallowed so tiny fingers don’t escape the sandbox. Keystrokes are not logged or stored.
-- **Grown-up exits**: configurable in Settings. The exit passphrase defaults to `parent` (then Return), alongside Shift-Escape and the pale failsafe corner. A session timer defaults to 20 minutes. Any of these quits the app and brings the desktop back.
+- **Grown-up exits**: configurable in Settings. The exit passphrase defaults to `parent` (then Return), alongside holding Shift-Escape for 1.5 s and the pale failsafe corner. A session timer defaults to 20 minutes. Any of these quits the app and brings the desktop back.
 
 On launch, CmdBaby tries to go straight into kid mode. You only see the French “parent tools” window if something blocked full-screen (permissions, simulated failure, etc.).
 

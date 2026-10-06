@@ -292,17 +292,16 @@ final class KioskInputBridge {
     self.onExit = onExit
   }
 
+  /// Phrase de sortie seulement : Maj-Échap (appui long) n’est reconnu que par le filtre du tap.
   func noteKeyDown(
     letters: Set<Character>,
     isReturn: Bool,
-    isEscape: Bool,
-    shiftDown: Bool
+    isEscape: Bool
   ) {
     let kind = recognizer.handleKeyDown(
       letters: letters,
       isReturn: isReturn,
-      isEscape: isEscape,
-      shiftDown: shiftDown
+      isEscape: isEscape
     )
     if let kind {
       onExit(kind)

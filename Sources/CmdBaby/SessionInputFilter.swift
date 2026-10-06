@@ -210,6 +210,7 @@ final class SessionInputFilter: @unchecked Sendable {
     }
 
     if type == .flagsChanged {
+      exitRecognizer.handleModifiersChanged(InputModifierMask(cgEventFlags: event.flags))
       let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
       let decision = ShortcutSuppressionPolicy.flagsChangedDecision(keyCode: keyCode)
       return absorbing(event, decision, record: event.flags.contains(.maskSecondaryFn))
@@ -233,17 +234,24 @@ final class SessionInputFilter: @unchecked Sendable {
     let shown = cached.active ?? unicodeLetter(from: event)
     let isReturn = keyCode == 0x24 || keyCode == 0x4C
     let isEscape = keyCode == 0x35
-    let shiftDown = modifiers.contains(.shift)
+
+    if type == .keyUp {
+      exitRecognizer.handleKeyUp(isEscape: isEscape)
+    }
 
     if type == .keyDown {
       let distinguishing = modifiers.intersection(.distinguishing)
       let lettersForPhrase = distinguishing.isEmpty ? letters : []
+      let wasHolding = exitRecognizer.isHoldingShiftEscape
       let kind = exitRecognizer.handleKeyDown(
         letters: lettersForPhrase,
         isReturn: isReturn && distinguishing.subtracting(.shift).isEmpty,
         isEscape: isEscape,
-        shiftDown: shiftDown
+        modifiers: modifiers
       )
+      if !wasHolding && exitRecognizer.isHoldingShiftEscape {
+        scheduleShiftEscapeDeadline()
+      }
       if let kind {
         killSwitch.engage()
         onAdultExit(kind)
@@ -262,6 +270,26 @@ final class SessionInputFilter: @unchecked Sendable {
     }
     // Les lettres ordinaires arrivent aux fenêtres de couverture, qui reconnaissent aussi la sortie.
     return Unmanaged.passUnretained(event)
+  }
+
+  /// Échéance de l’appui Maj-Échap, sur la boucle du tap : elle tombe même si plus rien n’est tapé.
+  /// Un minuteur d’un appui annulé ne fait rien : `tick()` mesure depuis l’appui en cours.
+  private func scheduleShiftEscapeDeadline() {
+    let fireDate = CFAbsoluteTimeGetCurrent() + AdultExitSettings.shiftEscapeHoldDuration + 0.05
+    let timer = CFRunLoopTimerCreateWithHandler(kCFAllocatorDefault, fireDate, 0, 0, 0) { [weak self] _ in
+      self?.shiftEscapeDeadlineReached()
+    }
+    CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, .commonModes)
+  }
+
+  private func shiftEscapeDeadlineReached() {
+    guard !killSwitch.isEngaged else { return }
+    if let kind = exitRecognizer.tick() {
+      killSwitch.engage()
+      onAdultExit(kind)
+    } else if exitRecognizer.isHoldingShiftEscape {
+      scheduleShiftEscapeDeadline()
+    }
   }
 
   /// `NX_SYSDEFINED` : touches média, luminosité, volume, Spotlight, Dictée…
@@ -349,6 +377,7 @@ extension InputModifierMask {
     if flags.contains(.maskAlternate) { mask.insert(.option) }
     if flags.contains(.maskControl) { mask.insert(.control) }
     if flags.contains(.maskShift) { mask.insert(.shift) }
+    if flags.contains(.maskSecondaryFn) { mask.insert(.function) }
     self = mask
   }
 }

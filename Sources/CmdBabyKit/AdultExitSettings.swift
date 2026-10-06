@@ -11,6 +11,8 @@ public struct AdultExitSettings: Codable, Equatable, Sendable {
   public static let timeLimitRange = 1...120
   public static let defaultTimeLimitMinutes = 3
   public static let defaultEnabledMethods = Set(AdultExitMethod.allCases)
+  /// Maj-Échap n’est une sortie qu’après cet appui maintenu, Maj seul : pas de sortie par hasard.
+  public static let shiftEscapeHoldDuration: TimeInterval = 1.5
 
   public var timeLimitMinutes: Int
   public var enabledMethods: Set<AdultExitMethod>

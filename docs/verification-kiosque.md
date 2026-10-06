@@ -40,7 +40,8 @@ Depuis #120, le filtre raisonne par catégories : toute combinaison avec Command
 | Action | Attendu | macOS 26 | macOS 13 |
 |---|---|---|---|
 | Phrase de sortie puis Entrée | Fin de session | | |
-| Maj-Échap (si activée) | Fin de session | | |
+| Maj-Échap maintenu 1,5 s, Maj seul (si activé) | Fin de session | | |
+| Maj-Échap bref, ou avec Cmd, Ctrl ou Option | Rien | | |
 | Cinq clics sur le carré de secours (si activés) | Fin de session | | |
 | Lettres, chiffres, Espace, Entrée | Réaction de la scène | | |
 
