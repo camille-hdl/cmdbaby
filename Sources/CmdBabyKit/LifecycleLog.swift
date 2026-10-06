@@ -119,6 +119,7 @@ public enum LifecycleLogEvent: Equatable, Sendable {
   case terminateRequest
   case applicationShouldTerminate(reply: LifecycleLog.TerminateReply)
   case statusItemAlive(Bool)
+  case statusIconMissing
   case sessionActivationFail(reason: String, binaryPath: String)
   case coversFollowScreens(added: Int, removed: Int, reframed: Int)
   case displaySleepAssertion(taken: Bool)
@@ -129,7 +130,7 @@ public enum LifecycleLogEvent: Equatable, Sendable {
   public var category: LifecycleLog.Category {
     switch self {
     case .statusItemCreate, .activationPolicy, .terminateRequest, .applicationShouldTerminate,
-      .statusItemAlive:
+      .statusItemAlive, .statusIconMissing:
       .lifecycle
     case .sessionStart, .sessionPhase, .sessionStop, .coversKey, .sessionActivationFail,
       .coversFollowScreens, .displaySleepAssertion, .guardTapLost, .guardSecureInput, .guardRefocus:
@@ -188,6 +189,8 @@ public enum LifecycleLogEvent: Equatable, Sendable {
       return "guard.secureInput"
     case .guardRefocus:
       return "guard.refocus"
+    case .statusIconMissing:
+      return "statusItem.icon missing fallback=\(MenuBarAgent.fallbackSymbolName)"
     case .terminateRequest:
       return "terminate.request"
     case .applicationShouldTerminate(let reply):

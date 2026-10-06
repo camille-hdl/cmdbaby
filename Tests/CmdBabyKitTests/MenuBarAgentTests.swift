@@ -1,3 +1,4 @@
+import AppKit
 import Testing
 
 @testable import CmdBabyKit
@@ -7,11 +8,14 @@ func menuBarAgentUsesAccessoryActivationPolicy() {
   #expect(MenuBarAgent.activationPolicy == .accessory)
 }
 
-@Test("Le status item est un SF Symbol template, pas un emoji")
-func menuBarAgentStatusItemIsTemplateSymbol() {
-  #expect(MenuBarAgent.systemSymbolName == "fish")
+@Test("Le status item est le biberon en PDF template de 18 × 18 pt")
+func menuBarAgentStatusItemIsTemplateBottle() throws {
+  let url = try #require(MenuBarAgent.statusIconURL())
+  #expect(FileManager.default.fileExists(atPath: url.path))
+  let image = try #require(NSImage(contentsOf: url))
+  #expect(image.size == MenuBarAgent.statusIconPointSize)
+  #expect(MenuBarAgent.statusIconPointSize == CGSize(width: 18, height: 18))
   #expect(MenuBarAgent.usesTemplateImage)
-  #expect(MenuBarAgent.systemSymbolName.unicodeScalars.allSatisfy { $0.isASCII })
 }
 
 @Test("Le menu de la barre de menus est en français")
@@ -36,4 +40,10 @@ func menuBarAgentLaunchStartsSessionSettingsOpenAndOnlyQuitTerminates() {
     MenuBarAgent.items(.language("en")).map(\.action)
       == [.startSession, .openSettings, .terminate]
   )
+}
+
+@Test("Un picto introuvable est journalisé")
+func missingStatusIconIsLogged() {
+  #expect(LifecycleLogEvent.statusIconMissing.message == "statusItem.icon missing fallback=fish")
+  #expect(LifecycleLogEvent.statusIconMissing.category == .lifecycle)
 }

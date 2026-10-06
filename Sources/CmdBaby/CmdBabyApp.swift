@@ -204,12 +204,7 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
 
   private func installStatusItem() {
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-    let image = NSImage(
-      systemSymbolName: MenuBarAgent.systemSymbolName,
-      accessibilityDescription: L10n.current("menu.statusIcon.accessibility")
-    )
-    image?.isTemplate = MenuBarAgent.usesTemplateImage
-    item.button?.image = image
+    item.button?.image = Self.statusIcon()
 
     let menu = NSMenu()
     for spec in MenuBarAgent.items() {
@@ -224,6 +219,25 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
     item.menu = menu
     statusItem = item
     LifecycleLogRecorder.shared.emit(.statusItemCreate)
+  }
+
+  /// Biberon en PDF template ; repli sur un SF Symbol si le PDF manque au bundle.
+  private static func statusIcon() -> NSImage? {
+    let description = L10n.current("menu.statusIcon.accessibility")
+    let image: NSImage?
+    if let url = MenuBarAgent.statusIconURL(), let bottle = NSImage(contentsOf: url) {
+      bottle.size = MenuBarAgent.statusIconPointSize
+      bottle.accessibilityDescription = description
+      image = bottle
+    } else {
+      LifecycleLogRecorder.shared.emit(.statusIconMissing)
+      image = NSImage(
+        systemSymbolName: MenuBarAgent.fallbackSymbolName,
+        accessibilityDescription: description
+      )
+    }
+    image?.isTemplate = MenuBarAgent.usesTemplateImage
+    return image
   }
 
   func isStatusItemInstalled() -> Bool {

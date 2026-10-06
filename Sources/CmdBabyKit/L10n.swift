@@ -49,17 +49,6 @@ public struct L10nTable: Sendable {
 public enum L10n {
   public static var current: L10nTable { L10nTable.current }
 
-  /// Bundle de ressources du kit : `Contents/Resources/CmdBaby_CmdBabyKit.bundle`
-  /// dans le .app empaqueté, sinon `Bundle.module` (swift test, swift run).
-  /// `Bundle.module` cherche le `.bundle` à la racine du `.app`, interdit par codesign.
-  public static let bundle: Bundle = {
-    let name = "CmdBaby_CmdBabyKit.bundle"
-    if let resources = Bundle.main.resourceURL {
-      let packaged = resources.appendingPathComponent(name)
-      if let found = Bundle(url: packaged) {
-        return found
-      }
-    }
-    return Bundle.module
-  }()
+  /// Bundle de ressources du kit, voir `KitResources`.
+  public static var bundle: Bundle { KitResources.bundle }
 }
