@@ -190,18 +190,63 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
     }
   }
 
+  /// Menus de l’app et Édition, traduits depuis `MenuBarAgent`.
   private func installMainMenu() {
     let mainMenu = NSMenu()
-    let appItem = NSMenuItem()
-    mainMenu.addItem(appItem)
-    let appMenu = NSMenu(title: AppIdentity.displayName)
-    appMenu.addItem(
-      withTitle: L10n.current("menu.quitApplication"),
-      action: #selector(quitApplication(_:)),
-      keyEquivalent: "q"
-    )
-    appItem.submenu = appMenu
+    for (title, entries) in [
+      (AppIdentity.displayName, MenuBarAgent.applicationMenu),
+      (L10n.current(MenuBarAgent.editMenuTitleKey), MenuBarAgent.editMenu),
+    ] {
+      let submenu = NSMenu(title: title)
+      for entry in entries {
+        submenu.addItem(menuItem(entry))
+      }
+      let item = NSMenuItem()
+      item.submenu = submenu
+      mainMenu.addItem(item)
+    }
     NSApp.mainMenu = mainMenu
+  }
+
+  private func menuItem(_ entry: MenuBarAgent.MenuEntry) -> NSMenuItem {
+    guard entry.command != .separator else { return .separator() }
+    let (action, target) = mainMenuAction(entry.command)
+    let item = NSMenuItem(
+      title: L10n.current(entry.titleKey),
+      action: action,
+      keyEquivalent: entry.keyEquivalent
+    )
+    item.keyEquivalentModifierMask = NSEvent.ModifierFlags(entry.modifiers)
+    item.target = target
+    return item
+  }
+
+  /// Édition : cible `nil`, la chaîne de répondeurs trouve le champ actif.
+  private func mainMenuAction(_ command: MenuBarAgent.MenuCommand) -> (Selector?, AnyObject?) {
+    switch command {
+    case .about: (#selector(openAboutFromMainMenu(_:)), self)
+    case .settings: (#selector(openSettingsFromMainMenu(_:)), self)
+    case .hide: (#selector(NSApplication.hide(_:)), NSApp)
+    case .hideOthers: (#selector(NSApplication.hideOtherApplications(_:)), NSApp)
+    case .showAll: (#selector(NSApplication.unhideAllApplications(_:)), NSApp)
+    case .quit: (#selector(quitApplication(_:)), self)
+    case .undo: (Selector(("undo:")), nil)
+    case .redo: (Selector(("redo:")), nil)
+    case .cut: (#selector(NSText.cut(_:)), nil)
+    case .copy: (#selector(NSText.copy(_:)), nil)
+    case .paste: (#selector(NSText.paste(_:)), nil)
+    case .selectAll: (#selector(NSText.selectAll(_:)), nil)
+    case .separator: (nil, nil)
+    }
+  }
+
+  /// Menu de l’app « Réglages… » (⌘,) : Mode de jeu, sans attendre de menu de la barre d’état.
+  @objc func openSettingsFromMainMenu(_ sender: Any?) {
+    openSettings(section: .mode)
+  }
+
+  @objc func openAboutFromMainMenu(_ sender: Any?) {
+    openSettings(section: .about)
   }
 
   private func installStatusItem() {
@@ -213,7 +258,7 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
       let menuItem = NSMenuItem(
         title: spec.title,
         action: selector(for: spec.action),
-        keyEquivalent: ""
+        keyEquivalent: spec.keyEquivalent
       )
       menuItem.target = self
       menu.addItem(menuItem)
@@ -301,5 +346,16 @@ extension NSApplication.ActivationPolicy {
     @unknown default:
       "unknown"
     }
+  }
+}
+
+extension NSEvent.ModifierFlags {
+  init(_ mask: InputModifierMask) {
+    var flags: NSEvent.ModifierFlags = []
+    if mask.contains(.command) { flags.insert(.command) }
+    if mask.contains(.option) { flags.insert(.option) }
+    if mask.contains(.control) { flags.insert(.control) }
+    if mask.contains(.shift) { flags.insert(.shift) }
+    self = flags
   }
 }

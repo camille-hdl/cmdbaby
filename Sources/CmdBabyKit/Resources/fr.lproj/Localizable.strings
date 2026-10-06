@@ -91,3 +91,14 @@
 "settings.about.header.accessibility" = "%@, version %@";
 "settings.permissions.configuration.title" = "Configuration";
 "settings.permissions.configuration.unreadable" = "Configuration illisible, valeurs par défaut utilisées.";
+"menu.app.about" = "À propos de {app}";
+"menu.app.hide" = "Masquer {app}";
+"menu.app.hideOthers" = "Masquer les autres";
+"menu.app.showAll" = "Tout afficher";
+"menu.edit" = "Édition";
+"menu.edit.undo" = "Annuler";
+"menu.edit.redo" = "Rétablir";
+"menu.edit.cut" = "Couper";
+"menu.edit.copy" = "Copier";
+"menu.edit.paste" = "Coller";
+"menu.edit.selectAll" = "Tout sélectionner";

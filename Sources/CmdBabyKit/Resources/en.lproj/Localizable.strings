@@ -91,3 +91,14 @@
 "settings.about.header.accessibility" = "%@, version %@";
 "settings.permissions.configuration.title" = "Configuration";
 "settings.permissions.configuration.unreadable" = "Unreadable configuration, default values in use.";
+"menu.app.about" = "About {app}";
+"menu.app.hide" = "Hide {app}";
+"menu.app.hideOthers" = "Hide Others";
+"menu.app.showAll" = "Show All";
+"menu.edit" = "Edit";
+"menu.edit.undo" = "Undo";
+"menu.edit.redo" = "Redo";
+"menu.edit.cut" = "Cut";
+"menu.edit.copy" = "Copy";
+"menu.edit.paste" = "Paste";
+"menu.edit.selectAll" = "Select All";
