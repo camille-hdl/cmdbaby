@@ -35,7 +35,7 @@ Done when every scope has a title and a position from 0 to 1: below 0.5 is uphil
 
 ## 2. Draw
 
-Draw the hill and its dots with the tool the user names, when they name one. Otherwise, use `@camille-hdl/hill-chart` first: write a one-line JSON file such as `{"scopes":[{"name":"Login","position":0.9}]}`, then run `npx @camille-hdl/hill-chart chart.json -o chart.png` (or `npx @camille-hdl/hill-chart chart.json > chart.svg`). If that package is unavailable or unsuitable, use any other tool available to you that produces an image. When no tool fits, ask the user.
+Draw the hill and its dots with the tool the user names, when they name one. Otherwise, use `@camille-hdl/hill-chart` first: write a one-line JSON file such as `{"scopes":[{"name":"Login","position":0.9}]}`, then run `npx @camille-hdl/hill-chart@0.2.0 chart.json -o chart.png` (or `npx @camille-hdl/hill-chart@0.2.0 chart.json > chart.svg`). If that package is unavailable or unsuitable, use any other tool available to you that produces an image. When no tool fits, ask the user.
 
 Done when the image file exists.
 

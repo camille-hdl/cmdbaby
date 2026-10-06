@@ -43,7 +43,7 @@ Done when every variant accounts for all three kinds, and every arrow starts fro
 
 ## 3. Draw
 
-Draw all variants side by side in one image, left to right, each under its name, with a thick, hand-drawn line. Use the tool the user names, when they name one. Otherwise, use `@camille-hdl/fat-marker` first: write a one-line JSON file such as `{"variants":[{"variant":"A · Search","contains":[{"place":"Search","contains":[{"affordance":"Search"}]}]}]}`, then run `npx @camille-hdl/fat-marker sketch.json -o sketch.png`. If that package is unavailable or unsuitable, use any other tool available to you that produces an image. See the [package README](https://github.com/camille-hdl/fat-marker#readme) for the format and CLI, or run `npx @camille-hdl/fat-marker --help` for the complete format guide and example. When no tool fits, ask the user.
+Draw all variants side by side in one image, left to right, each under its name, with a thick, hand-drawn line. Use the tool the user names, when they name one. Otherwise, use `@camille-hdl/fat-marker` first: write a one-line JSON file such as `{"variants":[{"variant":"A · Search","contains":[{"place":"Search","contains":[{"affordance":"Search"}]}]}]}`, then run `npx @camille-hdl/fat-marker@0.2.0 sketch.json -o sketch.png`. If that package is unavailable or unsuitable, use any other tool available to you that produces an image. See the [package README](https://github.com/camille-hdl/fat-marker#readme) for the format and CLI, or run `npx @camille-hdl/fat-marker@0.2.0 --help` for the complete format guide and example. When no tool fits, ask the user.
 
 Done when the image file exists.
 
