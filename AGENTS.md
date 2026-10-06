@@ -15,7 +15,7 @@ Conserver dans leur langue d’origine les identifiants de code, commandes, chem
 
 ### Issue tracker
 
-Les demandes sont suivies dans les issues GitHub de `camille-hdl/babywork`, via la CLI `gh`. Voir `docs/agents/issue-tracker.md`.
+Les demandes sont suivies dans les issues GitHub de `camille-hdl/cmdbaby`, via la CLI `gh`. Voir `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
