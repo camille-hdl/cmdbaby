@@ -88,6 +88,9 @@ private enum SettingsWindowMetrics {
   static let sidebarEntryIconWidth: CGFloat = 18
   static let sidebarEntryFontSize: CGFloat = 13
   static let appTitleSize: CGFloat = 18
+  /// Logo à gauche du titre de la barre ; le haut du squircle s’aligne sur le titre.
+  static let appLogoSize: CGFloat = 26
+  static let aboutLogoSize: CGFloat = 96
   static let sectionTitleSize: CGFloat = 22
   /// Depuis le haut de la barre, déjà décollée : le titre passe sous les feux.
   static let sidebarTitlebarClearance: CGFloat = 16
@@ -429,11 +432,14 @@ struct SettingsView: View {
 
   private var sidebar: some View {
     VStack(alignment: .leading, spacing: 0) {
-      Text(AppIdentity.displayName)
-        .font(.system(size: SettingsWindowMetrics.appTitleSize, weight: .bold, design: .serif))
-        .foregroundStyle(color(SettingsPalette.ink))
-        .padding(.horizontal, 8)
-        .padding(.bottom, 10)
+      HStack(alignment: .center, spacing: 8) {
+        AppLogo(size: SettingsWindowMetrics.appLogoSize)
+        Text(AppIdentity.displayName)
+          .font(.system(size: SettingsWindowMetrics.appTitleSize, weight: .bold, design: .serif))
+          .foregroundStyle(color(SettingsPalette.ink))
+      }
+      .padding(.horizontal, 8)
+      .padding(.bottom, 10)
       VStack(alignment: .leading, spacing: SettingsWindowMetrics.sidebarEntrySpacing) {
         ForEach(SettingsSection.allCases) { item in
           sidebarRow(item)
@@ -1099,13 +1105,8 @@ struct SettingsView: View {
 
   private var aboutSettings: some View {
     VStack(alignment: .leading, spacing: 22) {
+      aboutHeader
       SettingsGroup {
-        SettingsRow(label: installedAppName) {
-          Text(installedAppVersion)
-            .font(.system(size: 13))
-            .foregroundStyle(color(SettingsPalette.ink))
-        }
-        SettingsGroupDivider()
         aboutAuthorRow
       }
       SettingsGroup(title: L10n.current("settings.about.assets")) {
@@ -1119,6 +1120,26 @@ struct SettingsView: View {
         }
       }
     }
+  }
+
+  /// Comme les fenêtres « À propos » de macOS : logo, nom, version, centrés.
+  private var aboutHeader: some View {
+    VStack(spacing: 0) {
+      AppLogo(size: SettingsWindowMetrics.aboutLogoSize)
+      Text(installedAppName)
+        .font(.system(size: SettingsWindowMetrics.sectionTitleSize, weight: .bold, design: .serif))
+        .foregroundStyle(color(SettingsPalette.ink))
+        .padding(.top, 10)
+      Text(installedAppVersion)
+        .font(.system(size: 12))
+        .foregroundStyle(color(SettingsPalette.ink2))
+        .padding(.top, 2)
+    }
+    .frame(maxWidth: .infinity)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(
+      L10n.current("settings.about.header.accessibility", installedAppName, installedAppVersion)
+    )
   }
 
   private var aboutAuthorRow: some View {

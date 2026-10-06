@@ -88,3 +88,4 @@
 "cover.timer.accessibility" = "Session timer";
 "alert.secureInputActive" = "Another app is protecting keyboard input (password, Terminal…). Close it or leave its field, then try again.";
 "session.guard.warning" = "Keyboard protection interrupted — use an adult exit";
+"settings.about.header.accessibility" = "%@, version %@";

@@ -41,6 +41,7 @@ let package = Package(
       resources: [
         .process("Resources/Ocean"),
         .process("Resources/Starship"),
+        .process("Resources/Brand"),
       ],
       linkerSettings: [
         .linkedFramework("ApplicationServices"),
