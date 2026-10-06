@@ -60,6 +60,11 @@ public struct OceanSchool: Equatable, Sendable {
     self.nextBirthIndex = (fish.map(\.id).max() ?? 0) + 1
   }
 
+  /// Écran débranché en cours de session : ses poissons ne sont plus dessinés nulle part.
+  public mutating func removeFish(onScreen screenIndex: Int) {
+    fish.removeAll { $0.screenIndex == screenIndex }
+  }
+
   /// Un poisson dans la moitié gauche de `screenIndex`. `rng` décide kind, x, y, speed, displaySize.
   public mutating func spawnFish<R: RandomNumberGenerator>(
     screenIndex: Int,

@@ -172,6 +172,24 @@ func outOfBoundsScreenIndexIsCulled() {
   #expect(tick.removedIDs == [1])
 }
 
+@Test("Débrancher un écran retire ses poissons et garde ceux des autres")
+func removingAScreenDropsOnlyItsFish() {
+  var rng = SplitMix64(seed: 3)
+  var school = OceanSchool()
+  let kept = spawn(&school, rng: &rng)
+  _ = school.spawnFish(
+    screenIndex: 1,
+    screenSize: screen,
+    groundTop: groundTop,
+    displaySizeRange: displaySizeRange,
+    rng: &rng
+  )
+
+  school.removeFish(onScreen: 1)
+
+  #expect(school.fish.map(\.id) == [kept.id])
+}
+
 private func spawn(_ school: inout OceanSchool, rng: inout SplitMix64) -> OceanFish {
   school.spawnFish(
     screenIndex: 0,

@@ -3,17 +3,28 @@ import CmdBabyKit
 import QuartzCore
 
 /// Une fenêtre sans bordure par `NSScreen` vivant, jamais une fenêtre géante ni une liste mise en cache.
+/// Un écran branché, débranché ou redimensionné en cours de session suit dans la seconde.
 @MainActor
 final class CoverWindowCoordinator {
+  private struct Cover {
+    let screenID: ScreenID
+    let screenIndex: Int
+    let window: NSWindow
+    let failsafe: FailsafeClickView
+  }
+
   var onAdultExit: (@Sendable (AdultExitKind) -> Void)?
-  private var windows: [NSWindow] = []
+  private var covers: [Cover] = []
+  /// Index de scène du prochain écran ; jamais réutilisé dans une session.
+  private var nextScreenIndex = 0
   private var inputBridge: KioskInputBridge?
   private var playMode: (any PlayMode)?
   private var sessionMode: KioskPlayModeID = KioskPlayModeCatalog.default
   private var exits = AdultExitSettings()
   private var timeLimit: SessionTimeLimit?
-  private var outlineViews: [FailsafeClickView] = []
   private var outlineTimer: Timer?
+  private var screenObserver: NSObjectProtocol?
+  private let displaySleep = DisplaySleepAssertion()
 
   /// Mémorise le mode et les sorties de la session qui va démarrer.
   func prepare(mode: KioskPlayModeID, exits: AdultExitSettings) {
@@ -28,47 +39,24 @@ final class CoverWindowCoordinator {
 
     activateApp()
     let exitHandler = onAdultExit
-    let mode = PlayModeRegistry.make(sessionMode)
-    let bridge = KioskInputBridge(exits: exits) { kind in
+    inputBridge = KioskInputBridge(exits: exits) { kind in
       exitHandler?(kind)
     }
-    inputBridge = bridge
-    playMode = mode
+    playMode = PlayModeRegistry.make(sessionMode)
 
-    var descriptors: [ScreenDescriptor] = []
-    var outlines: [FailsafeClickView] = []
-    for (index, screen) in screens.enumerated() {
-      let descriptor = ScreenDescriptor(nsScreen: screen)
-      let failsafe = FailsafeClickView(
-        inputBridge: bridge,
-        acceptsClicks: exits.enabledMethods.contains(.failsafeClick)
-      )
-      outlines.append(failsafe)
-      let stage = mode.makeStage(
-        inputBridge: bridge,
-        screenIndex: index,
-        scale: screen.backingScaleFactor
-      )
-      let window = CoverWindow(
-        screen: screen,
-        descriptor: descriptor,
-        background: mode.windowBackground(screenIndex: index),
-        inputBridge: bridge,
-        contentView: PlayStageHost(stage: stage, failsafe: failsafe)
-      )
-      windows.append(window)
-      window.orderFrontRegardless()
-      descriptors.append(descriptor)
+    for screen in screens {
+      addCover(on: screen)
     }
-    outlineViews = outlines
     refocus()
     startOutlineClock()
-    return descriptors
+    observeScreenChanges()
+    displaySleep.take()
+    return screens.map(ScreenDescriptor.init(nsScreen:))
   }
 
   func refocus() {
     activateApp()
-    guard let first = windows.first else { return }
+    guard let first = covers.first?.window else { return }
     first.makeKeyAndOrderFront(nil)
     let responder = first.contentView.flatMap { content in
       content.subviews.first { $0.acceptsFirstResponder } ?? content
@@ -77,7 +65,7 @@ final class CoverWindowCoordinator {
   }
 
   var primaryCoverIsKey: Bool {
-    windows.first?.isKeyWindow == true
+    covers.first?.window.isKeyWindow == true
   }
 
   /// Après la présentation kiosque, le key peut rater le premier tour : retry borné.
@@ -103,19 +91,116 @@ final class CoverWindowCoordinator {
   }
 
   func closeCoverWindows() {
+    displaySleep.release()
+    stopObservingScreenChanges()
     stopOutlineClock()
-    let remaining = windows
-    windows.removeAll(keepingCapacity: false)
-    for window in remaining {
-      window.contentView = nil
-      window.ignoresMouseEvents = true
-      window.alphaValue = 0
-      window.orderOut(nil)
-      window.close()
+    let remaining = covers
+    covers.removeAll(keepingCapacity: false)
+    nextScreenIndex = 0
+    for cover in remaining {
+      Self.dismiss(cover.window)
     }
     inputBridge = nil
     playMode?.reset()
     playMode = nil
+  }
+
+  private func addCover(on screen: NSScreen) {
+    guard let mode = playMode, let bridge = inputBridge else { return }
+    let screenIndex = nextScreenIndex
+    nextScreenIndex += 1
+    let descriptor = ScreenDescriptor(nsScreen: screen)
+    let failsafe = FailsafeClickView(
+      inputBridge: bridge,
+      acceptsClicks: exits.enabledMethods.contains(.failsafeClick)
+    )
+    let stage = mode.makeStage(
+      inputBridge: bridge,
+      screenIndex: screenIndex,
+      scale: screen.backingScaleFactor
+    )
+    let window = CoverWindow(
+      screen: screen,
+      descriptor: descriptor,
+      background: mode.windowBackground(screenIndex: screenIndex),
+      inputBridge: bridge,
+      contentView: PlayStageHost(stage: stage, failsafe: failsafe)
+    )
+    covers.append(
+      Cover(
+        screenID: screen.screenID,
+        screenIndex: screenIndex,
+        window: window,
+        failsafe: failsafe
+      )
+    )
+    window.orderFrontRegardless()
+  }
+
+  private static func dismiss(_ window: NSWindow) {
+    window.contentView = nil
+    window.ignoresMouseEvents = true
+    window.alphaValue = 0
+    window.orderOut(nil)
+    window.close()
+  }
+
+  private func observeScreenChanges() {
+    screenObserver = NotificationCenter.default.addObserver(
+      forName: NSApplication.didChangeScreenParametersNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.followScreenChanges()
+      }
+    }
+  }
+
+  private func stopObservingScreenChanges() {
+    if let screenObserver {
+      NotificationCenter.default.removeObserver(screenObserver)
+    }
+    screenObserver = nil
+  }
+
+  /// Couvre les écrans branchés, ferme ceux débranchés, recadre ceux redimensionnés.
+  private func followScreenChanges() {
+    guard let mode = playMode else { return }
+    let screens = Dictionary(
+      NSScreen.screens.map { ($0.screenID, $0) },
+      uniquingKeysWith: { first, _ in first }
+    )
+    let diff = CoverLayoutDiff.changes(
+      current: Dictionary(
+        covers.map { ($0.screenID, $0.window.frame) },
+        uniquingKeysWith: { first, _ in first }
+      ),
+      next: screens.mapValues(\.frame)
+    )
+    guard !diff.isEmpty else { return }
+
+    for id in diff.remove {
+      guard let position = covers.firstIndex(where: { $0.screenID == id }) else { continue }
+      let cover = covers.remove(at: position)
+      Self.dismiss(cover.window)
+      mode.removeStage(screenIndex: cover.screenIndex)
+    }
+    for id in diff.reframe {
+      guard let screen = screens[id], let cover = covers.first(where: { $0.screenID == id }) else {
+        continue
+      }
+      cover.window.setFrame(screen.frame, display: true)
+    }
+    for id in diff.add {
+      guard let screen = screens[id] else { continue }
+      addCover(on: screen)
+    }
+    advanceOutlineClock()
+    refocus()
+    LifecycleLogRecorder.shared.emit(
+      .coversFollowScreens(added: diff.add.count, removed: diff.remove.count, reframed: diff.reframe.count)
+    )
   }
 
   private func startOutlineClock() {
@@ -138,15 +223,14 @@ final class CoverWindowCoordinator {
     outlineTimer?.invalidate()
     outlineTimer = nil
     timeLimit = nil
-    outlineViews.removeAll()
   }
 
   private func advanceOutlineClock() {
     guard let timeLimit else { return }
     let now = ProcessInfo.processInfo.systemUptime
     let progress = timeLimit.progress(at: now)
-    for view in outlineViews {
-      view.setOutlineProgress(progress)
+    for cover in covers {
+      cover.failsafe.setOutlineProgress(progress)
     }
     guard timeLimit.isComplete(at: now) else { return }
     self.timeLimit = nil
@@ -403,12 +487,18 @@ final class FailsafeClickView: NSView {
   }
 }
 
+extension NSScreen {
+  /// `CGDirectDisplayID` de l’écran ; 0 si macOS ne le donne pas.
+  var screenID: ScreenID {
+    let number = deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+    return number?.uint32Value ?? 0
+  }
+}
+
 extension ScreenDescriptor {
   init(nsScreen: NSScreen) {
-    let number = nsScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
-    let identifier = number.map { String($0.uint32Value) } ?? nsScreen.localizedName
     self.init(
-      id: identifier,
+      id: String(nsScreen.screenID),
       name: nsScreen.localizedName,
       originX: nsScreen.frame.origin.x,
       originY: nsScreen.frame.origin.y,

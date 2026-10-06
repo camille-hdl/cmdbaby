@@ -9,6 +9,8 @@ protocol PlayMode: AnyObject {
   func windowBackground(screenIndex: Int) -> NSColor
   /// Scène de jeu pour un écran ; le carré de secours est ajouté par les couvertures, pas par le mode.
   func makeStage(inputBridge: KioskInputBridge, screenIndex: Int, scale: CGFloat) -> NSView
+  /// Écran débranché en cours de session : oublier sa scène. `screenIndex` n’est jamais réutilisé.
+  func removeStage(screenIndex: Int)
   /// Démontage en fin de session (timers, banc, sprites propres au mode).
   func reset()
 }

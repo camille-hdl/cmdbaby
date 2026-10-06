@@ -307,3 +307,13 @@ private final class SequenceKioskServices: KioskSessionServices {
   func stopInputFilter() {}
   func hideDiagnosticInterface() {}
 }
+
+@Test("Les couvertures qui suivent les écrans et l’assertion d’énergie sont journalisées")
+func screenFollowingAndDisplaySleepAreLogged() {
+  let follow = LifecycleLogEvent.coversFollowScreens(added: 1, removed: 0, reframed: 2)
+  #expect(follow.message == "covers.followScreens added=1 removed=0 reframed=2")
+  #expect(follow.category == .session)
+  #expect(LifecycleLogEvent.displaySleepAssertion(taken: true).message == "power.displaySleep prevented=true")
+  #expect(LifecycleLogEvent.displaySleepAssertion(taken: false).message == "power.displaySleep prevented=false")
+  #expect(LifecycleLogEvent.displaySleepAssertion(taken: true).category == .session)
+}

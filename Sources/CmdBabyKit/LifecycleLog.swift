@@ -120,13 +120,16 @@ public enum LifecycleLogEvent: Equatable, Sendable {
   case applicationShouldTerminate(reply: LifecycleLog.TerminateReply)
   case statusItemAlive(Bool)
   case sessionActivationFail(reason: String, binaryPath: String)
+  case coversFollowScreens(added: Int, removed: Int, reframed: Int)
+  case displaySleepAssertion(taken: Bool)
 
   public var category: LifecycleLog.Category {
     switch self {
     case .statusItemCreate, .activationPolicy, .terminateRequest, .applicationShouldTerminate,
       .statusItemAlive:
       .lifecycle
-    case .sessionStart, .sessionPhase, .sessionStop, .coversKey, .sessionActivationFail:
+    case .sessionStart, .sessionPhase, .sessionStop, .coversKey, .sessionActivationFail,
+      .coversFollowScreens, .displaySleepAssertion:
       .session
     case .tapCreate, .tapEnable, .tapDisable, .tapFail, .tapReenable:
       .inputFilter
@@ -172,6 +175,10 @@ public enum LifecycleLogEvent: Equatable, Sendable {
     case .coversKey(let isKey, let outcome, let retry):
       let base = "covers.key isKey=\(isKey) outcome=\(outcome.rawValue)"
       return retry > 0 ? "\(base) retry=\(retry)" : base
+    case .coversFollowScreens(let added, let removed, let reframed):
+      return "covers.followScreens added=\(added) removed=\(removed) reframed=\(reframed)"
+    case .displaySleepAssertion(let taken):
+      return "power.displaySleep prevented=\(taken)"
     case .terminateRequest:
       return "terminate.request"
     case .applicationShouldTerminate(let reply):

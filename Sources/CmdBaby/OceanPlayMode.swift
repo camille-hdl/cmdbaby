@@ -61,14 +61,19 @@ final class OceanDirector {
     sessionSalt = UInt64.random(in: 1...UInt64.max)
   }
 
-  func register(_ painter: OceanPainter) {
-    let index = painters.count
+  func register(_ painter: OceanPainter, screenIndex: Int) {
     painters.append(painter)
     let shouldStart = ticker == nil
-    painter.attach(screenIndex: index, sessionSalt: sessionSalt)
+    painter.attach(screenIndex: screenIndex, sessionSalt: sessionSalt)
     if shouldStart {
       startTicker()
     }
+  }
+
+  func unregister(screenIndex: Int) {
+    painters.removeAll { $0.screenIndex == screenIndex }
+    spawnedInitial.remove(screenIndex)
+    school.removeFish(onScreen: screenIndex)
   }
 
   func reset() {
@@ -158,7 +163,7 @@ final class OceanPainter {
   private let foregroundHost: CALayer
   private let fishHost: CALayer
   private let bubbleHost: CALayer
-  private var screenIndex = 0
+  private(set) var screenIndex = 0
   private var sessionSalt: UInt64 = 1
   private var bounds: CGRect = .zero
   private var contentsScale: CGFloat
@@ -469,7 +474,11 @@ final class OceanPlayMode: PlayMode {
   }
 
   func makeStage(inputBridge: KioskInputBridge, screenIndex: Int, scale: CGFloat) -> NSView {
-    OceanStageView(inputBridge: inputBridge, director: director, scale: scale)
+    OceanStageView(inputBridge: inputBridge, director: director, screenIndex: screenIndex, scale: scale)
+  }
+
+  func removeStage(screenIndex: Int) {
+    director.unregister(screenIndex: screenIndex)
   }
 
   func reset() {
@@ -496,6 +505,7 @@ final class OceanStageView: NSView {
   init(
     inputBridge: KioskInputBridge,
     director: OceanDirector,
+    screenIndex: Int,
     scale: CGFloat
   ) {
     self.inputBridge = inputBridge
@@ -531,7 +541,7 @@ final class OceanStageView: NSView {
     layer?.addSublayer(foregroundHost)
     layer?.addSublayer(fishHost)
     layer?.addSublayer(bubbleHost)
-    director.register(painter)
+    director.register(painter, screenIndex: screenIndex)
   }
 
   @available(*, unavailable)

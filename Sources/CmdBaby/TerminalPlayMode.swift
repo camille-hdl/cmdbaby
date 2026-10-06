@@ -74,6 +74,21 @@ final class TerminalDirector {
     choosePromptScreenIfReady()
   }
 
+  /// Écran débranché : le prompt, s’il y était, passe sur un écran restant.
+  func unregister(screenIndex: Int) {
+    guard let slot = screens.firstIndex(where: { $0.index == screenIndex }) else { return }
+    screens[slot].painter.teardown()
+    screens.remove(at: slot)
+    if lastClickedScreenIndex == screenIndex {
+      lastClickedScreenIndex = nil
+    }
+    if promptScreenIndex == screenIndex {
+      promptScreenIndex = nil
+    }
+    rebuildLayout()
+    choosePromptScreenIfReady()
+  }
+
   /// Reçoit la frappe et, le cas échéant, lance la pluie demandée par le prompt.
   func handleKey(_ event: NSEvent) {
     cursorOn = true
@@ -862,6 +877,10 @@ final class TerminalPlayMode: PlayMode {
       screenIndex: screenIndex,
       scale: scale
     )
+  }
+
+  func removeStage(screenIndex: Int) {
+    director.unregister(screenIndex: screenIndex)
   }
 
   func reset() {

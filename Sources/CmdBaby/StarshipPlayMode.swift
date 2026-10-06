@@ -83,6 +83,21 @@ final class StarshipDirector {
     chooseHomeScreenIfReady()
   }
 
+  /// Écran débranché : le vaisseau, s’il y était, renaît sur le plus grand écran restant.
+  func unregister(screenIndex: Int) {
+    guard let slot = screens.firstIndex(where: { $0.index == screenIndex }) else { return }
+    screens[slot].painter.teardown()
+    screens.remove(at: slot)
+    if lastPointerScreenIndex == screenIndex {
+      lastPointerScreenIndex = nil
+    }
+    if homeScreenIndex == screenIndex {
+      targets.removeAll(keepingCapacity: false)
+      homeScreenIndex = nil
+    }
+    chooseHomeScreenIfReady()
+  }
+
   /// Le curseur est sur l’écran `screenIndex`. Ne fait rien si c’est déjà l’écran du vaisseau,
   /// ni avant le premier affichage, ni pendant `tuning.screenChangeDelay` :
   /// au lancement, le vaisseau naît sur le plus grand, sans warp.
@@ -558,6 +573,10 @@ final class StarshipPlayMode: PlayMode {
       screenIndex: screenIndex,
       scale: scale
     )
+  }
+
+  func removeStage(screenIndex: Int) {
+    director.unregister(screenIndex: screenIndex)
   }
 
   func reset() {
