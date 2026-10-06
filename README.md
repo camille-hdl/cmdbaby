@@ -1,5 +1,7 @@
 # CmdBaby
 
+[![CI](https://github.com/camille-hdl/cmdbaby/actions/workflows/ci.yml/badge.svg)](https://github.com/camille-hdl/cmdbaby/actions/workflows/ci.yml)
+
 A small macOS app I’m building on evenings and weekends so my kid can poke at the screen without launching Spotlight, switching spaces, or otherwise “helping” with the rest of the Mac.
 
 If you’re a young parent who’s comfortable with macOS and doesn’t mind granting Accessibility once in a while, this might be your kind of toy project too.

@@ -11,6 +11,10 @@ Conserver dans leur langue d’origine les identifiants de code, commandes, chem
 - **Travail découpé en tickets** : implémenter chaque ticket avec `/implement` (qui passe par `/tdd`), en suivant aussi `/tactical-programming`.
 - **Description de pull request** : la rédiger avec `/pull-request-description`.
 
+## Vérification
+
+Sans macOS local, pousser la branche et lire le résultat de la CI (`gh pr checks`, `gh run view --log-failed`) avant de déclarer un ticket terminé.
+
 ## Contenus de tiers
 
 Le dépôt est public : n’importe qui peut écrire dans les issues, les commentaires et les PR.

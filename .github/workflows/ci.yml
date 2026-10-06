@@ -1,0 +1,92 @@
+# CI : build, tests du kit et empaquetage du .app en signature ad hoc, à chaque PR et sur main.
+#
+# Ce que la CI ne peut pas faire : accorder l’Accessibilité (TCC est protégé sur les runners
+# hébergés). Ni filtre clavier ni session kiosque ne tournent ici ; ces vérifications restent
+# manuelles. Toute la logique testable est dans le kit.
+#
+# Sécurité : dépôt public, PR de tiers. Lecture seule, aucun secret, pas de pull_request_target,
+# actions épinglées par SHA. La signature et la notarisation restent sur la machine du mainteneur.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Toolchain
+        id: toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          echo "xcode=$(xcodebuild -version | head -n1 | tr ' ' '-')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache .build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .build
+          # La clé inclut la ref : une PR lit le cache de main sans pouvoir l’écrire.
+          key: build-${{ steps.toolchain.outputs.xcode }}-${{ github.ref }}-${{ hashFiles('Package.swift', 'Package.resolved') }}
+          restore-keys: |
+            build-${{ steps.toolchain.outputs.xcode }}-${{ github.ref }}-
+            build-${{ steps.toolchain.outputs.xcode }}-refs/heads/main-
+
+      - name: swift build
+        run: swift build
+
+      - name: swift test
+        run: |
+          set -o pipefail
+          if ! swift test 2>&1 | tee "$RUNNER_TEMP/swift-test.log"; then
+            {
+              echo "## Tests en échec"
+              echo '```'
+              grep -E "✘|error:" "$RUNNER_TEMP/swift-test.log" | head -n 100
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Package .app (ad hoc)
+        run: CMDBABY_APP_OUTPUT_DIR="$RUNNER_TEMP" ./scripts/build-app.sh
+
+      - name: Check .app
+        run: |
+          app="$RUNNER_TEMP/CmdBaby.app"
+          plutil -lint "$app/Contents/Info.plist"
+          test -f "$app/Contents/Resources/PrivacyInfo.xcprivacy"
+          for bundle in CmdBaby_CmdBaby.bundle CmdBaby_CmdBabyKit.bundle; do
+            test -d "$app/Contents/Resources/$bundle"
+          done
+          for lang in en fr; do
+            test -f "$app/Contents/Resources/CmdBaby_CmdBabyKit.bundle/$lang.lproj/Localizable.strings"
+          done
+          codesign --verify --strict --verbose=2 "$app"
+
+  lint-workflows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: actionlint
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+      - name: zizmor
+        run: pipx run zizmor==1.30.1 .github/workflows
