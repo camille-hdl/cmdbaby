@@ -18,12 +18,12 @@ fi
 
 case "$sandbox_mode" in
     1|true|TRUE|yes|YES)
-        entitlements_path="$project_dir/Resources/BabyWorks.sandbox.entitlements"
+        entitlements_path="$project_dir/Resources/CmdBaby.sandbox.entitlements"
         sandbox_label="App Sandbox activé"
         app_name="CmdBaby-sandbox.app"
         ;;
     *)
-        entitlements_path="$project_dir/Resources/BabyWorks.nosandbox.entitlements"
+        entitlements_path="$project_dir/Resources/CmdBaby.nosandbox.entitlements"
         sandbox_label="App Sandbox désactivé"
         app_name="CmdBaby.app"
         ;;
@@ -39,7 +39,7 @@ binary_dir=$(swift build --configuration "$configuration" --show-bin-path)
 
 mkdir -p "$contents_path/MacOS" "$contents_path/Resources"
 install -m 755 "$binary_dir/CmdBaby" "$executable_path"
-install -m 644 "$project_dir/Resources/BabyWorks-Info.plist" "$info_path"
+install -m 644 "$project_dir/Resources/CmdBaby-Info.plist" "$info_path"
 
 copy_resource_bundle() {
     local name="$1"
@@ -53,10 +53,10 @@ copy_resource_bundle() {
     cp -R "$source" "$contents_path/Resources/$name"
 }
 
-copy_resource_bundle "BabyWork_BabyWorks.bundle"
-copy_resource_bundle "BabyWork_BabyWorkDiagnosticsKit.bundle"
-/usr/bin/plutil -replace BabyWorkSigningIdentity -string "$signing_label" "$info_path"
-/usr/bin/plutil -replace BabyWorkSandboxMode -string "$sandbox_label" "$info_path"
+copy_resource_bundle "CmdBaby_CmdBaby.bundle"
+copy_resource_bundle "CmdBaby_CmdBabyKit.bundle"
+/usr/bin/plutil -replace CmdBabySigningIdentity -string "$signing_label" "$info_path"
+/usr/bin/plutil -replace CmdBabySandboxMode -string "$sandbox_label" "$info_path"
 
 if [[ "$sandbox_mode" == 1 || "$sandbox_mode" == true || "$sandbox_mode" == TRUE || "$sandbox_mode" == yes || "$sandbox_mode" == YES ]]; then
     /usr/bin/plutil -replace CFBundleIdentifier -string "app.cmdbaby.CmdBaby.sandbox" "$info_path"

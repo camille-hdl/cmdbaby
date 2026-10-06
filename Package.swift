@@ -3,30 +3,30 @@
 import PackageDescription
 
 let package = Package(
-  name: "BabyWork",
+  name: "CmdBaby",
   defaultLocalization: "en",
   platforms: [
     .macOS(.v13)
   ],
   products: [
     .library(
-      name: "BabyWorkDiagnosticsKit",
-      targets: ["BabyWorkDiagnosticsKit"]
+      name: "CmdBabyKit",
+      targets: ["CmdBabyKit"]
     ),
     .executable(
       name: "CmdBaby",
-      targets: ["BabyWorks"]
+      targets: ["CmdBaby"]
     ),
   ],
   targets: [
     .target(
-      name: "BabyWorkDiagnosticsKit",
+      name: "CmdBabyKit",
       resources: [
         .process("Resources"),
       ]
     ),
     .target(
-      name: "BabyWorkAppKitBridge",
+      name: "CmdBabyAppKitBridge",
       publicHeadersPath: "include",
       linkerSettings: [
         .linkedFramework("AppKit"),
@@ -36,8 +36,8 @@ let package = Package(
       ]
     ),
     .executableTarget(
-      name: "BabyWorks",
-      dependencies: ["BabyWorkDiagnosticsKit", "BabyWorkAppKitBridge"],
+      name: "CmdBaby",
+      dependencies: ["CmdBabyKit", "CmdBabyAppKitBridge"],
       resources: [
         .process("Resources/Ocean"),
         .process("Resources/Starship"),
@@ -53,8 +53,8 @@ let package = Package(
       ]
     ),
     .testTarget(
-      name: "BabyWorkDiagnosticsKitTests",
-      dependencies: ["BabyWorkDiagnosticsKit", "BabyWorkAppKitBridge"]
+      name: "CmdBabyKitTests",
+      dependencies: ["CmdBabyKit", "CmdBabyAppKitBridge"]
     ),
   ],
   swiftLanguageModes: [.v6]
