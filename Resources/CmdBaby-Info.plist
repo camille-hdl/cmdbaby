@@ -33,9 +33,7 @@
     <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
-    <key>NSInputMonitoringUsageDescription</key>
-    <string>CmdBaby a besoin de surveiller le clavier et la souris pour absorber les raccourcis système pendant une session enfant. Aucune frappe n’est enregistrée.</string>
     <key>NSHumanReadableCopyright</key>
-    <string>Projet personnel CmdBaby</string>
+    <string>© 2026 Camille Hodoul</string>
 </dict>
 </plist>

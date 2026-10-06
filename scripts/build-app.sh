@@ -40,6 +40,7 @@ binary_dir=$(swift build --configuration "$configuration" --show-bin-path)
 mkdir -p "$contents_path/MacOS" "$contents_path/Resources"
 install -m 755 "$binary_dir/CmdBaby" "$executable_path"
 install -m 644 "$project_dir/Resources/CmdBaby-Info.plist" "$info_path"
+install -m 644 "$project_dir/Resources/PrivacyInfo.xcprivacy" "$contents_path/Resources/PrivacyInfo.xcprivacy"
 
 copy_resource_bundle() {
     local name="$1"
