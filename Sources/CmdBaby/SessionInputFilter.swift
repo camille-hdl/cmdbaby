@@ -1,3 +1,4 @@
+import AppKit
 import ApplicationServices
 import CmdBabyKit
 import CoreGraphics
@@ -105,6 +106,8 @@ final class SessionInputFilter: @unchecked Sendable {
   private func runTapThread() {
     let mask = CGEventMask(1 << CGEventType.keyDown.rawValue)
       | CGEventMask(1 << CGEventType.keyUp.rawValue)
+      | CGEventMask(1 << CGEventType.flagsChanged.rawValue)
+      | CGEventMask(1 << Self.systemDefinedEventType)
     // tapDisabledByTimeout et tapDisabledByUserInput arrivent sans être dans le masque.
 
     let callback: CGEventTapCallBack = { proxy, type, event, refcon in
@@ -206,6 +209,19 @@ final class SessionInputFilter: @unchecked Sendable {
       return Unmanaged.passUnretained(event)
     }
 
+    if type == .flagsChanged {
+      let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
+      let decision = ShortcutSuppressionPolicy.flagsChangedDecision(keyCode: keyCode)
+      return absorbing(event, decision, record: event.flags.contains(.maskSecondaryFn))
+    }
+
+    if type.rawValue == Self.systemDefinedEventType {
+      let subtype = NSEvent(cgEvent: event).map { Int($0.subtype.rawValue) }
+      guard let subtype else { return Unmanaged.passUnretained(event) }
+      let decision = ShortcutSuppressionPolicy.systemDefinedDecision(subtype: subtype)
+      return absorbing(event, decision, record: true)
+    }
+
     guard type == .keyDown || type == .keyUp else {
       return Unmanaged.passUnretained(event)
     }
@@ -246,6 +262,23 @@ final class SessionInputFilter: @unchecked Sendable {
     }
     // Les lettres ordinaires arrivent aux fenêtres de couverture, qui reconnaissent aussi la sortie.
     return Unmanaged.passUnretained(event)
+  }
+
+  /// `NX_SYSDEFINED` : touches média, luminosité, volume, Spotlight, Dictée…
+  private static let systemDefinedEventType: UInt32 = 14
+
+  private func absorbing(
+    _ event: CGEvent,
+    _ decision: InputFilterDecision,
+    record: Bool
+  ) -> Unmanaged<CGEvent>? {
+    guard case .suppress(let shortcut) = decision else {
+      return Unmanaged.passUnretained(event)
+    }
+    if record {
+      recordSuppression(of: shortcut)
+    }
+    return nil
   }
 
   private func recordSuppression(of shortcut: MonitoredShortcut) {

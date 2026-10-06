@@ -32,6 +32,12 @@ public enum MonitoredShortcut: String, CaseIterable, Sendable, Equatable, Hashab
   case controlUp
   case controlDown
   case controlCommandQ
+  /// Toute autre combinaison avec Commande ou Contrôle (Espaces, captures, VoiceOver, emojis…).
+  case otherCommandOrControl
+  case functionKey
+  case fnGlobe
+  /// Touches système hors clavier principal : média, luminosité, volume, Spotlight, Dictée…
+  case auxiliaryKey
 
   public var displayName: String {
     switch self {
@@ -59,6 +65,14 @@ public enum MonitoredShortcut: String, CaseIterable, Sendable, Equatable, Hashab
       "Contrôle-↓"
     case .controlCommandQ:
       "Contrôle-Commande-Q"
+    case .otherCommandOrControl:
+      "Autre raccourci Commande ou Contrôle"
+    case .functionKey:
+      "Touche de fonction"
+    case .fnGlobe:
+      "Touche fn/Globe"
+    case .auxiliaryKey:
+      "Touche système"
     }
   }
 }
@@ -78,11 +92,22 @@ public enum MacVirtualKeyCode {
   public static let escape: UInt16 = 0x35
   public static let upArrow: UInt16 = 0x7E
   public static let downArrow: UInt16 = 0x7D
+  public static let function: UInt16 = 0x3F
+  /// F1 à F20.
+  public static let functionKeys: Set<UInt16> = [
+    0x7A, 0x78, 0x63, 0x76, 0x60, 0x61, 0x62, 0x64, 0x65, 0x6D,
+    0x67, 0x6F, 0x69, 0x6B, 0x71, 0x6A, 0x40, 0x4F, 0x50, 0x5A,
+  ]
 }
 
-/// Décide si une frappe doit être absorbée. Le caractère n’est utilisé que pour
-/// classer Q/H/M selon la disposition (AZERTY compris) ; il n’est jamais journalisé.
+/// Décide si une frappe doit être absorbée pendant une session. Hors session, aucun tap n’est installé.
+/// Par catégories : toute combinaison avec Commande ou Contrôle, les touches de fonction,
+/// fn/Globe et les touches système. Les sorties adulte n’utilisent ni Commande ni Contrôle.
+/// Le caractère n’est utilisé que pour nommer Q/H/M selon la disposition (AZERTY compris) ;
+/// il n’est jamais journalisé.
 public enum ShortcutSuppressionPolicy {
+  /// Sous-type `NX_SUBTYPE_AUX_CONTROL_BUTTONS` des événements `NX_SYSDEFINED` (type 14).
+  public static let auxiliaryKeySubtype = 8
   private struct Rule {
     let shortcut: MonitoredShortcut
     let keyCode: UInt16?
@@ -135,7 +160,23 @@ public enum ShortcutSuppressionPolicy {
         return .suppress(rule.shortcut)
       }
     }
+    if MacVirtualKeyCode.functionKeys.contains(keyCode) {
+      return .suppress(.functionKey)
+    }
+    if !distinguishing.isDisjoint(with: [.command, .control]) {
+      return .suppress(.otherCommandOrControl)
+    }
     return .allow
+  }
+
+  /// `flagsChanged` : seule la touche fn/Globe (emojis, dictée, bureau) est absorbée.
+  public static func flagsChangedDecision(keyCode: UInt16) -> InputFilterDecision {
+    keyCode == MacVirtualKeyCode.function ? .suppress(.fnGlobe) : .allow
+  }
+
+  /// Événement `NX_SYSDEFINED` : seules les touches auxiliaires sont absorbées.
+  public static func systemDefinedDecision(subtype: Int) -> InputFilterDecision {
+    subtype == auxiliaryKeySubtype ? .suppress(.auxiliaryKey) : .allow
   }
 }
 

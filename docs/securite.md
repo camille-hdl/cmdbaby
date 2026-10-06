@@ -23,3 +23,16 @@ Piste non retenue pour l’instant : depuis le thread du tap, terminer le proces
 ### Secure Event Input
 
 Quand une autre app active Secure Event Input (champ de mot de passe, Terminal avec « Secure Keyboard Entry »), le tap ne voit plus aucune frappe. CmdBaby refuse de lancer une session dans cet état. Si cela arrive en cours de session, le chien de garde affiche un bandeau pour l’adulte. Il ne peut pas rétablir le filtre : il faut utiliser une sortie adulte, à la souris (cinq clics sur le carré de secours) si le clavier ne répond plus.
+
+### Impossible à bloquer depuis une app
+
+Ces actions relèvent du matériel ou du système, hors de portée d’un tap clavier ou des options de présentation. CmdBaby ne cherche pas à les contourner :
+
+- bouton d’alimentation et Touch ID, Ctrl-Cmd-Alimentation ;
+- fermeture du capot ;
+- « Dis Siri » ;
+- fenêtres SecurityAgent (demandes de mot de passe du système) ;
+- gestes du trackpad gérés par le Dock ;
+- coins actifs.
+
+La liste de ce que le filtre absorbe, à vérifier à la main, est dans `docs/verification-kiosque.md`.
