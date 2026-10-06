@@ -32,6 +32,28 @@ xcuserdata/
 *.swp
 *.swo
 
+# Secrets de publication — ne jamais committer
+# Clés et certificats
+*.p8
+*.p12
+*.pem
+*.key
+*.cer
+*.certSigningRequest
+AuthKey_*
+# Clés privées Sparkle exportées
+*sparkle*private*
+*.ed25519
+eddsa_*
 # Site (Wrangler)
+.dev.vars
+.dev.vars.*
 .wrangler/
-site/node_modules/
+node_modules/
+# Artefacts de publication
+dist/
+*.dmg
+/*.app/
+notarization-*.json
+notarytool-*.log
+docs/assets/brand/out/

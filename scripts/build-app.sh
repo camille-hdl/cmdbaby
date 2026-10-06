@@ -55,8 +55,6 @@ copy_resource_bundle() {
 
 copy_resource_bundle "CmdBaby_CmdBaby.bundle"
 copy_resource_bundle "CmdBaby_CmdBabyKit.bundle"
-/usr/bin/plutil -replace CmdBabySigningIdentity -string "$signing_label" "$info_path"
-/usr/bin/plutil -replace CmdBabySandboxMode -string "$sandbox_label" "$info_path"
 
 if [[ "$sandbox_mode" == 1 || "$sandbox_mode" == true || "$sandbox_mode" == TRUE || "$sandbox_mode" == yes || "$sandbox_mode" == YES ]]; then
     /usr/bin/plutil -replace CFBundleIdentifier -string "app.cmdbaby.CmdBaby.sandbox" "$info_path"

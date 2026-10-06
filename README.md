@@ -52,6 +52,14 @@ Grant **Accessibility** to CmdBaby when macOS asks — that’s what lets the ap
 
 Personal project, no warranty, no roadmap promises — just something that works on our family Mac.
 
+### Git hooks
+
+Once per clone, enable the versioned pre-commit hook, which refuses keys, certificates and release artifacts:
+
+```bash
+git config core.hooksPath scripts/git-hooks
+```
+
 ## Website
 
 The site for https://cmdbaby.app lives in `site/` and is served by Cloudflare Workers. First-time setup (Wrangler login, domain, DNS, email, security): `scripts/setup-site.sh`. Later deploys: `scripts/deploy-site.sh`.

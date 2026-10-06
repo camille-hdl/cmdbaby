@@ -1,0 +1,40 @@
+#!/bin/zsh
+# Refuse un commit qui publierait un secret ou un artefact de publication.
+# Activer une fois par clone : git config core.hooksPath scripts/git-hooks
+
+set -euo pipefail
+setopt extended_glob
+
+# Mêmes motifs que la section « Secrets de publication » du .gitignore.
+patterns=(
+  '(*/|)*.p8' '(*/|)*.p12' '(*/|)*.pem' '(*/|)*.key' '(*/|)*.cer' '(*/|)*.certSigningRequest' '(*/|)AuthKey_*'
+  '(*/|)*sparkle*private*' '(*/|)*.ed25519' '(*/|)eddsa_*'
+  '(*/|).dev.vars' '(*/|).dev.vars.*' '(*/|).wrangler/*' '(*/|)node_modules/*'
+  'dist/*' '(*/|)*.dmg' '[^/]#.app/*' '(*/|)notarization-*.json' '(*/|)notarytool-*.log' 'docs/assets/brand/out/*'
+)
+
+refuse() {
+  print -u2 "Commit refusé : $1"
+  print -u2 "Si c’est voulu : git commit --no-verify"
+  exit 1
+}
+
+for file in ${(f)"$(git diff --cached --name-only --diff-filter=ACMR)"}; do
+  for pattern in $patterns; do
+    if [[ "$file" == ${~pattern} ]]; then
+      refuse "$file ressemble à un secret ou à un artefact de publication."
+    fi
+  done
+done
+
+secret_line='BEGIN [A-Z ]*PRIVATE KEY|ghp_[A-Za-z0-9]|github_pat_|AKIA[0-9A-Z]{16}'
+# Ce fichier cite les motifs : il est exclu de cette recherche.
+match=$(git diff --cached -U0 --diff-filter=ACMR -- . ':!scripts/git-hooks/pre-commit' | grep -E "^(\+\+\+ |\+)" | grep -E "^\+\+\+ |$secret_line" \
+  | awk '/^\+\+\+ / { file = substr($0, 7); next } { print file; exit }') || true
+if [[ -n "$match" ]]; then
+  refuse "$match contient ce qui ressemble à une clé privée ou à un jeton."
+fi
+
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --redact --no-banner --log-level warn || refuse "gitleaks a trouvé un secret (voir ci-dessus)."
+fi
