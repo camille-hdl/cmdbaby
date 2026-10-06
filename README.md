@@ -60,6 +60,10 @@ Once per clone, enable the versioned pre-commit hook, which refuses keys, certif
 git config core.hooksPath scripts/git-hooks
 ```
 
+## Security
+
+See [SECURITY.md](SECURITY.md) to report a vulnerability, and [how to verify a download](docs/securite.md#6-vérifier-un-téléchargement) (in French).
+
 ## Website
 
 The site for https://cmdbaby.app lives in `site/` and is served by Cloudflare Workers. First-time setup (Wrangler login, domain, DNS, email, security): `scripts/setup-site.sh`. Later deploys: `scripts/deploy-site.sh`.
