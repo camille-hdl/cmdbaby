@@ -4,7 +4,7 @@ import OSLog
 import ServiceManagement
 import SwiftUI
 
-private let settingsLogger = Logger(subsystem: "fr.camille.babywork", category: "Settings")
+private let settingsLogger = Logger(subsystem: AppIdentity.logSubsystem, category: "Settings")
 
 @MainActor
 final class SettingsModel: ObservableObject {
@@ -429,7 +429,7 @@ struct SettingsView: View {
 
   private var sidebar: some View {
     VStack(alignment: .leading, spacing: 0) {
-      Text("BabyWorks")
+      Text(AppIdentity.displayName)
         .font(.system(size: SettingsWindowMetrics.appTitleSize, weight: .bold, design: .serif))
         .foregroundStyle(color(SettingsPalette.ink))
         .padding(.horizontal, 8)
@@ -1641,7 +1641,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
       defer: false
     )
     window.title = L10n.current("settings.window.title")
-    window.identifier = NSUserInterfaceItemIdentifier("fr.camille.babywork.settings")
+    window.identifier = NSUserInterfaceItemIdentifier("\(AppIdentity.bundleIdentifier).settings")
     window.isReleasedWhenClosed = false
     window.titlebarAppearsTransparent = true
     window.titleVisibility = .hidden

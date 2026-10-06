@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 /// Applique `NSApp.presentationOptions`. Retourne false (et journalise la raison
-/// via os_log, subsystem "fr.camille.babywork", category "Presentation")
+/// via os_log, subsystem "app.cmdbaby.CmdBaby", category "Presentation")
 /// si AppKit rejette la combinaison ; ne lève jamais.
 bool BabyWorkTrySetPresentationOptions(uint64_t raw);
 

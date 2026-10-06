@@ -469,7 +469,7 @@ private final class CoverWindow: NSWindow {
     tabbingMode = .disallowed
     animationBehavior = .none
     acceptsMouseMovedEvents = true
-    identifier = NSUserInterfaceItemIdentifier("fr.camille.babywork.cover.\(descriptor.id)")
+    identifier = NSUserInterfaceItemIdentifier("\(AppIdentity.bundleIdentifier).cover.\(descriptor.id)")
     self.contentView = contentView
     // Une seule fermeture par fenêtre : un `close` répété avec `true` sur-relâche.
     isReleasedWhenClosed = false

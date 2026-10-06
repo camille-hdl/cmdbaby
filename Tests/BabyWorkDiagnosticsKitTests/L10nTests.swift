@@ -37,14 +37,14 @@ func launchModeButtonCopy() {
 func aboutSectionCopy() {
   #expect(L10nTable.language("fr")("settings.about.title") == "À propos")
   #expect(L10nTable.language("en")("settings.about.title") == "About")
-  #expect(L10nTable.language("fr")("settings.about.subtitle") == "BabyWorks et ce qui le rend possible.")
-  #expect(L10nTable.language("en")("settings.about.subtitle") == "BabyWorks and what makes it possible.")
+  #expect(L10nTable.language("fr")("settings.about.subtitle") == "CmdBaby et ce qui le rend possible.")
+  #expect(L10nTable.language("en")("settings.about.subtitle") == "CmdBaby and what makes it possible.")
   #expect(L10nTable.language("fr")("settings.about.assets") == "Images")
   #expect(L10nTable.language("en")("settings.about.assets") == "Artwork")
   #expect(L10nTable.language("fr")("settings.about.madeBy") == "Made by")
   #expect(L10nTable.language("en")("settings.about.madeBy") == "Made by")
-  #expect(L10nTable.language("fr")("settings.about.name.fallback") == "BabyWorks")
-  #expect(L10nTable.language("en")("settings.about.name.fallback") == "BabyWorks")
+  #expect(L10nTable.language("fr")("settings.about.name.fallback") == "CmdBaby")
+  #expect(L10nTable.language("en")("settings.about.name.fallback") == "CmdBaby")
   #expect(L10nTable.language("fr")("settings.about.version.missing") == "—")
   #expect(L10nTable.language("en")("settings.about.version.missing") == "—")
   #expect(L10nTable.language("fr")("settings.about.asset.credit", "Kenney", "CC0") == "Kenney · CC0")
@@ -63,11 +63,11 @@ func languagePreferenceCopy() {
   #expect(L10nTable.language("en")("settings.general.language.french") == "Français")
   #expect(
     L10nTable.language("fr")("settings.general.language.relaunch.help")
-      == "Relancer BabyWorks pour appliquer"
+      == "Relancer CmdBaby pour appliquer"
   )
   #expect(
     L10nTable.language("en")("settings.general.language.relaunch.help")
-      == "Relaunch BabyWorks to apply"
+      == "Relaunch CmdBaby to apply"
   )
   #expect(L10nTable.language("fr")("settings.general.language.relaunch.action") == "Relancer maintenant")
   #expect(L10nTable.language("en")("settings.general.language.relaunch.action") == "Relaunch Now")
@@ -95,19 +95,19 @@ func permissionsAccessibilityCopy() {
   #expect(L10nTable.language("en")("settings.permissions.accessibility.title") == "Accessibility")
   #expect(
     L10nTable.language("fr")("settings.permissions.accessibility.ok")
-      == "BabyWorks peut filtrer les raccourcis pendant une session."
+      == "CmdBaby peut filtrer les raccourcis pendant une session."
   )
   #expect(
     L10nTable.language("en")("settings.permissions.accessibility.ok")
-      == "BabyWorks can filter shortcuts during a session."
+      == "CmdBaby can filter shortcuts during a session."
   )
   #expect(
     L10nTable.language("fr")("settings.permissions.accessibility.attention")
-      == "Cochez BabyWorks dans Réglages Système › Confidentialité et sécurité › Accessibilité. Si BabyWorks y est déjà cochée, retirez-la avec « – », puis ajoutez-la de nouveau : l’entrée est périmée après une mise à jour ou une copie."
+      == "Cochez CmdBaby dans Réglages Système › Confidentialité et sécurité › Accessibilité. Si CmdBaby y est déjà cochée, retirez-la avec « – », puis ajoutez-la de nouveau : l’entrée est périmée après une mise à jour ou une copie."
   )
   #expect(
     L10nTable.language("en")("settings.permissions.accessibility.attention")
-      == "Turn on BabyWorks in System Settings › Privacy & Security › Accessibility. If BabyWorks is already on, remove it with “–”, then add it again: the entry is stale after an update or a copy."
+      == "Turn on CmdBaby in System Settings › Privacy & Security › Accessibility. If CmdBaby is already on, remove it with “–”, then add it again: the entry is stale after an update or a copy."
   )
   #expect(L10nTable.language("fr")("settings.permissions.action.request") == "Demander l’accès")
   #expect(L10nTable.language("en")("settings.permissions.action.request") == "Request Access")
@@ -125,19 +125,19 @@ func permissionsLocationAndLaunchAtLoginCopy() {
   #expect(L10nTable.language("en")("settings.permissions.location.title") == "Location")
   #expect(
     L10nTable.language("fr")("settings.permissions.location.ok")
-      == "BabyWorks est dans le dossier Applications."
+      == "CmdBaby est dans le dossier Applications."
   )
   #expect(
     L10nTable.language("en")("settings.permissions.location.ok")
-      == "BabyWorks is in the Applications folder."
+      == "CmdBaby is in the Applications folder."
   )
   #expect(
     L10nTable.language("fr")("settings.permissions.location.attention")
-      == "Déplacez BabyWorks dans le dossier Applications, puis rouvrez-la depuis là. L’autorisation Accessibilité est liée à cet emplacement."
+      == "Déplacez CmdBaby dans le dossier Applications, puis rouvrez-la depuis là. L’autorisation Accessibilité est liée à cet emplacement."
   )
   #expect(
     L10nTable.language("en")("settings.permissions.location.attention")
-      == "Move BabyWorks to the Applications folder, then open it again from there. The Accessibility permission is tied to this location."
+      == "Move CmdBaby to the Applications folder, then open it again from there. The Accessibility permission is tied to this location."
   )
   #expect(
     L10nTable.language("fr")("settings.permissions.action.revealInFinder") == "Afficher dans le Finder"
@@ -149,18 +149,18 @@ func permissionsLocationAndLaunchAtLoginCopy() {
   #expect(L10nTable.language("en")("settings.permissions.launchAtLogin.title") == "Launch at Login")
   #expect(
     L10nTable.language("fr")("settings.permissions.launchAtLogin.ok")
-      == "BabyWorks s’ouvrira à la connexion."
+      == "CmdBaby s’ouvrira à la connexion."
   )
   #expect(
-    L10nTable.language("en")("settings.permissions.launchAtLogin.ok") == "BabyWorks will open at login."
+    L10nTable.language("en")("settings.permissions.launchAtLogin.ok") == "CmdBaby will open at login."
   )
   #expect(
     L10nTable.language("fr")("settings.permissions.launchAtLogin.requiresApproval")
-      == "macOS attend votre accord pour ouvrir BabyWorks à la connexion."
+      == "macOS attend votre accord pour ouvrir CmdBaby à la connexion."
   )
   #expect(
     L10nTable.language("en")("settings.permissions.launchAtLogin.requiresApproval")
-      == "macOS is waiting for your approval to open BabyWorks at login."
+      == "macOS is waiting for your approval to open CmdBaby at login."
   )
   #expect(
     L10nTable.language("fr")("settings.permissions.launchAtLogin.notRegistered")
@@ -314,20 +314,20 @@ func settingsWindowCopy() {
   )
   #expect(
     L10nTable.language("fr")("settings.general.launchAtLogin.help")
-      == "Ouvre BabyWorks dans la barre de menus au login, sans lancer de session."
+      == "Ouvre CmdBaby dans la barre de menus au login, sans lancer de session."
   )
   #expect(
     L10nTable.language("en")("settings.general.launchAtLogin.help")
-      == "Opens BabyWorks in the menu bar at login, without starting a session."
+      == "Opens CmdBaby in the menu bar at login, without starting a session."
   )
 }
 
 @Test("Le menu principal, l’icône et les couvertures sont en anglais et en français")
 func applicationMenuIconAndCoverLabelsAreLocalized() {
-  #expect(L10nTable.language("fr")("menu.quitApplication") == "Quitter BabyWorks")
-  #expect(L10nTable.language("en")("menu.quitApplication") == "Quit BabyWorks")
-  #expect(L10nTable.language("fr")("menu.statusIcon.accessibility") == "BabyWorks")
-  #expect(L10nTable.language("en")("menu.statusIcon.accessibility") == "BabyWorks")
+  #expect(L10nTable.language("fr")("menu.quitApplication") == "Quitter CmdBaby")
+  #expect(L10nTable.language("en")("menu.quitApplication") == "Quit CmdBaby")
+  #expect(L10nTable.language("fr")("menu.statusIcon.accessibility") == "CmdBaby")
+  #expect(L10nTable.language("en")("menu.statusIcon.accessibility") == "CmdBaby")
   #expect(L10nTable.language("fr")("cover.failsafe.accessibility") == "Sortie de secours")
   #expect(L10nTable.language("en")("cover.failsafe.accessibility") == "Failsafe exit")
   #expect(L10nTable.language("fr")("cover.timer.accessibility") == "Minuteur de session")

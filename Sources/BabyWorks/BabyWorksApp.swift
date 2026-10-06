@@ -2,12 +2,13 @@ import AppKit
 import BabyWorkDiagnosticsKit
 import OSLog
 
-private let appLogger = Logger(subsystem: "fr.camille.babywork", category: "App")
+private let appLogger = Logger(subsystem: AppIdentity.logSubsystem, category: "App")
 
 @main
 enum BabyWorksMain {
   static func main() {
     LifecycleLogRecorder.shared.installStandardSinks()
+    BabyWorksConfigurationStore().migrateLegacyConfiguration()
     let app = NSApplication.shared
     let delegate = MainActor.assumeIsolated {
       MenuBarAgent.activationPolicy.apply(to: app)
@@ -97,12 +98,14 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     ) { app, error in
       if let error {
         appLogger.error(
-          "Impossible de relancer BabyWorks : \(error.localizedDescription, privacy: .public)"
+          "Impossible de relancer \(AppIdentity.displayName, privacy: .public) : \(error.localizedDescription, privacy: .public)"
         )
         return
       }
       guard app != nil else {
-        appLogger.error("Impossible de relancer BabyWorks : instance absente")
+        appLogger.error(
+          "Impossible de relancer \(AppIdentity.displayName, privacy: .public) : instance absente"
+        )
         return
       }
       Task { @MainActor in
@@ -189,7 +192,7 @@ final class BabyWorksAppDelegate: NSObject, NSApplicationDelegate {
     let mainMenu = NSMenu()
     let appItem = NSMenuItem()
     mainMenu.addItem(appItem)
-    let appMenu = NSMenu(title: "BabyWorks")
+    let appMenu = NSMenu(title: AppIdentity.displayName)
     appMenu.addItem(
       withTitle: L10n.current("menu.quitApplication"),
       action: #selector(quitApplication(_:)),

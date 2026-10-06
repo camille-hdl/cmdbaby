@@ -1,3 +1,4 @@
+import BabyWorkDiagnosticsKit
 import Carbon
 import Foundation
 
@@ -8,7 +9,7 @@ final class KeyboardLayoutLetter: @unchecked Sendable {
 
   /// Postée sur le fil principal à la fin de `refreshFromCurrentLayout()`.
   static let didChangeNotification = Notification.Name(
-    "fr.camille.babywork.keyboardLayoutLetterDidChange"
+    "\(AppIdentity.bundleIdentifier).keyboardLayoutLetterDidChange"
   )
 
   private let lock = NSLock()

@@ -5,9 +5,10 @@ set -euo pipefail
 script_dir=${0:A:h}
 project_dir=${script_dir:h}
 configuration=${CONFIGURATION:-release}
-output_dir=${BABYWORK_APP_OUTPUT_DIR:-"/Applications"}
-signing_identity=${BABYWORK_CODE_SIGN_IDENTITY:--}
-sandbox_mode=${BABYWORK_APP_SANDBOX:-0}
+# Les variables BABYWORK_* restent acceptées comme anciens noms.
+output_dir=${CMDBABY_APP_OUTPUT_DIR:-${BABYWORK_APP_OUTPUT_DIR:-"/Applications"}}
+signing_identity=${CMDBABY_CODE_SIGN_IDENTITY:-${BABYWORK_CODE_SIGN_IDENTITY:--}}
+sandbox_mode=${CMDBABY_APP_SANDBOX:-${BABYWORK_APP_SANDBOX:-0}}
 
 if [[ "$signing_identity" == "-" ]]; then
     signing_label="Signature ad hoc — impropre à une identité TCC stable"
@@ -19,25 +20,25 @@ case "$sandbox_mode" in
     1|true|TRUE|yes|YES)
         entitlements_path="$project_dir/Resources/BabyWorks.sandbox.entitlements"
         sandbox_label="App Sandbox activé"
-        app_name="BabyWorks-sandbox.app"
+        app_name="CmdBaby-sandbox.app"
         ;;
     *)
         entitlements_path="$project_dir/Resources/BabyWorks.nosandbox.entitlements"
         sandbox_label="App Sandbox désactivé"
-        app_name="BabyWorks.app"
+        app_name="CmdBaby.app"
         ;;
 esac
 
 app_path="$output_dir/$app_name"
 contents_path="$app_path/Contents"
-executable_path="$contents_path/MacOS/BabyWorks"
+executable_path="$contents_path/MacOS/CmdBaby"
 info_path="$contents_path/Info.plist"
 
-swift build --configuration "$configuration" --product BabyWorks
+swift build --configuration "$configuration" --product CmdBaby
 binary_dir=$(swift build --configuration "$configuration" --show-bin-path)
 
 mkdir -p "$contents_path/MacOS" "$contents_path/Resources"
-install -m 755 "$binary_dir/BabyWorks" "$executable_path"
+install -m 755 "$binary_dir/CmdBaby" "$executable_path"
 install -m 644 "$project_dir/Resources/BabyWorks-Info.plist" "$info_path"
 
 copy_resource_bundle() {
@@ -58,9 +59,9 @@ copy_resource_bundle "BabyWork_BabyWorkDiagnosticsKit.bundle"
 /usr/bin/plutil -replace BabyWorkSandboxMode -string "$sandbox_label" "$info_path"
 
 if [[ "$sandbox_mode" == 1 || "$sandbox_mode" == true || "$sandbox_mode" == TRUE || "$sandbox_mode" == yes || "$sandbox_mode" == YES ]]; then
-    /usr/bin/plutil -replace CFBundleIdentifier -string "fr.camille.babywork.sandbox" "$info_path"
-    /usr/bin/plutil -replace CFBundleDisplayName -string "BabyWorks (sandbox)" "$info_path"
-    /usr/bin/plutil -replace CFBundleName -string "BabyWorksSandbox" "$info_path"
+    /usr/bin/plutil -replace CFBundleIdentifier -string "app.cmdbaby.CmdBaby.sandbox" "$info_path"
+    /usr/bin/plutil -replace CFBundleDisplayName -string "CmdBaby (sandbox)" "$info_path"
+    /usr/bin/plutil -replace CFBundleName -string "CmdBabySandbox" "$info_path"
 fi
 
 /usr/bin/codesign \
@@ -80,5 +81,5 @@ print -r -- "Sandbox: $sandbox_label"
 if [[ "$signing_identity" == "-" ]]; then
     print -r -- "Rappel TCC : la signature ad hoc change l’identité Accessibilité à chaque rebuild."
     print -r -- "Pour un TCC stable, voir README (Build & run) :"
-    print -r -- 'BABYWORK_CODE_SIGN_IDENTITY="$(security find-identity -v -p codesigning | sed -n '\''s/.*"\(Apple Development:.*\)".*/\1/p'\'' | head -1)" BABYWORK_APP_SANDBOX=0 ./scripts/build-app.sh'
+    print -r -- 'CMDBABY_CODE_SIGN_IDENTITY="$(security find-identity -v -p codesigning | sed -n '\''s/.*"\(Apple Development:.*\)".*/\1/p'\'' | head -1)" CMDBABY_APP_SANDBOX=0 ./scripts/build-app.sh'
 fi

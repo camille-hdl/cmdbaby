@@ -78,7 +78,7 @@ final class SessionInputFilter: @unchecked Sendable {
     let thread = Thread { [weak self] in
       self?.runTapThread()
     }
-    thread.name = "fr.camille.babywork.input-filter"
+    thread.name = "\(AppIdentity.bundleIdentifier).input-filter"
     thread.qualityOfService = .userInteractive
 
     stateLock.lock()

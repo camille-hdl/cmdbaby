@@ -8,7 +8,7 @@ public struct CreditedAsset: Equatable, Sendable {
   public let url: URL
 }
 
-/// Auteur de BabyWorks et packs d’images affichés dans les Réglages.
+/// Auteur de CmdBaby et packs d’images affichés dans les Réglages.
 public enum Credits {
   public static let authorName = "Camille"
   public static let authorURL = URL(string: "https://camillehdl.dev")!

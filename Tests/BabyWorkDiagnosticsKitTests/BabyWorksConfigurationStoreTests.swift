@@ -57,15 +57,71 @@ func hasSavedConfigurationIsFalseUntilTheFileIsWritten() throws {
   #expect(store.hasSavedConfiguration == true)
 }
 
-@Test("Le chemin par défaut est Application Support/BabyWorks/config.json")
+@Test("Le chemin par défaut est Application Support/CmdBaby/config.json")
 func defaultConfigurationPathIsApplicationSupport() {
   let url = BabyWorksConfigurationStore.defaultFileURL
   #expect(url.lastPathComponent == "config.json")
-  #expect(url.deletingLastPathComponent().lastPathComponent == "BabyWorks")
+  #expect(url.deletingLastPathComponent().lastPathComponent == "CmdBaby")
   #expect(
     url.deletingLastPathComponent().deletingLastPathComponent().lastPathComponent
       == "Application Support"
   )
+}
+
+@Test("La migration copie l’ancienne config quand la nouvelle manque")
+func legacyConfigurationIsCopiedWhenTheNewOneIsMissing() throws {
+  let legacy = TemporaryConfigurationFile()
+  let file = TemporaryConfigurationFile()
+  defer {
+    legacy.remove()
+    file.remove()
+  }
+  let saved = BabyWorksConfiguration(mode: .starship, launchAtLogin: true)
+  try BabyWorksConfigurationStore(fileURL: legacy.fileURL).save(saved)
+
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  store.migrateLegacyConfiguration(from: legacy.fileURL)
+
+  #expect(store.load() == saved)
+  #expect(FileManager.default.fileExists(atPath: legacy.fileURL.path))
+}
+
+@Test("La migration ne remplace pas une config déjà là")
+func legacyConfigurationIsIgnoredWhenTheNewOneExists() throws {
+  let legacy = TemporaryConfigurationFile()
+  let file = TemporaryConfigurationFile()
+  defer {
+    legacy.remove()
+    file.remove()
+  }
+  try BabyWorksConfigurationStore(fileURL: legacy.fileURL)
+    .save(BabyWorksConfiguration(mode: .starship, launchAtLogin: true))
+  let current = BabyWorksConfiguration(mode: .ocean, launchAtLogin: false)
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  try store.save(current)
+
+  store.migrateLegacyConfiguration(from: legacy.fileURL)
+
+  #expect(store.load() == current)
+}
+
+@Test("Sans ancienne config, la migration ne crée rien")
+func missingLegacyConfigurationCreatesNothing() {
+  let legacy = TemporaryConfigurationFile()
+  let file = TemporaryConfigurationFile()
+  defer { file.remove() }
+
+  let store = BabyWorksConfigurationStore(fileURL: file.fileURL)
+  store.migrateLegacyConfiguration(from: legacy.fileURL)
+
+  #expect(store.hasSavedConfiguration == false)
+}
+
+@Test("L’ancienne config est Application Support/BabyWorks/config.json")
+func legacyConfigurationPathIsTheBabyWorksFolder() {
+  let url = BabyWorksConfigurationStore.legacyFileURL
+  #expect(url.lastPathComponent == "config.json")
+  #expect(url.deletingLastPathComponent().lastPathComponent == "BabyWorks")
 }
 
 private struct TemporaryConfigurationFile {

@@ -15,20 +15,20 @@ func launchWithoutSavedConfigurationOpensExits() {
 
 @Test("L’argument --open-settings general ouvre Général, même au premier lancement")
 func launchArgumentOpensGeneralSettings() {
-  let arguments = ["BabyWorks", "--open-settings", "general"]
+  let arguments = ["CmdBaby", "--open-settings", "general"]
   #expect(LaunchPlan.atLaunch(hasSavedConfiguration: true, arguments: arguments) == .openSettings(.general))
   #expect(LaunchPlan.atLaunch(hasSavedConfiguration: false, arguments: arguments) == .openSettings(.general))
 }
 
 @Test("Sans --open-settings general, le lancement ne change pas")
 func launchWithoutLanguageArgumentKeepsTheExistingPlan() {
-  #expect(LaunchPlan.atLaunch(hasSavedConfiguration: true, arguments: ["BabyWorks"]) == .idle)
+  #expect(LaunchPlan.atLaunch(hasSavedConfiguration: true, arguments: ["CmdBaby"]) == .idle)
   #expect(
-    LaunchPlan.atLaunch(hasSavedConfiguration: false, arguments: ["BabyWorks", "--open-settings"])
+    LaunchPlan.atLaunch(hasSavedConfiguration: false, arguments: ["CmdBaby", "--open-settings"])
       == .openSettings(.exits)
   )
   #expect(
-    LaunchPlan.atLaunch(hasSavedConfiguration: true, arguments: ["BabyWorks", "--open-settings", "mode"])
+    LaunchPlan.atLaunch(hasSavedConfiguration: true, arguments: ["CmdBaby", "--open-settings", "mode"])
       == .idle
   )
 }

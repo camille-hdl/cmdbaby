@@ -2,7 +2,7 @@ import Foundation
 
 /// Journal de cycle de vie : lignes stables pour Console et fichier, sans donnée clavier.
 public enum LifecycleLog {
-  public static let subsystem = "fr.camille.babywork"
+  public static let subsystem = AppIdentity.logSubsystem
 
   public enum Category: String, Sendable {
     case lifecycle = "Lifecycle"

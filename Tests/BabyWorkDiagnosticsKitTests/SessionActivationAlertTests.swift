@@ -13,7 +13,7 @@ func accessibilityFailureAlertOpensPermissionsWithoutJargon() {
   #expect(alert.title == "La session n’a pas pu démarrer")
   #expect(
     alert.informativeText
-      == "BabyWorks a besoin de l’autorisation Accessibilité pour protéger le Mac pendant la session. Ouvrez Réglages › Permissions pour la vérifier."
+      == "CmdBaby a besoin de l’autorisation Accessibilité pour protéger le Mac pendant la session. Ouvrez Réglages › Permissions pour la vérifier."
   )
   #expect(alert.actions == [.openAppSettings(.permissions), .dismiss])
   expectNoTechnicalJargon(alert.title)
@@ -36,7 +36,7 @@ func accessibilityFailureAlertSpeaksEnglish() {
   #expect(alert.title == "The session couldn't start")
   #expect(
     alert.informativeText
-      == "BabyWorks needs the Accessibility permission to protect the Mac during a session. Open Settings › Permissions to check it."
+      == "CmdBaby needs the Accessibility permission to protect the Mac during a session. Open Settings › Permissions to check it."
   )
   #expect(alert.actions == [.openAppSettings(.permissions), .dismiss])
   #expect(alert.actions.map { $0.title(in: .language("en")) } == ["Settings…", "OK"])
@@ -122,12 +122,12 @@ func otherActivationFailuresOpenTheModeSection() {
 func accessibilityFailureLogRecordsTheTechnicalReasonAndBinaryPath() {
   let event = SessionActivationAlert.activationFailureLog(
     .filterUnavailable("tap créé mais inactif"),
-    binaryPath: "/Applications/BabyWorks.app"
+    binaryPath: "/Applications/CmdBaby.app"
   )
 
   #expect(
     event.message
-      == "session.activation.fail reason=tap créé mais inactif binary=/Applications/BabyWorks.app"
+      == "session.activation.fail reason=tap créé mais inactif binary=/Applications/CmdBaby.app"
   )
   #expect(event.category == .session)
 }
@@ -136,12 +136,12 @@ func accessibilityFailureLogRecordsTheTechnicalReasonAndBinaryPath() {
 func passphraseFailureLogOmitsThePhrase() {
   let event = SessionActivationAlert.activationFailureLog(
     .passphraseNotTypable(["é", "ü"]),
-    binaryPath: "/Applications/BabyWorks.app"
+    binaryPath: "/Applications/CmdBaby.app"
   )
 
   #expect(
     event.message
-      == "session.activation.fail reason=passphraseNotTypable binary=/Applications/BabyWorks.app"
+      == "session.activation.fail reason=passphraseNotTypable binary=/Applications/CmdBaby.app"
   )
 }
 

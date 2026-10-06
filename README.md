@@ -1,4 +1,4 @@
-# BabyWorks
+# CmdBaby
 
 A small macOS app I’m building on evenings and weekends so my kid can poke at the screen without launching Spotlight, switching spaces, or otherwise “helping” with the rest of the Mac.
 
@@ -12,7 +12,7 @@ Made by [Camille](https://camillehdl.dev). **Every line of code in this repo was
 - **Keyboard shielding** during play: common shortcuts get swallowed so tiny fingers don’t escape the sandbox. Keystrokes are not logged or stored.
 - **Grown-up exits**: configurable in Settings. The exit passphrase defaults to `parent` (then Return), alongside Shift-Escape and the pale failsafe corner. A session timer defaults to 20 minutes. Any of these quits the app and brings the desktop back.
 
-On launch, BabyWorks tries to go straight into kid mode. You only see the French “parent tools” window if something blocked full-screen (permissions, simulated failure, etc.).
+On launch, CmdBaby tries to go straight into kid mode. You only see the French “parent tools” window if something blocked full-screen (permissions, simulated failure, etc.).
 
 ## Art credits
 
@@ -26,27 +26,27 @@ Requirements: **macOS 13+**, **Swift 6.1** (Xcode or Swift toolchain).
 
 ```bash
 swift test
-swift build --product BabyWorks
-.build/release/BabyWorks
+swift build --product CmdBaby
+.build/release/CmdBaby
 ```
 
 For a signed `.app` in `/Applications` (recommended so Accessibility / TCC remembers a stable identity):
 
 ```bash
-BABYWORK_CODE_SIGN_IDENTITY="$(security find-identity -v -p codesigning | sed -n 's/.*"\(Apple Development:.*\)".*/\1/p' | head -1)" BABYWORK_APP_SANDBOX=0 ./scripts/build-app.sh
-open /Applications/BabyWorks.app
+CMDBABY_CODE_SIGN_IDENTITY="$(security find-identity -v -p codesigning | sed -n 's/.*"\(Apple Development:.*\)".*/\1/p' | head -1)" CMDBABY_APP_SANDBOX=0 ./scripts/build-app.sh
+open /Applications/CmdBaby.app
 ```
 
-Open **`/Applications/BabyWorks.app`**, not a `.build` binary (the snippet above is tests/debug only). macOS keys Accessibility to the code-signing identity (CDHash). An **ad hoc** signature (`BABYWORK_CODE_SIGN_IDENTITY=-`, the script default) is debug-only: every rebuild is a new identity, so “BabyWorks” can look authorized while **Lancer session** still fails until you remove stale entries and re-grant **this** copy.
+Open **`/Applications/CmdBaby.app`**, not a `.build` binary (the snippet above is tests/debug only). macOS keys Accessibility to the code-signing identity (CDHash). An **ad hoc** signature (`CMDBABY_CODE_SIGN_IDENTITY=-`, the script default) is debug-only: every rebuild is a new identity, so “CmdBaby” can look authorized while **Lancer session** still fails until you remove stale entries and re-grant **this** copy.
 
 Sandbox experiment (separate bundle ID):
 
 ```bash
-BABYWORK_APP_SANDBOX=1 ./scripts/build-app.sh
-open /Applications/BabyWorks-sandbox.app
+CMDBABY_APP_SANDBOX=1 ./scripts/build-app.sh
+open /Applications/CmdBaby-sandbox.app
 ```
 
-Grant **Accessibility** to BabyWorks when macOS asks — that’s what lets the app filter shortcuts during kiosk mode. If you change your mind after denying, quit and relaunch the app (or drag it into the Accessibility list from Finder).
+Grant **Accessibility** to CmdBaby when macOS asks — that’s what lets the app filter shortcuts during kiosk mode. If you change your mind after denying, quit and relaunch the app (or drag it into the Accessibility list from Finder).
 
 ---
 

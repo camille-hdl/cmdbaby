@@ -7,7 +7,7 @@ static os_log_t BabyWorkPresentationLog(void) {
   static os_log_t log;
   static dispatch_once_t once;
   dispatch_once(&once, ^{
-    log = os_log_create("fr.camille.babywork", "Presentation");
+    log = os_log_create("app.cmdbaby.CmdBaby", "Presentation");  // AppIdentity.logSubsystem
   });
   return log;
 }

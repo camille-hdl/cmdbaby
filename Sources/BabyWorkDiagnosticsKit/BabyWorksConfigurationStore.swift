@@ -1,11 +1,15 @@
 import Foundation
 import OSLog
 
-private let configurationLogger = Logger(subsystem: "fr.camille.babywork", category: "Config")
+private let configurationLogger = Logger(subsystem: AppIdentity.logSubsystem, category: "Config")
 
 /// Lecture et écriture de `BabyWorksConfiguration` dans Application Support.
 public struct BabyWorksConfigurationStore: Sendable {
-  public static let defaultFileURL = URL.applicationSupportDirectory
+  public static let defaultFileURL = AppIdentity.supportDirectory
+    .appendingPathComponent("config.json", isDirectory: false)
+
+  /// Config de l’époque où l’app s’appelait BabyWorks.
+  public static let legacyFileURL = URL.applicationSupportDirectory
     .appendingPathComponent("BabyWorks", isDirectory: true)
     .appendingPathComponent("config.json", isDirectory: false)
 
@@ -18,6 +22,23 @@ public struct BabyWorksConfigurationStore: Sendable {
   /// Vrai dès que `config.json` existe, même s’il est illisible.
   public var hasSavedConfiguration: Bool {
     FileManager.default.fileExists(atPath: fileURL.path)
+  }
+
+  /// Copie l’ancienne config si la nouvelle n’existe pas encore. Sinon, ne fait rien.
+  public func migrateLegacyConfiguration(from legacyURL: URL = legacyFileURL) {
+    let fileManager = FileManager.default
+    guard !hasSavedConfiguration, fileManager.fileExists(atPath: legacyURL.path) else { return }
+    do {
+      try fileManager.createDirectory(
+        at: fileURL.deletingLastPathComponent(),
+        withIntermediateDirectories: true
+      )
+      try fileManager.copyItem(at: legacyURL, to: fileURL)
+    } catch {
+      configurationLogger.error(
+        "Migration de \(legacyURL.path, privacy: .public) impossible (\(error.localizedDescription, privacy: .public))."
+      )
+    }
   }
 
   public func load() -> BabyWorksConfiguration {

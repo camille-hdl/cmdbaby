@@ -101,7 +101,7 @@ func mandatoryEventsFormatToStableLines() {
 
 @Test("Le sous-système os_log est le bundle id")
 func logSubsystemIsBundleIdentifier() {
-  #expect(LifecycleLog.subsystem == "fr.camille.babywork")
+  #expect(LifecycleLog.subsystem == "app.cmdbaby.CmdBaby")
 }
 
 @Test("Les lignes fichier portent horodatage, catégorie et message")
@@ -111,18 +111,18 @@ func fileLinesIncludeTimestampCategoryAndMessage() {
   #expect(line == "2026-09-29T08:14:00Z [Session] session.start")
 }
 
-@Test("Le chemin par défaut est Application Support/BabyWorks/logs")
-func defaultLogDirectoryIsApplicationSupportBabyWorksLogs() {
+@Test("Le chemin par défaut est Application Support/CmdBaby/logs")
+func defaultLogDirectoryIsApplicationSupportCmdBabyLogs() {
   let url = LifecycleLogFile.defaultDirectory
   #expect(url.lastPathComponent == "logs")
-  #expect(url.deletingLastPathComponent().lastPathComponent == "BabyWorks")
+  #expect(url.deletingLastPathComponent().lastPathComponent == "CmdBaby")
   #expect(
     url.deletingLastPathComponent().deletingLastPathComponent().lastPathComponent
       == "Application Support"
   )
 }
 
-@Test("Le fichier du jour s’appelle babywork-YYYYMMDD.log")
+@Test("Le fichier du jour s’appelle cmdbaby-YYYYMMDD.log")
 func datedLogFileUsesDayStamp() throws {
   let directory = TemporaryLogDirectory()
   defer { directory.remove() }
@@ -135,7 +135,7 @@ func datedLogFileUsesDayStamp() throws {
 
   file.write(.sessionStart)
 
-  let logURL = directory.url.appendingPathComponent("babywork-20260929.log")
+  let logURL = directory.url.appendingPathComponent("cmdbaby-20260929.log")
   let contents = try String(contentsOf: logURL, encoding: .utf8)
   #expect(contents.contains("[Session] session.start"))
   #expect(contents.hasSuffix("\n"))
@@ -157,11 +157,11 @@ func newDayOpensANewFile() throws {
   file.write(.sessionStop(kind: .adultExit))
 
   let day29 = try String(
-    contentsOf: directory.url.appendingPathComponent("babywork-20260929.log"),
+    contentsOf: directory.url.appendingPathComponent("cmdbaby-20260929.log"),
     encoding: .utf8
   )
   let day30 = try String(
-    contentsOf: directory.url.appendingPathComponent("babywork-20260930.log"),
+    contentsOf: directory.url.appendingPathComponent("cmdbaby-20260930.log"),
     encoding: .utf8
   )
   #expect(day29.contains("session.start"))
@@ -169,7 +169,7 @@ func newDayOpensANewFile() throws {
   #expect(day30.contains("session.stop kind=adultExit"))
 }
 
-@Test("Un fichier trop gros passe à babywork-YYYYMMDD-2.log")
+@Test("Un fichier trop gros passe à cmdbaby-YYYYMMDD-2.log")
 func oversizedFileRotatesToNumberedSibling() throws {
   let directory = TemporaryLogDirectory()
   defer { directory.remove() }
@@ -185,11 +185,11 @@ func oversizedFileRotatesToNumberedSibling() throws {
   file.write(.sessionStop(kind: .adultExit))
 
   let first = try String(
-    contentsOf: directory.url.appendingPathComponent("babywork-20260929.log"),
+    contentsOf: directory.url.appendingPathComponent("cmdbaby-20260929.log"),
     encoding: .utf8
   )
   let second = try String(
-    contentsOf: directory.url.appendingPathComponent("babywork-20260929-2.log"),
+    contentsOf: directory.url.appendingPathComponent("cmdbaby-20260929-2.log"),
     encoding: .utf8
   )
   #expect(first.contains("session.start"))

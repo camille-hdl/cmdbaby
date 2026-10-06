@@ -27,7 +27,10 @@ public struct L10nTable: Sendable {
     return String(format: format, locale: Locale(identifier: languageCode), arguments: arguments)
   }
 
-  /// Charge le sous-bundle `<code>.lproj` du kit.
+  /// Jeton des tables remplacé par `AppIdentity.displayName`.
+  static let appNameToken = "{app}"
+
+  /// Charge le sous-bundle `<code>.lproj` du kit et y place le nom de l’app.
   private static func entries(in code: String) -> [String: String] {
     guard
       let lprojURL = L10n.bundle.url(forResource: code, withExtension: "lproj"),
@@ -37,7 +40,9 @@ public struct L10nTable: Sendable {
     else {
       return [:]
     }
-    return dictionary
+    return dictionary.mapValues {
+      $0.replacingOccurrences(of: appNameToken, with: AppIdentity.displayName)
+    }
   }
 }
 

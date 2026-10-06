@@ -5,10 +5,10 @@ import Testing
 @Test("Le nom affiché l’emporte sur le nom du bundle")
 func installedAppNamePrefersDisplayName() {
   #expect(
-    InstalledAppLabel.name(displayName: "BabyWorks (sandbox)", bundleName: "BabyWorksSandbox")
-      == "BabyWorks (sandbox)"
+    InstalledAppLabel.name(displayName: "CmdBaby (sandbox)", bundleName: "BabyWorksSandbox")
+      == "CmdBaby (sandbox)"
   )
-  #expect(InstalledAppLabel.name(displayName: "  ", bundleName: "BabyWorks") == "BabyWorks")
+  #expect(InstalledAppLabel.name(displayName: "  ", bundleName: "CmdBaby") == "CmdBaby")
   #expect(InstalledAppLabel.name(displayName: nil, bundleName: nil) == nil)
 }
 

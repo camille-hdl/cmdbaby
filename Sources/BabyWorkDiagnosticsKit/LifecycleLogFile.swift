@@ -2,8 +2,7 @@ import Foundation
 
 /// Fichier rotatif : un fichier par jour, relais numéroté au-delà de ~2 Mo.
 public final class LifecycleLogFile: LifecycleLogSink, @unchecked Sendable {
-  public static let defaultDirectory = URL.applicationSupportDirectory
-    .appendingPathComponent("BabyWorks", isDirectory: true)
+  public static let defaultDirectory = AppIdentity.supportDirectory
     .appendingPathComponent("logs", isDirectory: true)
 
   public static let defaultMaxBytes = 2 * 1024 * 1024
@@ -60,7 +59,7 @@ public final class LifecycleLogFile: LifecycleLogSink, @unchecked Sendable {
   }
 
   private func fileURL(stamp: String, index: Int) -> URL {
-    let name = index == 1 ? "babywork-\(stamp).log" : "babywork-\(stamp)-\(index).log"
+    let name = index == 1 ? "cmdbaby-\(stamp).log" : "cmdbaby-\(stamp)-\(index).log"
     return directory.appendingPathComponent(name)
   }
 

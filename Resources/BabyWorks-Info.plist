@@ -14,15 +14,15 @@
         <string>fr</string>
     </array>
     <key>CFBundleDisplayName</key>
-    <string>BabyWorks</string>
+    <string>CmdBaby</string>
     <key>CFBundleExecutable</key>
-    <string>BabyWorks</string>
+    <string>CmdBaby</string>
     <key>CFBundleIdentifier</key>
-    <string>fr.camille.babywork</string>
+    <string>app.cmdbaby.CmdBaby</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>BabyWorks</string>
+    <string>CmdBaby</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -38,8 +38,8 @@
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSInputMonitoringUsageDescription</key>
-    <string>BabyWorks a besoin de surveiller le clavier et la souris pour absorber les raccourcis système pendant une session enfant. Aucune frappe n’est enregistrée.</string>
+    <string>CmdBaby a besoin de surveiller le clavier et la souris pour absorber les raccourcis système pendant une session enfant. Aucune frappe n’est enregistrée.</string>
     <key>NSHumanReadableCopyright</key>
-    <string>Projet personnel BabyWorks</string>
+    <string>Projet personnel CmdBaby</string>
 </dict>
 </plist>

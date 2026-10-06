@@ -4,7 +4,7 @@ import CoreText
 import os
 import QuartzCore
 
-private let terminalLog = Logger(subsystem: "fr.camille.babywork", category: "Terminal")
+private let terminalLog = Logger(subsystem: AppIdentity.logSubsystem, category: "Terminal")
 
 /// Un par session, partagé entre les écrans. Un seul prompt : dernier écran cliqué, sinon le plus grand.
 @MainActor

@@ -26,8 +26,8 @@ func deniedAccessibilityNeedsBothActions() throws {
 func applicationInApplicationsFolderIsOk() throws {
   let home = "/Users/ada"
   for bundlePath in [
-    "/Applications/BabyWorks.app",
-    "/Users/ada/Applications/BabyWorks.app",
+    "/Applications/CmdBaby.app",
+    "/Users/ada/Applications/CmdBaby.app",
   ] {
     let checklist = SetupChecklist(
       facts: facts(accessibilityGranted: true, bundlePath: bundlePath, homeDirectory: home)
@@ -43,8 +43,8 @@ func applicationInApplicationsFolderIsOk() throws {
 func applicationOutsideApplicationsNeedsRevealInFinder() throws {
   let home = "/Users/ada"
   let paths = [
-    "/Users/ada/Downloads/BabyWorks.app",
-    "/private/var/folders/ab/cd/T/AppTranslocation/E1E1E1E1-E1E1-E1E1-E1E1-E1E1E1E1E1E1/d/BabyWorks.app",
+    "/Users/ada/Downloads/CmdBaby.app",
+    "/private/var/folders/ab/cd/T/AppTranslocation/E1E1E1E1-E1E1-E1E1-E1E1-E1E1E1E1E1E1/d/CmdBaby.app",
   ]
   for bundlePath in paths {
     let checklist = SetupChecklist(
@@ -56,7 +56,7 @@ func applicationOutsideApplicationsNeedsRevealInFinder() throws {
     #expect(check.actions == [.revealInFinder])
     #expect(
       L10nTable.language("fr")(check.detailKey)
-        == "Déplacez BabyWorks dans le dossier Applications, puis rouvrez-la depuis là. L’autorisation Accessibilité est liée à cet emplacement."
+        == "Déplacez CmdBaby dans le dossier Applications, puis rouvrez-la depuis là. L’autorisation Accessibilité est liée à cet emplacement."
     )
   }
 }
@@ -89,7 +89,7 @@ func launchAtLoginRequiresApprovalOpensLoginItemsSettings() throws {
   #expect(check.actions == [.openLoginItemsSettings])
   #expect(
     L10nTable.language("fr")(check.detailKey)
-      == "macOS attend votre accord pour ouvrir BabyWorks à la connexion."
+      == "macOS attend votre accord pour ouvrir CmdBaby à la connexion."
   )
 }
 
@@ -202,7 +202,7 @@ func untypableEteAsksToChangeThePhrase() throws {
 func checklistKeysExistInBothLanguages() {
   let lists = [
     SetupChecklist(facts: facts(accessibilityGranted: true)),
-    SetupChecklist(facts: facts(accessibilityGranted: false, bundlePath: "/Users/ada/Downloads/BabyWorks.app")),
+    SetupChecklist(facts: facts(accessibilityGranted: false, bundlePath: "/Users/ada/Downloads/CmdBaby.app")),
     SetupChecklist(
       facts: facts(accessibilityGranted: true, launchAtLoginRequested: true, loginItemStatus: .enabled)
     ),
@@ -247,7 +247,7 @@ func checklistKeysExistInBothLanguages() {
 /// App dans /Applications, démarrage automatique non demandé : seules Accessibilité et l’emplacement varient.
 private func facts(
   accessibilityGranted: Bool,
-  bundlePath: String = "/Applications/BabyWorks.app",
+  bundlePath: String = "/Applications/CmdBaby.app",
   homeDirectory: String = "/Users/ada",
   launchAtLoginRequested: Bool = false,
   loginItemStatus: LoginItemStatus = .notRegistered,
