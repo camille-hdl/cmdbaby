@@ -29,8 +29,11 @@ if [[ -f site/public/appcast.xml ]]; then
     fi
 fi
 
-print "Installation de Wrangler (version épinglée dans site/package-lock.json)…"
+print "Installation de Wrangler et Tailwind (versions épinglées dans site/package-lock.json)…"
 npm ci --prefix site --ignore-scripts --no-audit --no-fund
+
+print "Compilation de la feuille de style (Tailwind)…"
+npm run --prefix site build
 
 print "Déploiement…"
 npm exec --prefix site -- wrangler deploy --config site/wrangler.jsonc "$@"

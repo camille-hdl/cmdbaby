@@ -68,4 +68,4 @@ See [SECURITY.md](SECURITY.md) to report a vulnerability, and [how to verify a d
 
 ## Website
 
-The site for https://cmdbaby.app lives in `site/` and is served by Cloudflare Workers. First-time setup (Wrangler login, domain, DNS, email, security): `scripts/setup-site.sh`. Later deploys: `scripts/deploy-site.sh`.
+The site for https://cmdbaby.app lives in `site/` and is served by Cloudflare Workers. First-time setup (Wrangler login, domain, DNS, email, security): `scripts/setup-site.sh`. Later deploys: `scripts/deploy-site.sh`. Local preview: `npm run --prefix site dev` (Tailwind build, then `wrangler dev`). Settings screenshots: `scripts/site-screenshots.sh`.

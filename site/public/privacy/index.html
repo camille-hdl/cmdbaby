@@ -3,46 +3,62 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Privacy — CmdBaby</title>
-  <meta name="description" content="Let your toddler bash the keyboard. Your Mac stays safe. Free for macOS.">
+  <title>Privacy · CmdBaby</title>
+  <meta name="description" content="A Mac app that turns the keyboard into a toy for toddlers, and keeps the Mac safe. Free.">
+  <meta name="color-scheme" content="light dark">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/svg+xml" href="/favicon-dark.svg" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="/style.css">
   <link rel="canonical" href="https://cmdbaby.app/privacy/">
   <link rel="alternate" hreflang="en" href="https://cmdbaby.app/privacy/">
   <link rel="alternate" hreflang="fr" href="https://cmdbaby.app/fr/privacy/">
-  <meta property="og:title" content="Privacy — CmdBaby">
-  <meta property="og:description" content="Let your toddler bash the keyboard. Your Mac stays safe. Free for macOS.">
+  <meta property="og:title" content="Privacy · CmdBaby">
+  <meta property="og:description" content="A Mac app that turns the keyboard into a toy for toddlers, and keeps the Mac safe. Free.">
   <meta property="og:image" content="https://cmdbaby.app/img/social-preview.png">
   <meta property="og:url" content="https://cmdbaby.app/privacy/">
   <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
-<main>
-<article class="prose">
-  <h1>Privacy</h1>
-  <h2>Keystrokes</h2>
-  <p>No keystroke is recorded, stored or sent. The Accessibility permission is only used to filter shortcuts during a session.</p>
-  <h2>No tracking</h2>
-  <p>No account, no usage statistics, no advertising. This website has no cookies and no analytics. Cloudflare, which serves it, keeps standard technical logs.</p>
-  <h2>Network</h2>
-  <p>The app connects to the network only to <strong>check for updates</strong> (Sparkle). It reads <code>https://cmdbaby.app/appcast.xml</code> regularly; you can turn this check off in Settings › General. Each check sends your IP address and a <code>User-Agent</code> header with the versions of CmdBaby and Sparkle. No system profile is sent.</p>
-  <p>An update is downloaded from <code>github.com</code>, where GitHub’s privacy policy applies.</p>
-  <h2>Settings</h2>
-  <p>Settings stay on your Mac, in <code>~/Library/Application Support/CmdBaby/</code> and in the app’s preferences.</p>
-  <h2>Questions</h2>
-  <p>See the <a href="/support/">Support</a> page.</p>
-</article>
-</main>
-<footer>
-  <nav>
-    <a href="/">CmdBaby</a> ·
-    <a href="/privacy/">Privacy</a> ·
-    <a href="/support/">Support</a> ·
-    <a href="https://github.com/camille-hdl/cmdbaby">GitHub</a>
+<a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-10 focus:rounded-lg focus:bg-raised focus:px-4 focus:py-2">Skip to content</a>
+<header class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-8">
+  <a href="/" class="flex items-center gap-3 text-ink no-underline">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="/img/icon-nuit.svg">
+      <img src="/img/icon-jour.svg" alt="" width="40" height="40" class="size-10">
+    </picture>
+    <span class="font-serif text-2xl font-bold">CmdBaby</span>
+  </a>
+  <nav class="flex items-center gap-5 text-base" aria-label="Language">
+    <a href="/privacy/" class="text-ink-2 no-underline hover:text-claret">Privacy</a>
+    <a href="/support/" class="text-ink-2 no-underline hover:text-claret">Support</a>
+    <a href="/fr/privacy/" hreflang="fr" lang="fr" class="rounded-full border border-rule px-3 py-1 text-ink-2 no-underline hover:border-claret hover:text-claret">Français</a>
   </nav>
-  <p>Made by <a href="https://camillehdl.dev">Camille</a> · Art: Kenney (CC0)</p>
-  <p class="lang" aria-label="Language"><span aria-current="page">EN</span> / <a href="/fr/privacy/" hreflang="fr" lang="fr">FR</a></p>
+</header>
+<main id="main">
+<article class="mx-auto flex max-w-2xl flex-col gap-5 px-4 pt-12 sm:px-8 sm:pt-20">
+    <h1 class="mb-4 font-serif text-4xl font-bold sm:text-5xl">Privacy</h1>
+    <h2 class="mt-8 font-serif text-2xl font-bold">What you type</h2>
+    <p class="text-lg leading-relaxed text-ink-2">CmdBaby never records, stores or sends a keystroke. It uses the Accessibility permission only to block shortcuts during a session.</p>
+    <h2 class="mt-8 font-serif text-2xl font-bold">No tracking</h2>
+    <p class="text-lg leading-relaxed text-ink-2">There is no account, no usage statistics and no advertising. This website sets no cookies and runs no analytics. Cloudflare, which serves it, keeps standard technical logs.</p>
+    <h2 class="mt-8 font-serif text-2xl font-bold">Network</h2>
+    <p class="text-lg leading-relaxed text-ink-2">The app goes online only to check for updates. It reads <code>https://cmdbaby.app/appcast.xml</code> from time to time. Each check sends your IP address and a <code>User-Agent</code> header with the CmdBaby and Sparkle versions, and nothing else about your Mac. You can turn the check off in Settings, General.</p>
+    <p class="text-lg leading-relaxed text-ink-2">Updates download from GitHub, where GitHub's privacy policy applies.</p>
+    <h2 class="mt-8 font-serif text-2xl font-bold">Your settings</h2>
+    <p class="text-lg leading-relaxed text-ink-2">Settings stay on your Mac, in <code>~/Library/Application Support/CmdBaby/</code> and in the app's preferences.</p>
+    <h2 class="mt-8 font-serif text-2xl font-bold">Questions</h2>
+    <p class="text-lg leading-relaxed text-ink-2">Write to us from the <a href="/support/">Support</a> page.</p>
+  </article>
+</main>
+<footer class="mx-auto mt-24 max-w-6xl border-t border-rule/60 px-4 py-10 text-sm text-muted sm:px-8">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <p>Made by <a href="https://camillehdl.dev">Camille</a> · Art by Kenney (CC0)</p>
+    <p class="flex gap-5">
+      <a href="/privacy/">Privacy</a>
+      <a href="/support/">Support</a>
+      <a href="https://github.com/camille-hdl/cmdbaby">GitHub</a>
+    </p>
+  </div>
 </footer>
 </body>
 </html>

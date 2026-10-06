@@ -3,46 +3,62 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Confidentialité — CmdBaby</title>
-  <meta name="description" content="Laissez votre tout-petit taper sur le clavier. Votre Mac ne risque rien. Gratuit pour macOS.">
+  <title>Confidentialité · CmdBaby</title>
+  <meta name="description" content="Une app Mac qui transforme le clavier en jouet pour les tout-petits, sans risque pour le Mac. Gratuite.">
+  <meta name="color-scheme" content="light dark">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/svg+xml" href="/favicon-dark.svg" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="/style.css">
   <link rel="canonical" href="https://cmdbaby.app/fr/privacy/">
   <link rel="alternate" hreflang="fr" href="https://cmdbaby.app/fr/privacy/">
   <link rel="alternate" hreflang="en" href="https://cmdbaby.app/privacy/">
-  <meta property="og:title" content="Confidentialité — CmdBaby">
-  <meta property="og:description" content="Laissez votre tout-petit taper sur le clavier. Votre Mac ne risque rien. Gratuit pour macOS.">
+  <meta property="og:title" content="Confidentialité · CmdBaby">
+  <meta property="og:description" content="Une app Mac qui transforme le clavier en jouet pour les tout-petits, sans risque pour le Mac. Gratuite.">
   <meta property="og:image" content="https://cmdbaby.app/img/social-preview.png">
   <meta property="og:url" content="https://cmdbaby.app/fr/privacy/">
   <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
-<main>
-<article class="prose">
-  <h1>Confidentialité</h1>
-  <h2>Frappes</h2>
-  <p>Aucune frappe n’est enregistrée, stockée ni envoyée. L’autorisation Accessibilité sert seulement à filtrer les raccourcis pendant une session.</p>
-  <h2>Aucun suivi</h2>
-  <p>Pas de compte, pas de statistiques d’usage, pas de publicité. Ce site n’a ni cookie ni outil de mesure d’audience. Cloudflare, qui le sert, conserve des journaux techniques standard.</p>
-  <h2>Réseau</h2>
-  <p>L’app ne se connecte au réseau que pour <strong>vérifier les mises à jour</strong> (Sparkle). Elle lit <code>https://cmdbaby.app/appcast.xml</code> à intervalles réguliers ; on peut désactiver cette vérification dans Réglages › Général. Chaque vérification envoie votre adresse IP et un en-tête <code>User-Agent</code> avec les versions de CmdBaby et de Sparkle. Aucun profil système n’est envoyé.</p>
-  <p>Une mise à jour se télécharge depuis <code>github.com</code>, où s’applique la politique de confidentialité de GitHub.</p>
-  <h2>Réglages</h2>
-  <p>Les réglages restent sur le Mac, dans <code>~/Library/Application Support/CmdBaby/</code> et dans les préférences de l’app.</p>
-  <h2>Questions</h2>
-  <p>Voir la page <a href="/fr/support/">Support</a>.</p>
-</article>
-</main>
-<footer>
-  <nav>
-    <a href="/fr/">CmdBaby</a> ·
-    <a href="/fr/privacy/">Confidentialité</a> ·
-    <a href="/fr/support/">Support</a> ·
-    <a href="https://github.com/camille-hdl/cmdbaby">GitHub</a>
+<a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-10 focus:rounded-lg focus:bg-raised focus:px-4 focus:py-2">Aller au contenu</a>
+<header class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-8">
+  <a href="/fr/" class="flex items-center gap-3 text-ink no-underline">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="/img/icon-nuit.svg">
+      <img src="/img/icon-jour.svg" alt="" width="40" height="40" class="size-10">
+    </picture>
+    <span class="font-serif text-2xl font-bold">CmdBaby</span>
+  </a>
+  <nav class="flex items-center gap-5 text-base" aria-label="Langue">
+    <a href="/fr/privacy/" class="text-ink-2 no-underline hover:text-claret">Confidentialité</a>
+    <a href="/fr/support/" class="text-ink-2 no-underline hover:text-claret">Support</a>
+    <a href="/privacy/" hreflang="en" lang="en" class="rounded-full border border-rule px-3 py-1 text-ink-2 no-underline hover:border-claret hover:text-claret">English</a>
   </nav>
-  <p>Fait par <a href="https://camillehdl.dev">Camille</a> · Images : Kenney (CC0)</p>
-  <p class="lang" aria-label="Langue"><span aria-current="page">FR</span> / <a href="/privacy/" hreflang="en" lang="en">EN</a></p>
+</header>
+<main id="main">
+<article class="mx-auto flex max-w-2xl flex-col gap-5 px-4 pt-12 sm:px-8 sm:pt-20">
+    <h1 class="mb-4 font-serif text-4xl font-bold sm:text-5xl">Confidentialité</h1>
+    <h2 class="mt-8 font-serif text-2xl font-bold">Ce que vous tapez</h2>
+    <p class="text-lg leading-relaxed text-ink-2">CmdBaby n'enregistre, ne stocke et n'envoie jamais aucune frappe. L'autorisation Accessibilité sert seulement à bloquer les raccourcis pendant une session.</p>
+    <h2 class="mt-8 font-serif text-2xl font-bold">Aucun suivi</h2>
+    <p class="text-lg leading-relaxed text-ink-2">Pas de compte, pas de statistiques d'usage, pas de publicité. Ce site ne pose aucun cookie et ne mesure pas l'audience. Cloudflare, qui le sert, garde des journaux techniques standard.</p>
+    <h2 class="mt-8 font-serif text-2xl font-bold">Réseau</h2>
+    <p class="text-lg leading-relaxed text-ink-2">L'app ne se connecte que pour vérifier les mises à jour. Elle lit <code>https://cmdbaby.app/appcast.xml</code> de temps en temps. Chaque vérification envoie votre adresse IP et un en-tête <code>User-Agent</code> avec les versions de CmdBaby et de Sparkle, et rien d'autre sur votre Mac. On peut désactiver cette vérification dans Réglages, Général.</p>
+    <p class="text-lg leading-relaxed text-ink-2">Les mises à jour se téléchargent depuis GitHub, où s'applique la politique de confidentialité de GitHub.</p>
+    <h2 class="mt-8 font-serif text-2xl font-bold">Vos réglages</h2>
+    <p class="text-lg leading-relaxed text-ink-2">Les réglages restent sur votre Mac, dans <code>~/Library/Application Support/CmdBaby/</code> et dans les préférences de l'app.</p>
+    <h2 class="mt-8 font-serif text-2xl font-bold">Questions</h2>
+    <p class="text-lg leading-relaxed text-ink-2">Écrivez-nous depuis la page <a href="/fr/support/">Support</a>.</p>
+  </article>
+</main>
+<footer class="mx-auto mt-24 max-w-6xl border-t border-rule/60 px-4 py-10 text-sm text-muted sm:px-8">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <p>Fait par <a href="https://camillehdl.dev">Camille</a> · Images de Kenney (CC0)</p>
+    <p class="flex gap-5">
+      <a href="/fr/privacy/">Confidentialité</a>
+      <a href="/fr/support/">Support</a>
+      <a href="https://github.com/camille-hdl/cmdbaby">GitHub</a>
+    </p>
+  </div>
 </footer>
 </body>
 </html>

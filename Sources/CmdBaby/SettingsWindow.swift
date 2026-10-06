@@ -1314,6 +1314,15 @@ private final class PermissionsMonitor: ObservableObject {
     self.checklist = checklist
   }
 
+  /// Capture du site : une installation saine, sans point d’attention dû au build de debug.
+  private static var isSnapshot: Bool {
+    #if DEBUG
+    SettingsSnapshotRequest(arguments: CommandLine.arguments) != nil
+    #else
+    false
+    #endif
+  }
+
   private static func checklist(
     loginItem: any LoginItemRegistration,
     launchAtLoginRequested: Bool,
@@ -1322,8 +1331,8 @@ private final class PermissionsMonitor: ObservableObject {
   ) -> SetupChecklist {
     SetupChecklist(
       facts: SetupFacts(
-        accessibilityGranted: AccessibilitySettings.isProcessTrusted(),
-        bundlePath: Bundle.main.bundlePath,
+        accessibilityGranted: AccessibilitySettings.isProcessTrusted() || Self.isSnapshot,
+        bundlePath: Self.isSnapshot ? "/Applications/CmdBaby.app" : Bundle.main.bundlePath,
         homeDirectory: FileManager.default.homeDirectoryForCurrentUser.path,
         launchAtLoginRequested: launchAtLoginRequested,
         loginItemStatus: loginItem.status,
@@ -1646,6 +1655,51 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
       NSApp.activate(ignoringOtherApps: true)
     }
   }
+
+  #if DEBUG
+  /// Capture d’une section pour le site, sans autorisation d’enregistrement d’écran :
+  /// la fenêtre, invisible, se dessine elle-même dans un PNG (barre de titre comprise).
+  /// Configuration de démonstration (valeurs par défaut) : jamais la vraie phrase de sortie.
+  func writeSnapshot(section: SettingsSection, dark: Bool, to url: URL, then done: @escaping () -> Void) {
+    let demoStore = CmdBabyConfigurationStore(
+      fileURL: FileManager.default.temporaryDirectory
+        .appendingPathComponent("cmdbaby-snapshot-\(UUID().uuidString).json")
+    )
+    let model = SettingsModel(
+      settings: CmdBabySettings(store: demoStore, loginItem: loginItem),
+      languageSettings: languageSettings,
+      languageAtLaunch: languageAtLaunch
+    )
+    self.model = model
+    let window = existingOrMakeWindow()
+    window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+    window.contentView = NSHostingView(
+      rootView: SettingsView(
+        model: model,
+        loginItem: loginItem,
+        session: session,
+        presence: presence,
+        initialSection: section,
+        onLaunch: {},
+        onRelaunch: {}
+      )
+    )
+    window.alphaValue = 0
+    // Fenêtre active : interrupteurs teintés et boutons de titre en couleur, comme à l’usage.
+    NSApp.setActivationPolicy(.regular)
+    NSApp.activate(ignoringOtherApps: true)
+    window.makeKeyAndOrderFront(nil)
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+      let frame = window.contentView?.superview ?? window.contentView!
+      if let rep = frame.bitmapImageRepForCachingDisplay(in: frame.bounds) {
+        frame.cacheDisplay(in: frame.bounds, to: rep)
+        try? rep.representation(using: .png, properties: [:])?.write(to: url)
+      }
+      window.orderOut(nil)
+      done()
+    }
+  }
+  #endif
 
   private func existingOrMakeWindow() -> NSWindow {
     if let window {

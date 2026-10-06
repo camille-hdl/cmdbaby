@@ -52,6 +52,14 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
   }
 
   func applicationDidFinishLaunching(_ notification: Notification) {
+    #if DEBUG
+    if let snapshot = SettingsSnapshotRequest(arguments: CommandLine.arguments) {
+      settingsWindowController.writeSnapshot(section: snapshot.section, dark: snapshot.dark, to: snapshot.url) {
+        exit(0)
+      }
+      return
+    }
+    #endif
     installMainMenu()
     installStatusItem()
     model.attachTerminationDelegate(self)
@@ -359,3 +367,25 @@ extension NSEvent.ModifierFlags {
     self = flags
   }
 }
+
+#if DEBUG
+/// `swift run CmdBaby --snapshot-settings <mode|exits|general|permissions|about> <light|dark> <fichier.png>`
+struct SettingsSnapshotRequest {
+  let section: SettingsSection
+  let dark: Bool
+  let url: URL
+
+  init?(arguments: [String]) {
+    guard let flag = arguments.firstIndex(of: "--snapshot-settings"), arguments.count > flag + 3 else {
+      return nil
+    }
+    let sections: [String: SettingsSection] = [
+      "mode": .mode, "exits": .exits, "general": .general, "permissions": .permissions, "about": .about,
+    ]
+    guard let section = sections[arguments[flag + 1]] else { return nil }
+    self.section = section
+    dark = arguments[flag + 2] == "dark"
+    url = URL(fileURLWithPath: arguments[flag + 3])
+  }
+}
+#endif

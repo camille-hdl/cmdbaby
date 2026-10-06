@@ -3,57 +3,160 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CmdBaby — un terrain de jeu au clavier, sans risque pour le Mac</title>
-  <meta name="description" content="Laissez votre tout-petit taper sur le clavier. Votre Mac ne risque rien. Gratuit pour macOS.">
+  <title>CmdBaby · Un jouet clavier pour tout-petits, sans risque pour le Mac</title>
+  <meta name="description" content="Une app Mac qui transforme le clavier en jouet pour les tout-petits, sans risque pour le Mac. Gratuite.">
+  <meta name="color-scheme" content="light dark">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/svg+xml" href="/favicon-dark.svg" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="/style.css">
   <link rel="canonical" href="https://cmdbaby.app/fr/">
   <link rel="alternate" hreflang="fr" href="https://cmdbaby.app/fr/">
   <link rel="alternate" hreflang="en" href="https://cmdbaby.app/">
-  <meta property="og:title" content="CmdBaby — un terrain de jeu au clavier, sans risque pour le Mac">
-  <meta property="og:description" content="Laissez votre tout-petit taper sur le clavier. Votre Mac ne risque rien. Gratuit pour macOS.">
+  <meta property="og:title" content="CmdBaby · Un jouet clavier pour tout-petits, sans risque pour le Mac">
+  <meta property="og:description" content="Une app Mac qui transforme le clavier en jouet pour les tout-petits, sans risque pour le Mac. Gratuite.">
   <meta property="og:image" content="https://cmdbaby.app/img/social-preview.png">
   <meta property="og:url" content="https://cmdbaby.app/fr/">
   <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
-<main>
-<header class="hero">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="/img/icon-nuit.svg">
-    <img src="/img/icon-jour.svg" alt="CmdBaby" width="128" height="128">
-  </picture>
-  <h1>CmdBaby</h1>
-  <p class="tagline">Laissez votre tout-petit taper sur le clavier. Votre Mac ne risque rien.</p>
-  <p><a class="button" href="/download">Télécharger pour macOS</a></p>
-  <p class="fine">Gratuit · macOS 13 ou plus récent · Apple Silicon et Intel</p>
-  <p class="brew">Ou avec Homebrew : <code>brew install --cask camille-hdl/tap/cmdbaby</code></p>
-</header>
-<section class="features">
-  <article>
-    <h2>Scènes plein écran</h2>
-    <p>Un fond marin avec poissons et bulles, une pluie verte de terminal, ou un vaisseau spatial qui tire sur la touche pressée. Chaque touche fait quelque chose.</p>
-  </article>
-  <article>
-    <h2>Raccourcis bloqués</h2>
-    <p>Pendant une session, les raccourcis du système sont absorbés : le Mac reste à l’abri. Cela demande l’autorisation Accessibilité. Aucune frappe n’est enregistrée.</p>
-  </article>
-  <article>
-    <h2>Sorties pour les grands</h2>
-    <p>Tapez la phrase <code>parent</code> puis Entrée, maintenez Maj-Échap 1,5&nbsp;seconde, cliquez 5&nbsp;fois sur le carré de secours, ou laissez le minuteur finir la session (3&nbsp;minutes par défaut).</p>
-  </article>
-</section>
-</main>
-<footer>
-  <nav>
-    <a href="/fr/">CmdBaby</a> ·
-    <a href="/fr/privacy/">Confidentialité</a> ·
-    <a href="/fr/support/">Support</a> ·
-    <a href="https://github.com/camille-hdl/cmdbaby">GitHub</a>
+<a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-10 focus:rounded-lg focus:bg-raised focus:px-4 focus:py-2">Aller au contenu</a>
+<header class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-8">
+  <a href="/fr/" class="flex items-center gap-3 text-ink no-underline">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="/img/icon-nuit.svg">
+      <img src="/img/icon-jour.svg" alt="" width="40" height="40" class="size-10">
+    </picture>
+    <span class="font-serif text-2xl font-bold">CmdBaby</span>
+  </a>
+  <nav class="flex items-center gap-5 text-base" aria-label="Langue">
+    <a href="/fr/privacy/" class="text-ink-2 no-underline hover:text-claret">Confidentialité</a>
+    <a href="/fr/support/" class="text-ink-2 no-underline hover:text-claret">Support</a>
+    <a href="/" hreflang="en" lang="en" class="rounded-full border border-rule px-3 py-1 text-ink-2 no-underline hover:border-claret hover:text-claret">English</a>
   </nav>
-  <p>Fait par <a href="https://camillehdl.dev">Camille</a> · Images : Kenney (CC0)</p>
-  <p class="lang" aria-label="Langue"><span aria-current="page">FR</span> / <a href="/" hreflang="en" lang="en">EN</a></p>
+</header>
+<main id="main">
+<section class="mx-auto flex max-w-4xl flex-col items-center gap-8 px-4 pt-12 pb-16 text-center sm:px-8 sm:pt-20">
+    <h1 class="font-serif text-5xl font-bold leading-[1.1] sm:text-7xl">Laissez votre <span class="whitespace-nowrap">tout-petit</span> <span class="marker">taper sur le clavier</span>.</h1>
+    <p class="max-w-2xl text-xl leading-relaxed text-ink-2 sm:text-2xl">CmdBaby transforme votre Mac en jouet pour les petites mains. Chaque touche fait apparaître quelque chose à l'écran, et les raccourcis qui ferment une app ou ouvrent Spotlight ne font rien.</p>
+    <div class="flex flex-col gap-3 items-center text-center">
+      <a href="/download" class="inline-block rounded-full bg-claret px-8 py-4 text-lg font-semibold text-on-claret no-underline shadow-lg shadow-claret/25 transition hover:-translate-y-0.5 hover:shadow-xl">Télécharger pour macOS</a>
+      <p class="text-sm text-muted">Gratuit · macOS 13 ou plus récent · Apple Silicon et Intel</p>
+      <p class="text-sm text-muted">Ou avec Homebrew <code>brew install --cask camille-hdl/tap/cmdbaby</code></p>
+    </div>
+  </section>
+  <div class="mx-auto max-w-5xl px-4 sm:px-8">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="/img/screenshots/mode-dark-fr.webp">
+      <img src="/img/screenshots/mode-light-fr.webp" alt="Les réglages de CmdBaby, avec les trois modes de jeu : Océan, Terminal et Vaisseau." width="1520" height="1080" loading="lazy" class="w-full rounded-2xl shadow-2xl shadow-ink/20 ring-1 ring-rule/40 ">
+    </picture>
+  </div>
+
+  <section class="mx-auto max-w-6xl px-4 py-16 sm:px-8 sm:py-24" style="--marker: var(--color-teal-soft)">
+    <h2 class="mb-10 max-w-2xl font-serif text-3xl font-bold leading-tight sm:text-4xl">Trois <span class="marker">mondes</span> où jouer</h2>
+    <div class="rounded-[2.5rem] bg-teal-soft p-4 sm:p-8">
+      <div class="grid gap-4 sm:gap-6 md:grid-cols-3">
+        <div class="rounded-3xl bg-raised p-8 shadow-sm">
+          <p class="mb-3 inline-block rounded-full bg-teal-soft px-3 py-1 text-sm font-semibold text-teal">Océan</p>
+          <p class="text-lg leading-relaxed text-ink-2">Des poissons arrivent et des bulles montent à chaque touche.</p>
+        </div>
+        <div class="rounded-3xl bg-raised p-8 shadow-sm">
+          <p class="mb-3 inline-block rounded-full bg-jade-soft px-3 py-1 text-sm font-semibold text-jade">Terminal</p>
+          <p class="text-lg leading-relaxed text-ink-2">Une pluie de code vert tombe sur l'écran, une colonne par touche.</p>
+        </div>
+        <div class="rounded-3xl bg-raised p-8 shadow-sm">
+          <p class="mb-3 inline-block rounded-full bg-velvet-soft px-3 py-1 text-sm font-semibold text-velvet">Vaisseau</p>
+          <p class="text-lg leading-relaxed text-ink-2">Un vaisseau spatial pivote et tire sur la lettre qui vient d'être tapée.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-8 sm:py-24 md:grid-cols-2 md:gap-16" style="--marker: var(--color-jade-soft)">
+    <div class="flex flex-col gap-6 ">
+      <h2 class="font-serif text-3xl font-bold leading-tight sm:text-4xl">Tous les <span class="marker">écrans</span> sont couverts</h2>
+      <p class="text-lg leading-relaxed text-ink-2 sm:text-xl">Les jeux pour tout-petits dans un navigateur occupent un seul onglet. CmdBaby couvre chaque écran branché au Mac : un clic perdu ne tombe jamais sur votre bureau.</p>
+      <p class="text-lg leading-relaxed text-ink-2 sm:text-xl">Branchez un second écran pendant une session, il est couvert en moins d'une seconde. Débranchez-le ou changez la résolution, la couverture suit.</p>
+    </div>
+    <div>
+      <div class="flex items-end justify-center gap-4 sm:gap-6" role="img" aria-label="Deux écrans qui affichent tous les deux la scène Océan.">
+        <div class="flex w-3/5 flex-col items-center">
+          <div class="w-full rounded-2xl bg-stone-800 p-2 shadow-xl shadow-ink/20">
+            <img src="/img/ocean-scene.webp" alt="" width="336" height="236" loading="lazy" class="w-full rounded-lg">
+          </div>
+          <div class="h-5 w-3 bg-stone-400"></div>
+          <div class="h-1.5 w-20 rounded-full bg-stone-400"></div>
+        </div>
+        <div class="flex w-2/5 flex-col items-center">
+          <div class="w-full rounded-2xl bg-stone-800 p-2 shadow-xl shadow-ink/20">
+            <img src="/img/ocean-scene.webp" alt="" width="336" height="236" loading="lazy" class="w-full rounded-lg">
+          </div>
+          <div class="h-5 w-3 bg-stone-400"></div>
+          <div class="h-1.5 w-20 rounded-full bg-stone-400"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-8 sm:py-24 md:grid-cols-2 md:gap-16" style="--marker: var(--color-velvet-soft)">
+    <div class="flex flex-col gap-6 md:order-last">
+      <h2 class="font-serif text-3xl font-bold leading-tight sm:text-4xl">Des raccourcis qui <span class="marker">ne font rien</span></h2>
+      <p class="text-lg leading-relaxed text-ink-2 sm:text-xl">Pendant une session, CmdBaby absorbe les raccourcis avec Cmd et Ctrl, les touches de fonction, les touches média et la touche Globe. Cmd-Q, Cmd-Tab, Spotlight et les captures d'écran restent sans effet.</p>
+      <p class="text-lg leading-relaxed text-ink-2 sm:text-xl">Cela demande l'autorisation Accessibilité. CmdBaby n'enregistre jamais ce qui est tapé.</p>
+    </div>
+    <div>
+      <div class="flex flex-wrap justify-center gap-3 rounded-[2.5rem] bg-velvet-soft p-8 sm:p-12" role="img" aria-label="Raccourcis bloqués : Commande-Q, Commande-Tab, Commande-Espace, Contrôle-Flèche, Maj-Commande-4, F11, Globe.">
+        <kbd class="inline-flex min-w-14 items-center justify-center rounded-xl border border-b-4 border-rule bg-raised px-4 py-3 font-sans text-lg font-semibold text-muted line-through decoration-velvet decoration-2 shadow-sm">⌘ Q</kbd>
+        <kbd class="inline-flex min-w-14 items-center justify-center rounded-xl border border-b-4 border-rule bg-raised px-4 py-3 font-sans text-lg font-semibold text-muted line-through decoration-velvet decoration-2 shadow-sm">⌘ Tab</kbd>
+        <kbd class="inline-flex min-w-14 items-center justify-center rounded-xl border border-b-4 border-rule bg-raised px-4 py-3 font-sans text-lg font-semibold text-muted line-through decoration-velvet decoration-2 shadow-sm">⌘ Space</kbd>
+        <kbd class="inline-flex min-w-14 items-center justify-center rounded-xl border border-b-4 border-rule bg-raised px-4 py-3 font-sans text-lg font-semibold text-muted line-through decoration-velvet decoration-2 shadow-sm">⌃ →</kbd>
+        <kbd class="inline-flex min-w-14 items-center justify-center rounded-xl border border-b-4 border-rule bg-raised px-4 py-3 font-sans text-lg font-semibold text-muted line-through decoration-velvet decoration-2 shadow-sm">⇧⌘ 4</kbd>
+        <kbd class="inline-flex min-w-14 items-center justify-center rounded-xl border border-b-4 border-rule bg-raised px-4 py-3 font-sans text-lg font-semibold text-muted line-through decoration-velvet decoration-2 shadow-sm">F11</kbd>
+        <kbd class="inline-flex min-w-14 items-center justify-center rounded-xl border border-b-4 border-rule bg-raised px-4 py-3 font-sans text-lg font-semibold text-muted line-through decoration-velvet decoration-2 shadow-sm">Globe</kbd>
+      </div>
+    </div>
+  </section>
+
+  <section class="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-8 sm:py-24 md:grid-cols-2 md:gap-16" style="--marker: var(--color-mandarin-soft)">
+    <div class="flex flex-col gap-6 ">
+      <h2 class="font-serif text-3xl font-bold leading-tight sm:text-4xl">Vous choisissez <span class="marker">comment ça finit</span></h2>
+      <p class="text-lg leading-relaxed text-ink-2 sm:text-xl">Tapez <code>parent</code>, puis Entrée. Ou maintenez Maj-Échap 1,5 seconde, ou cliquez 5 fois sur le petit carré dans le coin.</p>
+      <p class="text-lg leading-relaxed text-ink-2 sm:text-xl">Un minuteur peut aussi finir la session, après 3 minutes par défaut. Les sorties, la phrase et la durée se règlent dans les Réglages.</p>
+    </div>
+    <div>
+      <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="/img/screenshots/exits-dark-fr.webp">
+      <img src="/img/screenshots/exits-light-fr.webp" alt="Les réglages de sortie de CmdBaby : phrase de sortie, Maj-Échap, clics de secours et minuteur." width="1520" height="1080" loading="lazy" class="w-full rounded-2xl shadow-2xl shadow-ink/20 ring-1 ring-rule/40 ">
+    </picture>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-3xl px-4 py-16 sm:px-8 sm:py-24" style="--marker: var(--color-claret-soft)">
+    <div class="flex flex-col gap-6">
+      <h2 class="font-serif text-3xl font-bold leading-tight sm:text-4xl">Gratuit et <span class="marker">discret</span></h2>
+      <p class="text-lg leading-relaxed text-ink-2 sm:text-xl">Pas de compte, pas de publicité, pas de statistiques. L'app ne se connecte que pour vérifier les mises à jour. <a href='/fr/privacy/'>Lire la page Confidentialité</a>.</p>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-4xl px-4 pt-8 sm:px-8">
+    <div class="flex flex-col items-center gap-8 rounded-[2.5rem] bg-surface px-6 py-16 text-center">
+      <h2 class="font-serif text-3xl font-bold sm:text-4xl">Prêt à jouer&nbsp;?</h2>
+      <div class="flex flex-col gap-3 items-center text-center">
+      <a href="/download" class="inline-block rounded-full bg-claret px-8 py-4 text-lg font-semibold text-on-claret no-underline shadow-lg shadow-claret/25 transition hover:-translate-y-0.5 hover:shadow-xl">Télécharger pour macOS</a>
+      <p class="text-sm text-muted">Gratuit · macOS 13 ou plus récent · Apple Silicon et Intel</p>
+      <p class="text-sm text-muted">Ou avec Homebrew <code>brew install --cask camille-hdl/tap/cmdbaby</code></p>
+    </div>
+    </div>
+  </section>
+</main>
+<footer class="mx-auto mt-24 max-w-6xl border-t border-rule/60 px-4 py-10 text-sm text-muted sm:px-8">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <p>Fait par <a href="https://camillehdl.dev">Camille</a> · Images de Kenney (CC0)</p>
+    <p class="flex gap-5">
+      <a href="/fr/privacy/">Confidentialité</a>
+      <a href="/fr/support/">Support</a>
+      <a href="https://github.com/camille-hdl/cmdbaby">GitHub</a>
+    </p>
+  </div>
 </footer>
 </body>
 </html>
