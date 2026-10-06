@@ -15,23 +15,28 @@ final class KeyboardLayoutLetter: @unchecked Sendable {
   private let lock = NSLock()
   /// Disposition active fusionnée avec la disposition ASCII : 1 ou 2 lettres par touche.
   private var letters: [UInt16: Set<Character>] = [:]
-  /// Disposition active seule, pour le HUD : pas la lettre ASCII en plus.
+  /// Disposition active seule, sans la lettre ASCII : la lettre que l’enfant voit sur la touche.
   private var activeLetters: [UInt16: Character] = [:]
-  private(set) var layoutName: String?
+  private var currentLayoutName: String?
+
+  /// Nom de la disposition active, lu sous le verrou.
+  var layoutName: String? {
+    lock.lock()
+    defer { lock.unlock() }
+    return currentLayoutName
+  }
 
   private init() {}
 
-  /// `merged` : disposition active et ASCII. `active` : disposition active seule, pour le HUD.
+  /// `merged` : disposition active et ASCII. `active` : disposition active seule.
   func letters(for keyCode: UInt16) -> (merged: Set<Character>, active: Character?) {
     lock.lock()
     defer { lock.unlock() }
     return (letters[keyCode] ?? [], activeLetters[keyCode])
   }
 
-  /// Lettres reconnues pour une frappe de fenêtre, et la lettre unique du HUD.
-  func keyDownLetters(keyCode: UInt16, charactersIgnoringModifiers: String) -> (
-    letters: Set<Character>, shown: Character?
-  ) {
+  /// Lettres reconnues pour une frappe de fenêtre.
+  func keyDownLetters(keyCode: UInt16, charactersIgnoringModifiers: String) -> Set<Character> {
     let cached = letters(for: keyCode)
     let typed = charactersIgnoringModifiers.lowercased().first { $0.isLetter }
     var recognized = cached.merged
@@ -42,7 +47,7 @@ final class KeyboardLayoutLetter: @unchecked Sendable {
       recognized.remove(active)
       recognized.insert(typed)
     }
-    return (recognized, typed ?? cached.active)
+    return recognized
   }
 
   /// Table keycode → lettres, lue sous le verrou.
@@ -58,11 +63,11 @@ final class KeyboardLayoutLetter: @unchecked Sendable {
       NotificationCenter.default.post(name: Self.didChangeNotification, object: self)
     }
     let inputSource = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue()
-    layoutName = inputSource.flatMap { localizedName(of: $0) }
+    let name = inputSource.flatMap { localizedName(of: $0) }
     let active = inputSource.flatMap { unicodeLetters(of: $0) }
     let asciiSource = TISCopyCurrentASCIICapableKeyboardLayoutInputSource()?.takeRetainedValue()
     let ascii = asciiSource.flatMap { unicodeLetters(of: $0) }
-    replaceTables(merged: merge(active: active, ascii: ascii), active: active ?? [:])
+    replaceTables(merged: merge(active: active, ascii: ascii), active: active ?? [:], name: name)
   }
 
   private func unicodeLetters(of inputSource: TISInputSource) -> [UInt16: Character]? {
@@ -106,10 +111,15 @@ final class KeyboardLayoutLetter: @unchecked Sendable {
     return merged
   }
 
-  private func replaceTables(merged: [UInt16: Set<Character>], active: [UInt16: Character]) {
+  private func replaceTables(
+    merged: [UInt16: Set<Character>],
+    active: [UInt16: Character],
+    name: String?
+  ) {
     lock.lock()
     letters = merged
     activeLetters = active
+    currentLayoutName = name
     lock.unlock()
   }
 

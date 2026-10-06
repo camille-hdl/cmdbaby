@@ -2,183 +2,10 @@ import AppKit
 import CmdBabyKit
 import QuartzCore
 
-/// État live du kiosque, affiché sur les couvertures. Aucune persistance.
-final class KioskHUD: @unchecked Sendable {
-  private let lock = NSLock()
-  private var source = "—"
-  private var lastKey = "—"
-  private var sequence = "—"
-  private var failsafeClicks = "0/5"
-  private var mouseSeen = 0
-  private var shifts = "—"
-  private var tap = "—"
-  private var exit = "—"
-  private var passphraseEnabled = true
-  private var shiftEscapeEnabled = true
-  private var failsafeEnabled = true
-  private var handlers: [@Sendable (String) -> Void] = []
-
-  func resetHandlers() {
-    lock.lock()
-    handlers.removeAll(keepingCapacity: false)
-    lock.unlock()
-  }
-
-  func addHandler(_ handler: @escaping @Sendable (String) -> Void) {
-    lock.lock()
-    handlers.append(handler)
-    let text = renderLocked()
-    lock.unlock()
-    publish(text, handlers: [handler])
-  }
-
-  func noteSessionExits(_ exits: AdultExitSettings) {
-    lock.lock()
-    passphraseEnabled = exits.enabledMethods.contains(.passphrase)
-    shiftEscapeEnabled = exits.enabledMethods.contains(.shiftEscape)
-    failsafeEnabled = exits.enabledMethods.contains(.failsafeClick)
-    sequence = "—"
-    let text = renderLocked()
-    let handlers = handlers
-    lock.unlock()
-    publish(text, handlers: handlers)
-  }
-
-  func noteWindowKey(letter: Character?, isReturn: Bool, isEscape: Bool = false, filled: Int, target: Int) {
-    lock.lock()
-    source = "fenêtre keyDown"
-    if isEscape {
-      lastKey = "Échap"
-    } else if isReturn {
-      lastKey = "Entrée"
-    } else {
-      lastKey = letter.map(String.init) ?? "(non lettre)"
-    }
-    sequence = "\(filled)/\(target)"
-    let text = renderLocked()
-    let handlers = handlers
-    lock.unlock()
-    publish(text, handlers: handlers)
-  }
-
-  func noteFilterKey(letter: Character?, isReturn: Bool, isEscape: Bool = false, filled: Int, target: Int) {
-    lock.lock()
-    source = "filtre tap"
-    if isEscape {
-      lastKey = "Échap"
-    } else if isReturn {
-      lastKey = "Entrée"
-    } else {
-      lastKey = letter.map(String.init) ?? "(non lettre)"
-    }
-    sequence = "\(filled)/\(target)"
-    let text = renderLocked()
-    let handlers = handlers
-    lock.unlock()
-    publish(text, handlers: handlers)
-  }
-
-  func noteFailsafeClick(count: Int) {
-    lock.lock()
-    source = "carré secours"
-    failsafeClicks = "\(min(count, 5))/5"
-    let text = renderLocked()
-    let handlers = handlers
-    lock.unlock()
-    publish(text, handlers: handlers)
-  }
-
-  func noteBackgroundClick() {
-    lock.lock()
-    mouseSeen += 1
-    source = "clic couverture"
-    let text = renderLocked()
-    let handlers = handlers
-    lock.unlock()
-    publish(text, handlers: handlers)
-  }
-
-  func noteShifts(left: Bool, right: Bool, origin: String) {
-    lock.lock()
-    source = origin
-    switch (left, right) {
-    case (true, true):
-      shifts = "gauche+droite"
-    case (true, false):
-      shifts = "gauche"
-    case (false, true):
-      shifts = "droite"
-    case (false, false):
-      shifts = "—"
-    }
-    let text = renderLocked()
-    let handlers = handlers
-    lock.unlock()
-    publish(text, handlers: handlers)
-  }
-
-  func noteTap(_ status: String) {
-    lock.lock()
-    tap = status
-    let text = renderLocked()
-    let handlers = handlers
-    lock.unlock()
-    publish(text, handlers: handlers)
-  }
-
-  func noteExit(_ kind: AdultExitKind) {
-    lock.lock()
-    switch kind {
-    case .passphrase:
-      exit = "demandée : phrase+Entrée"
-    case .shiftEscape:
-      exit = "demandée : Majuscule-Échap"
-    case .failsafeClick:
-      exit = "demandée : 5 clics"
-    case .timeLimit:
-      exit = "demandée : minuteur"
-    }
-    let text = renderLocked()
-    let handlers = handlers
-    lock.unlock()
-    publish(text, handlers: handlers)
-  }
-
-  private func renderLocked() -> String {
-    let sequenceLine = passphraseEnabled ? sequence : "désactivé"
-    let clickLine = failsafeEnabled ? failsafeClicks : "désactivé"
-    let shiftLine = shiftEscapeEnabled ? shifts : "désactivé"
-    return """
-    source     \(source)
-    touche     \(lastKey)
-    séquence   \(sequenceLine)
-    clics      \(clickLine)
-    souris     \(mouseSeen)
-    maj        \(shiftLine)
-    tap        \(tap)
-    sortie     \(exit)
-    """
-  }
-
-  private func publish(_ text: String, handlers: [@Sendable (String) -> Void]) {
-    let apply: @Sendable () -> Void = {
-      for handler in handlers {
-        handler(text)
-      }
-    }
-    if Thread.isMainThread {
-      apply()
-    } else {
-      DispatchQueue.main.async(execute: apply)
-    }
-  }
-}
-
 /// Une fenêtre sans bordure par `NSScreen` vivant, jamais une fenêtre géante ni une liste mise en cache.
 @MainActor
 final class CoverWindowCoordinator {
   var onAdultExit: (@Sendable (AdultExitKind) -> Void)?
-  var hud = KioskHUD()
   private var windows: [NSWindow] = []
   private var inputBridge: KioskInputBridge?
   private var playMode: (any PlayMode)?
@@ -201,10 +28,8 @@ final class CoverWindowCoordinator {
 
     activateApp()
     let exitHandler = onAdultExit
-    let hud = self.hud
     let mode = PlayModeRegistry.make(sessionMode)
-    let bridge = KioskInputBridge(hud: hud, exits: exits) { kind in
-      hud.noteExit(kind)
+    let bridge = KioskInputBridge(exits: exits) { kind in
       exitHandler?(kind)
     }
     inputBridge = bridge
@@ -291,7 +116,6 @@ final class CoverWindowCoordinator {
     inputBridge = nil
     playMode?.reset()
     playMode = nil
-    hud.resetHandlers()
   }
 
   private func startOutlineClock() {
@@ -328,7 +152,6 @@ final class CoverWindowCoordinator {
     self.timeLimit = nil
     outlineTimer?.invalidate()
     outlineTimer = nil
-    hud.noteExit(.timeLimit)
     onAdultExit?(.timeLimit)
   }
 
@@ -345,22 +168,18 @@ final class CoverWindowCoordinator {
 @MainActor
 final class KioskInputBridge {
   private let recognizer: AdultExitRecognizer
-  private let hud: KioskHUD
   private let onExit: @Sendable (AdultExitKind) -> Void
 
   init(
-    hud: KioskHUD,
     exits: AdultExitSettings,
     onExit: @escaping @Sendable (AdultExitKind) -> Void
   ) {
     self.recognizer = AdultExitRecognizer(settings: exits)
-    self.hud = hud
     self.onExit = onExit
   }
 
   func noteKeyDown(
     letters: Set<Character>,
-    shownLetter: Character?,
     isReturn: Bool,
     isEscape: Bool,
     shiftDown: Bool
@@ -371,34 +190,16 @@ final class KioskInputBridge {
       isEscape: isEscape,
       shiftDown: shiftDown
     )
-    let filled = recognizer.prefixLength
-    let target = recognizer.prefixTarget
-    hud.noteWindowKey(
-      letter: shownLetter,
-      isReturn: isReturn,
-      isEscape: isEscape,
-      filled: filled,
-      target: target
-    )
     if let kind {
       onExit(kind)
     }
   }
 
-  func noteShifts(left: Bool, right: Bool) {
-    hud.noteShifts(left: left, right: right, origin: "fenêtre flagsChanged")
-  }
-
   func noteFailsafeClick() {
     let result = recognizer.handleFailsafeClick()
-    hud.noteFailsafeClick(count: result.count)
     if let exit = result.exit {
       onExit(exit)
     }
-  }
-
-  func noteBackgroundClick() {
-    hud.noteBackgroundClick()
   }
 }
 
@@ -473,12 +274,6 @@ private final class CoverWindow: NSWindow {
     self.contentView = contentView
     // Une seule fermeture par fenêtre : un `close` répété avec `true` sur-relâche.
     isReleasedWhenClosed = false
-  }
-
-  override func flagsChanged(with event: NSEvent) {
-    let left = CGEventSource.keyState(.hidSystemState, key: CGKeyCode(0x38))
-    let right = CGEventSource.keyState(.hidSystemState, key: CGKeyCode(0x3C))
-    inputBridge.noteShifts(left: left, right: right)
   }
 
   override func performKeyEquivalent(with event: NSEvent) -> Bool {

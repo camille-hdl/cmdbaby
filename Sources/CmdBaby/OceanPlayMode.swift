@@ -560,13 +560,12 @@ final class OceanStageView: NSView {
     let isReturn = code == 0x24 || code == 0x4C
     let isEscape = code == 0x35
     let shiftDown = event.modifierFlags.contains(.shift)
-    let key = KeyboardLayoutLetter.shared.keyDownLetters(
+    let letters = KeyboardLayoutLetter.shared.keyDownLetters(
       keyCode: code,
       charactersIgnoringModifiers: event.charactersIgnoringModifiers ?? ""
     )
     inputBridge.noteKeyDown(
-      letters: key.letters,
-      shownLetter: key.shown,
+      letters: letters,
       isReturn: isReturn,
       isEscape: isEscape,
       shiftDown: shiftDown

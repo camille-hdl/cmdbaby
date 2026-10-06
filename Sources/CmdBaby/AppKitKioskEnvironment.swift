@@ -12,18 +12,12 @@ final class AppKitKioskEnvironment: KioskSessionServices {
 
   private let presentation = KioskPresentationController()
   private let covers = CoverWindowCoordinator()
-  private let hud = KioskHUD()
   private let filterHolder = FilterHolder()
   private var sessionExits = AdultExitSettings()
-
-  init() {
-    covers.hud = hud
-  }
 
   func prepareSession(_ configuration: CmdBabyConfiguration) {
     sessionExits = configuration.exits
     covers.prepare(mode: configuration.mode, exits: configuration.exits)
-    hud.noteSessionExits(configuration.exits)
   }
 
   func capturePresentation() throws -> PresentationOptionsSnapshot {
@@ -31,11 +25,8 @@ final class AppKitKioskEnvironment: KioskSessionServices {
   }
 
   func createCoverWindows() throws -> [ScreenDescriptor] {
-    covers.hud = hud
-    let hud = self.hud
     let onAdultExit = self.onAdultExit
     covers.onAdultExit = { kind in
-      hud.noteExit(kind)
       onAdultExit?(kind)
     }
     return try covers.createCoverWindows()
@@ -52,7 +43,6 @@ final class AppKitKioskEnvironment: KioskSessionServices {
     let statusHandler = onFilterStatus
     let countsHandler = onCountsChange
     let exitHandler = onAdultExit
-    let hud = self.hud
 
     do {
       try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
@@ -75,8 +65,7 @@ final class AppKitKioskEnvironment: KioskSessionServices {
           onAdultExit: { kind in
             exitHandler?(kind)
           },
-          exits: sessionExits,
-          hud: hud
+          exits: sessionExits
         )
         filterHolder.set(engine)
         engine.start()

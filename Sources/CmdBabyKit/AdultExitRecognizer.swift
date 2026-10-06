@@ -28,7 +28,8 @@ public enum AdultExitKind: Equatable, Sendable {
 }
 
 /// Reconnaît les sorties adultes sans dépendre du rendu et sans journaliser le tampon.
-public final class AdultExitRecognizer: @unchecked Sendable {
+/// Sans verrou : chaque instance reste sur un seul thread (celui du tap, ou le fil principal).
+public final class AdultExitRecognizer {
   public static let passphraseWindow: TimeInterval = 5
 
   private let settings: AdultExitSettings

@@ -3,33 +3,8 @@ import CmdBabyKit
 import CoreGraphics
 import Foundation
 
-/// Coupure globale du tap, lisible depuis le callback sans hop MainActor.
-final class SessionInputKillSwitch: @unchecked Sendable {
-  static let shared = SessionInputKillSwitch()
-
-  private let lock = NSLock()
-  private var engaged = false
-
-  func reset() {
-    lock.lock()
-    engaged = false
-    lock.unlock()
-  }
-
-  func engage() {
-    lock.lock()
-    engaged = true
-    lock.unlock()
-  }
-
-  var isEngaged: Bool {
-    lock.lock()
-    defer { lock.unlock() }
-    return engaged
-  }
-}
-
 /// Filtre de session Quartz : thread dédié, callback borné, aucune journalisation de frappe.
+/// Un filtre par session : après `stop()`, il ne redémarre pas.
 final class SessionInputFilter: @unchecked Sendable {
   private let log = LifecycleLogRecorder.shared
 
@@ -38,26 +13,25 @@ final class SessionInputFilter: @unchecked Sendable {
   private var runLoop: CFRunLoop?
   private var tapPort: CFMachPort?
   private var runLoopSource: CFRunLoopSource?
+  private var lifecycle = TapLifecycle()
+  private let killSwitch = SessionInputKillSwitch()
   private var suppressedCounts: [MonitoredShortcut: Int] = [:]
   private let exitRecognizer: AdultExitRecognizer
 
   private let onStatusChange: @Sendable (InputFilterStatus) -> Void
   private let onCountsChange: @Sendable ([MonitoredShortcut: Int]) -> Void
   private let onAdultExit: @Sendable (AdultExitKind) -> Void
-  private let hud: KioskHUD?
 
   init(
     onStatusChange: @escaping @Sendable (InputFilterStatus) -> Void,
     onCountsChange: @escaping @Sendable ([MonitoredShortcut: Int]) -> Void,
     onAdultExit: @escaping @Sendable (AdultExitKind) -> Void,
-    exits: AdultExitSettings,
-    hud: KioskHUD? = nil
+    exits: AdultExitSettings
   ) {
     self.exitRecognizer = AdultExitRecognizer(settings: exits)
     self.onStatusChange = onStatusChange
     self.onCountsChange = onCountsChange
     self.onAdultExit = onAdultExit
-    self.hud = hud
   }
 
   func start() {
@@ -66,7 +40,7 @@ final class SessionInputFilter: @unchecked Sendable {
     stateLock.unlock()
     guard !alreadyRunning else { return }
 
-    SessionInputKillSwitch.shared.reset()
+    killSwitch.reset()
     onStatusChange(.starting)
     resetCounts()
     exitRecognizer.reset()
@@ -88,21 +62,24 @@ final class SessionInputFilter: @unchecked Sendable {
     thread.start()
   }
 
+  /// Sûr à tout moment, même avant que le thread du tap ait créé son port.
   func stop() {
-    SessionInputKillSwitch.shared.engage()
+    killSwitch.engage()
     stateLock.lock()
+    let onStop = lifecycle.requestStop()
     let loop = runLoop
     let port = tapPort
     stateLock.unlock()
 
-    if let port {
+    if onStop == .disableAndStopLoop, let port, let loop {
       CGEvent.tapEnable(tap: port, enable: false)
       log.emit(.tapDisable(reason: "stop"))
+      // Le bloc s’exécute dès que la boucle tourne, même si elle n’a pas encore démarré.
+      CFRunLoopPerformBlock(loop, CFRunLoopMode.commonModes.rawValue) {
+        CFRunLoopStop(loop)
+      }
+      CFRunLoopWakeUp(loop)
     }
-    if let loop {
-      CFRunLoopStop(loop)
-    }
-    hud?.noteTap("arrêté")
     onStatusChange(.inactive)
   }
 
@@ -119,7 +96,7 @@ final class SessionInputFilter: @unchecked Sendable {
     let port = tapPort
     stateLock.unlock()
     guard let port else { return }
-    if SessionInputKillSwitch.shared.isEngaged { return }
+    if killSwitch.isEngaged { return }
     CGEvent.tapEnable(tap: port, enable: true)
     onStatusChange(.active)
     log.emit(.tapReenable(reason: "requested"))
@@ -128,9 +105,7 @@ final class SessionInputFilter: @unchecked Sendable {
   private func runTapThread() {
     let mask = CGEventMask(1 << CGEventType.keyDown.rawValue)
       | CGEventMask(1 << CGEventType.keyUp.rawValue)
-      | CGEventMask(1 << CGEventType.flagsChanged.rawValue)
-      | CGEventMask(1 << CGEventType.tapDisabledByTimeout.rawValue)
-      | CGEventMask(1 << CGEventType.tapDisabledByUserInput.rawValue)
+    // tapDisabledByTimeout et tapDisabledByUserInput arrivent sans être dans le masque.
 
     let callback: CGEventTapCallBack = { proxy, type, event, refcon in
       guard let refcon else {
@@ -168,27 +143,39 @@ final class SessionInputFilter: @unchecked Sendable {
       return
     }
 
-    let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, port, 0)
+    log.emit(.tapCreate)
     let loop = CFRunLoopGetCurrent()
-    CFRunLoopAddSource(loop, source, .commonModes)
-    CGEvent.tapEnable(tap: port, enable: true)
+    let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, port, 0)
 
+    // Sous le verrou : `stop()` voit soit aucun port, soit un tap actif et sa boucle.
     stateLock.lock()
-    tapPort = port
-    runLoopSource = source
-    runLoop = loop
+    let afterCreation = lifecycle.portCreated()
+    if afterCreation == .enable {
+      CFRunLoopAddSource(loop, source, .commonModes)
+      CGEvent.tapEnable(tap: port, enable: true)
+      tapPort = port
+      runLoopSource = source
+      runLoop = loop
+    }
     stateLock.unlock()
 
+    guard afterCreation == .enable else {
+      CFMachPortInvalidate(port)
+      log.emit(.tapDisable(reason: "stoppedBeforeEnable"))
+      stateLock.lock()
+      thread = nil
+      stateLock.unlock()
+      return
+    }
+
     onStatusChange(.active)
-    hud?.noteTap("actif")
-    log.emit(.tapCreate)
     log.emit(.tapEnable)
     CFRunLoopRun()
 
+    CGEvent.tapEnable(tap: port, enable: false)
+    CFRunLoopRemoveSource(loop, source, .commonModes)
+    CFMachPortInvalidate(port)
     stateLock.lock()
-    if let source = runLoopSource {
-      CFRunLoopRemoveSource(loop, source, .commonModes)
-    }
     tapPort = nil
     runLoopSource = nil
     runLoop = nil
@@ -201,30 +188,21 @@ final class SessionInputFilter: @unchecked Sendable {
     type: CGEventType,
     event: CGEvent
   ) -> Unmanaged<CGEvent>? {
-    if SessionInputKillSwitch.shared.isEngaged {
+    if killSwitch.isEngaged {
       return Unmanaged.passUnretained(event)
     }
 
     if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
       let reason = type == .tapDisabledByTimeout ? "timeout" : "userInput"
       log.emit(.tapDisable(reason: reason))
-      hud?.noteTap("désactivé → réactivation")
       stateLock.lock()
       let port = tapPort
       stateLock.unlock()
       if let port {
         CGEvent.tapEnable(tap: port, enable: true)
       }
-      hud?.noteTap("actif")
       onStatusChange(.active)
       log.emit(.tapReenable(reason: reason))
-      return Unmanaged.passUnretained(event)
-    }
-
-    if type == .flagsChanged {
-      let left = CGEventSource.keyState(.hidSystemState, key: CGKeyCode(0x38))
-      let right = CGEventSource.keyState(.hidSystemState, key: CGKeyCode(0x3C))
-      hud?.noteShifts(left: left, right: right, origin: "filtre flagsChanged")
       return Unmanaged.passUnretained(event)
     }
 
@@ -250,15 +228,8 @@ final class SessionInputFilter: @unchecked Sendable {
         isEscape: isEscape,
         shiftDown: shiftDown
       )
-      hud?.noteFilterKey(
-        letter: shown,
-        isReturn: isReturn,
-        isEscape: isEscape,
-        filled: exitRecognizer.prefixLength,
-        target: exitRecognizer.prefixTarget
-      )
       if let kind {
-        SessionInputKillSwitch.shared.engage()
+        killSwitch.engage()
         onAdultExit(kind)
         return Unmanaged.passUnretained(event)
       }
