@@ -89,3 +89,5 @@
 "alert.secureInputActive" = "Une autre app protège la saisie (mot de passe, Terminal…). Fermez-la ou quittez son champ, puis relancez.";
 "session.guard.warning" = "Protection du clavier interrompue — utilisez une sortie adulte";
 "settings.about.header.accessibility" = "%@, version %@";
+"settings.permissions.configuration.title" = "Configuration";
+"settings.permissions.configuration.unreadable" = "Configuration illisible, valeurs par défaut utilisées.";

@@ -245,6 +245,24 @@ func checklistKeysExistInBothLanguages() {
 }
 
 /// App dans /Applications, démarrage automatique non demandé : seules Accessibilité et l’emplacement varient.
+@Test("Une configuration illisible est signalée dans Permissions")
+func unreadableConfigurationNeedsAttention() throws {
+  let checklist = SetupChecklist(facts: facts(accessibilityGranted: true, configurationUnreadable: true))
+  let check = try #require(checklist.checks.first { $0.id == .configuration })
+  #expect(check.state == .attention)
+  #expect(checklist.needsAttention)
+  #expect(
+    check.localizedDetail(in: .language("fr")) == "Configuration illisible, valeurs par défaut utilisées."
+  )
+  #expect(
+    check.localizedDetail(in: .language("en")) == "Unreadable configuration, default values in use."
+  )
+  #expect(
+    SetupChecklist(facts: facts(accessibilityGranted: true)).checks.contains { $0.id == .configuration }
+      == false
+  )
+}
+
 private func facts(
   accessibilityGranted: Bool,
   bundlePath: String = "/Applications/CmdBaby.app",
@@ -253,7 +271,8 @@ private func facts(
   loginItemStatus: LoginItemStatus = .notRegistered,
   passphraseEnabled: Bool = false,
   passphraseTypability: PassphraseTypability = PassphraseTypability(missingLetters: []),
-  layoutName: String? = nil
+  layoutName: String? = nil,
+  configurationUnreadable: Bool = false
 ) -> SetupFacts {
   SetupFacts(
     accessibilityGranted: accessibilityGranted,
@@ -263,6 +282,7 @@ private func facts(
     loginItemStatus: loginItemStatus,
     passphraseEnabled: passphraseEnabled,
     passphraseTypability: passphraseTypability,
-    layoutName: layoutName
+    layoutName: layoutName,
+    configurationUnreadable: configurationUnreadable
   )
 }

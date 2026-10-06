@@ -134,6 +134,7 @@ func datedLogFileUsesDayStamp() throws {
   )
 
   file.write(.sessionStart)
+  file.flush()
 
   let logURL = directory.url.appendingPathComponent("cmdbaby-20260929.log")
   let contents = try String(contentsOf: logURL, encoding: .utf8)
@@ -155,6 +156,7 @@ func newDayOpensANewFile() throws {
   file.write(.sessionStart)
   clock.now = utcDate(year: 2026, month: 9, day: 30, hour: 0, minute: 1)
   file.write(.sessionStop(kind: .adultExit))
+  file.flush()
 
   let day29 = try String(
     contentsOf: directory.url.appendingPathComponent("cmdbaby-20260929.log"),
@@ -183,6 +185,7 @@ func oversizedFileRotatesToNumberedSibling() throws {
 
   file.write(.sessionStart)
   file.write(.sessionStop(kind: .adultExit))
+  file.flush()
 
   let first = try String(
     contentsOf: directory.url.appendingPathComponent("cmdbaby-20260929.log"),
@@ -316,4 +319,51 @@ func screenFollowingAndDisplaySleepAreLogged() {
   #expect(LifecycleLogEvent.displaySleepAssertion(taken: true).message == "power.displaySleep prevented=true")
   #expect(LifecycleLogEvent.displaySleepAssertion(taken: false).message == "power.displaySleep prevented=false")
   #expect(LifecycleLogEvent.displaySleepAssertion(taken: true).category == .session)
+}
+
+@Test("Journaux en 600, dossier en 700, lien symbolique jamais suivi")
+func logFilesArePrivateAndNeverFollowSymlinks() throws {
+  let directory = TemporaryLogDirectory()
+  defer { directory.remove() }
+  let now = utcDate(year: 2026, month: 9, day: 29, hour: 8, minute: 0)
+  let file = LifecycleLogFile(directory: directory.url, calendar: utcCalendar, now: { now })
+  file.write(.sessionStart)
+  file.flush()
+
+  let logURL = directory.url.appendingPathComponent("cmdbaby-20260929.log")
+  let fileMode = try FileManager.default.attributesOfItem(atPath: logURL.path)[.posixPermissions] as? Int
+  let folderMode = try FileManager.default.attributesOfItem(atPath: directory.url.path)[.posixPermissions] as? Int
+  #expect(fileMode == 0o600)
+  #expect(folderMode == 0o700)
+
+  let target = directory.url.appendingPathComponent("target.txt")
+  try Data("cible\n".utf8).write(to: target)
+  let linked = directory.url.appendingPathComponent("cmdbaby-20260930.log")
+  try FileManager.default.createSymbolicLink(at: linked, withDestinationURL: target)
+  let nextDay = LifecycleLogFile(
+    directory: directory.url,
+    calendar: utcCalendar,
+    now: { utcDate(year: 2026, month: 9, day: 30, hour: 8, minute: 0) }
+  )
+  nextDay.write(.sessionStart)
+  nextDay.flush()
+  #expect(try String(contentsOf: target, encoding: .utf8) == "cible\n")
+}
+
+@Test("La purge au lancement retire les vieux journaux")
+func purgeRemovesOldLogs() throws {
+  let directory = TemporaryLogDirectory()
+  defer { directory.remove() }
+  try FileManager.default.createDirectory(at: directory.url, withIntermediateDirectories: true)
+  try Data("x".utf8).write(to: directory.url.appendingPathComponent("cmdbaby-20260901.log"))
+  try Data("x".utf8).write(to: directory.url.appendingPathComponent("cmdbaby-20260929.log"))
+  let file = LifecycleLogFile(
+    directory: directory.url,
+    calendar: utcCalendar,
+    now: { utcDate(year: 2026, month: 9, day: 29, hour: 8, minute: 0) }
+  )
+  file.purgeOldFiles()
+  file.flush()
+  let names = try FileManager.default.contentsOfDirectory(atPath: directory.url.path)
+  #expect(names == ["cmdbaby-20260929.log"])
 }

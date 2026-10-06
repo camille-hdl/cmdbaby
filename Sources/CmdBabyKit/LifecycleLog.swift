@@ -1,7 +1,15 @@
 import Foundation
 
 /// Journal de cycle de vie : lignes stables pour Console et fichier, sans donnée clavier.
+///
+/// Règle : jamais de caractère tapé, de keycode, de phrase de sortie ni de progression de phrase
+/// dans un journal. Les chemins passent par `displayPath` : pas de nom d’utilisateur en clair.
 public enum LifecycleLog {
+  /// Chemin avec `~` à la place du dossier personnel.
+  public static func displayPath(_ path: String) -> String {
+    (path as NSString).abbreviatingWithTildeInPath
+  }
+
   public static let subsystem = AppIdentity.logSubsystem
 
   public enum Category: String, Sendable {
@@ -87,7 +95,9 @@ public final class LifecycleLogRecorder: @unchecked Sendable {
     didInstallStandardSinks = true
     lock.unlock()
     addSink(OSLogLifecycleLogSink())
-    addSink(LifecycleLogFile())
+    let file = LifecycleLogFile()
+    file.purgeOldFiles()
+    addSink(file)
   }
 }
 
@@ -120,6 +130,8 @@ public enum LifecycleLogEvent: Equatable, Sendable {
   case applicationShouldTerminate(reply: LifecycleLog.TerminateReply)
   case statusItemAlive(Bool)
   case statusIconMissing
+  /// Bundle de ressources absent du `.app` : bug d’empaquetage.
+  case resourceBundleMissing(name: String)
   case sessionActivationFail(reason: String, binaryPath: String)
   case coversFollowScreens(added: Int, removed: Int, reframed: Int)
   case displaySleepAssertion(taken: Bool)
@@ -130,7 +142,7 @@ public enum LifecycleLogEvent: Equatable, Sendable {
   public var category: LifecycleLog.Category {
     switch self {
     case .statusItemCreate, .activationPolicy, .terminateRequest, .applicationShouldTerminate,
-      .statusItemAlive, .statusIconMissing:
+      .statusItemAlive, .statusIconMissing, .resourceBundleMissing:
       .lifecycle
     case .sessionStart, .sessionPhase, .sessionStop, .coversKey, .sessionActivationFail,
       .coversFollowScreens, .displaySleepAssertion, .guardTapLost, .guardSecureInput, .guardRefocus:
@@ -189,6 +201,8 @@ public enum LifecycleLogEvent: Equatable, Sendable {
       return "guard.secureInput"
     case .guardRefocus:
       return "guard.refocus"
+    case .resourceBundleMissing(let name):
+      return "resources.missing bundle=\(name)"
     case .statusIconMissing:
       return "statusItem.icon missing fallback=\(MenuBarAgent.fallbackSymbolName)"
     case .terminateRequest:

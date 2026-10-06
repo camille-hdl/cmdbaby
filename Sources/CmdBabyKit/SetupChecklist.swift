@@ -13,6 +13,8 @@ public struct SetupFacts: Equatable, Sendable {
   public var passphraseTypability: PassphraseTypability
   /// Nom localisé de la disposition active.
   public var layoutName: String?
+  /// Vrai quand `config.json` existe mais n’a pas pu être lu : les défauts sont utilisés.
+  public var configurationUnreadable: Bool
 
   public init(
     accessibilityGranted: Bool,
@@ -22,7 +24,8 @@ public struct SetupFacts: Equatable, Sendable {
     loginItemStatus: LoginItemStatus,
     passphraseEnabled: Bool,
     passphraseTypability: PassphraseTypability,
-    layoutName: String?
+    layoutName: String?,
+    configurationUnreadable: Bool = false
   ) {
     self.accessibilityGranted = accessibilityGranted
     self.bundlePath = bundlePath
@@ -32,6 +35,7 @@ public struct SetupFacts: Equatable, Sendable {
     self.passphraseEnabled = passphraseEnabled
     self.passphraseTypability = passphraseTypability
     self.layoutName = layoutName
+    self.configurationUnreadable = configurationUnreadable
   }
 }
 
@@ -40,6 +44,7 @@ public enum SetupCheckID: Equatable, Sendable, Hashable {
   case location
   case launchAtLogin
   case passphrase
+  case configuration
 }
 
 public enum SetupCheckState: Equatable, Sendable {
@@ -111,6 +116,17 @@ public struct SetupChecklist: Equatable, Sendable {
       layoutName: facts.layoutName
     ) {
       checks.append(passphrase)
+    }
+    if facts.configurationUnreadable {
+      checks.append(
+        SetupCheck(
+          id: .configuration,
+          state: .attention,
+          titleKey: "settings.permissions.configuration.title",
+          detailKey: "settings.permissions.configuration.unreadable",
+          actions: []
+        )
+      )
     }
     self.checks = checks
   }

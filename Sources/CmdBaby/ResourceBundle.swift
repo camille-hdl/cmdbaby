@@ -1,16 +1,14 @@
+import CmdBabyKit
 import Foundation
 
 enum ResourceBundle {
-  /// `Bundle.module` SPM cherche le `.bundle` à la racine du `.app`, interdit par codesign.
-  /// Le script d’empaquetage le pose dans `Contents/Resources/`.
-  static let shared: Bundle = {
-    let names = "CmdBaby_CmdBaby.bundle"
-    if let resources = Bundle.main.resourceURL {
-      let packaged = resources.appendingPathComponent(names)
-      if let bundle = Bundle(url: packaged) {
-        return bundle
-      }
-    }
-    return Bundle.module
-  }()
+  /// Bundle de ressources de l’app : `Contents/Resources/CmdBaby_CmdBaby.bundle` dans le `.app`.
+  /// Même règle que le kit : jamais de repli hors du bundle signé.
+  static let shared: Bundle = KitResources.resourceBundle(named: "CmdBaby_CmdBaby.bundle") {
+    #if DEBUG
+    Bundle.module
+    #else
+    Bundle.main
+    #endif
+  }
 }

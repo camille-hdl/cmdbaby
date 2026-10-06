@@ -1332,7 +1332,8 @@ private final class PermissionsMonitor: ObservableObject {
           passphrase,
           layoutLetters: KeyboardLayoutLetter.shared.snapshot()
         ),
-        layoutName: KeyboardLayoutLetter.shared.layoutName
+        layoutName: KeyboardLayoutLetter.shared.layoutName,
+        configurationUnreadable: CmdBabyConfigurationStore().isUnreadable
       )
     )
   }

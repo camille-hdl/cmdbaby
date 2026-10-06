@@ -124,6 +124,71 @@ func legacyConfigurationPathIsTheBabyWorksFolder() {
   #expect(url.deletingLastPathComponent().lastPathComponent == "BabyWorks")
 }
 
+@Test("Une config illisible est signalée, puis copiée en .corrupt avant d’être réécrite")
+func unreadableConfigurationIsPreservedBeforeSave() throws {
+  let file = TemporaryConfigurationFile()
+  defer { file.remove() }
+  try FileManager.default.createDirectory(at: file.directory, withIntermediateDirectories: true)
+  try Data("{".utf8).write(to: file.fileURL)
+
+  let store = CmdBabyConfigurationStore(fileURL: file.fileURL)
+  #expect(store.read() == .unreadable(.invalid))
+  #expect(store.load() == CmdBabyConfiguration())
+
+  let saved = CmdBabyConfiguration(mode: .terminal, launchAtLogin: true)
+  try store.save(saved)
+
+  let names = try FileManager.default.contentsOfDirectory(atPath: file.directory.path)
+  let corrupt = try #require(names.first { $0.hasPrefix("config.json.corrupt-") })
+  #expect(try Data(contentsOf: file.directory.appendingPathComponent(corrupt)) == Data("{".utf8))
+  #expect(store.read() == .loaded(saved))
+}
+
+@Test("Un champ de mauvais type rend la config illisible")
+func wrongFieldTypeIsUnreadable() throws {
+  let file = TemporaryConfigurationFile()
+  defer { file.remove() }
+  try FileManager.default.createDirectory(at: file.directory, withIntermediateDirectories: true)
+  try Data(#"{"launchAtLogin":"oui"}"#.utf8).write(to: file.fileURL)
+  #expect(CmdBabyConfigurationStore(fileURL: file.fileURL).read() == .unreadable(.invalid))
+}
+
+@Test("Un schemaVersion futur est refusé et le fichier n’est jamais écrasé")
+func futureSchemaIsRefusedWithoutOverwrite() throws {
+  let file = TemporaryConfigurationFile()
+  defer { file.remove() }
+  try FileManager.default.createDirectory(at: file.directory, withIntermediateDirectories: true)
+  let future = Data(#"{"schemaVersion":99,"mode":"ocean"}"#.utf8)
+  try future.write(to: file.fileURL)
+
+  let store = CmdBabyConfigurationStore(fileURL: file.fileURL)
+  #expect(store.read() == .unreadable(.newerSchema))
+  #expect(throws: CmdBabyConfigurationStore.SaveError.newerSchema) {
+    try store.save(CmdBabyConfiguration())
+  }
+  #expect(try Data(contentsOf: file.fileURL) == future)
+}
+
+@Test("Un fichier de plus de 1 Mo n’est pas lu")
+func oversizedConfigurationIsUnreadable() throws {
+  let file = TemporaryConfigurationFile()
+  defer { file.remove() }
+  try FileManager.default.createDirectory(at: file.directory, withIntermediateDirectories: true)
+  try Data(repeating: 0x20, count: 1024 * 1024 + 1).write(to: file.fileURL)
+  #expect(CmdBabyConfigurationStore(fileURL: file.fileURL).read() == .unreadable(.tooLarge))
+}
+
+@Test("Après un enregistrement : fichier en 600, dossier en 700")
+func savedConfigurationIsPrivate() throws {
+  let file = TemporaryConfigurationFile()
+  defer { file.remove() }
+  try CmdBabyConfigurationStore(fileURL: file.fileURL).save(CmdBabyConfiguration())
+  let fileMode = try FileManager.default.attributesOfItem(atPath: file.fileURL.path)[.posixPermissions] as? Int
+  let folderMode = try FileManager.default.attributesOfItem(atPath: file.directory.path)[.posixPermissions] as? Int
+  #expect(fileMode == 0o600)
+  #expect(folderMode == 0o700)
+}
+
 private struct TemporaryConfigurationFile {
   let directory: URL
   let fileURL: URL

@@ -8,7 +8,9 @@ private let appLogger = Logger(subsystem: AppIdentity.logSubsystem, category: "A
 enum CmdBabyMain {
   static func main() {
     LifecycleLogRecorder.shared.installStandardSinks()
-    CmdBabyConfigurationStore().migrateLegacyConfiguration()
+    let store = CmdBabyConfigurationStore()
+    store.migrateLegacyConfiguration()
+    store.restrictPermissions()
     let app = NSApplication.shared
     let delegate = MainActor.assumeIsolated {
       MenuBarAgent.activationPolicy.apply(to: app)
@@ -157,7 +159,7 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
     LifecycleLogRecorder.shared.emit(
       SessionActivationAlert.activationFailureLog(
         error,
-        binaryPath: Bundle.main.bundleURL.path
+        binaryPath: LifecycleLog.displayPath(Bundle.main.bundleURL.path)
       )
     )
     let spec = SessionActivationAlert.forFailedActivation(error)
