@@ -77,13 +77,14 @@ final class DiagnosticsSessionModel: ObservableObject {
       configuration.exits.passphrase,
       layoutLetters: KeyboardLayoutLetter.shared.snapshot()
     )
-    if case .blocked(let missingLetters) = SessionLaunchCheck.evaluate(
+    if case .blocked(let error) = SessionLaunchCheck.evaluate(
       exits: configuration.exits,
-      typability: typability
+      typability: typability,
+      secureInputActive: IsSecureEventInputEnabled()
     ) {
       // L’alerte est modale : au tour suivant, le menu ou les Réglages sont déjà refermés.
       Task { @MainActor [weak self] in
-        self?.presentActivationFailure?(.passphraseNotTypable(missingLetters))
+        self?.presentActivationFailure?(error)
       }
       return
     }

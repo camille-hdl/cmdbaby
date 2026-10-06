@@ -86,3 +86,5 @@
 "settings.error.passphrase.invalidCharacters" = "Uniquement des lettres, sans espace ni chiffre.";
 "cover.failsafe.accessibility" = "Sortie de secours";
 "cover.timer.accessibility" = "Minuteur de session";
+"alert.secureInputActive" = "Une autre app protège la saisie (mot de passe, Terminal…). Fermez-la ou quittez son champ, puis relancez.";
+"session.guard.warning" = "Protection du clavier interrompue — utilisez une sortie adulte";

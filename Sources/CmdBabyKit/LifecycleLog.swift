@@ -122,6 +122,9 @@ public enum LifecycleLogEvent: Equatable, Sendable {
   case sessionActivationFail(reason: String, binaryPath: String)
   case coversFollowScreens(added: Int, removed: Int, reframed: Int)
   case displaySleepAssertion(taken: Bool)
+  case guardTapLost
+  case guardSecureInput
+  case guardRefocus
 
   public var category: LifecycleLog.Category {
     switch self {
@@ -129,7 +132,7 @@ public enum LifecycleLogEvent: Equatable, Sendable {
       .statusItemAlive:
       .lifecycle
     case .sessionStart, .sessionPhase, .sessionStop, .coversKey, .sessionActivationFail,
-      .coversFollowScreens, .displaySleepAssertion:
+      .coversFollowScreens, .displaySleepAssertion, .guardTapLost, .guardSecureInput, .guardRefocus:
       .session
     case .tapCreate, .tapEnable, .tapDisable, .tapFail, .tapReenable:
       .inputFilter
@@ -179,6 +182,12 @@ public enum LifecycleLogEvent: Equatable, Sendable {
       return "covers.followScreens added=\(added) removed=\(removed) reframed=\(reframed)"
     case .displaySleepAssertion(let taken):
       return "power.displaySleep prevented=\(taken)"
+    case .guardTapLost:
+      return "guard.tapLost"
+    case .guardSecureInput:
+      return "guard.secureInput"
+    case .guardRefocus:
+      return "guard.refocus"
     case .terminateRequest:
       return "terminate.request"
     case .applicationShouldTerminate(let reply):

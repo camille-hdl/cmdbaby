@@ -49,6 +49,8 @@ public struct SessionActivationAlert: Equatable, Sendable {
       table("alert.injectedFailure")
     case .passphraseNotTypable(let letters):
       passphraseNotTypableText(letters, table: table)
+    case .secureInputActive:
+      table("alert.secureInputActive")
     }
   }
 
@@ -60,6 +62,8 @@ public struct SessionActivationAlert: Equatable, Sendable {
       [.openAppSettings(.exits), .dismiss]
     case .noScreens, .presentationRejected, .injectedFailure:
       [.openAppSettings(.mode), .dismiss]
+    case .secureInputActive:
+      [.dismiss]
     }
   }
 
@@ -83,6 +87,8 @@ public struct SessionActivationAlert: Equatable, Sendable {
       "injectedFailure \(step.rawValue)"
     case .passphraseNotTypable:
       "passphraseNotTypable"
+    case .secureInputActive:
+      "secureInputActive"
     }
   }
 

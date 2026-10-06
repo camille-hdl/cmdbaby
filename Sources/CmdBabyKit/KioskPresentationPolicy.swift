@@ -168,6 +168,7 @@ public enum KioskSessionError: Error, Equatable, Sendable {
   case presentationRejected
   case filterUnavailable(String)
   case passphraseNotTypable([Character])
+  case secureInputActive
 }
 
 extension KioskSessionError: LocalizedError {
@@ -183,6 +184,8 @@ extension KioskSessionError: LocalizedError {
       "Le filtre d’entrée n’a pas pu démarrer (\(reason))."
     case .passphraseNotTypable(let letters):
       SessionActivationAlert.passphraseNotTypableText(letters, table: .current)
+    case .secureInputActive:
+      L10n.current("alert.secureInputActive")
     }
   }
 
@@ -196,7 +199,7 @@ extension KioskSessionError: LocalizedError {
       "Relancer l’application et réessayer le mode kiosque."
     case .filterUnavailable:
       "Accorder Accessibilité, puis quitter et relancer l’application."
-    case .passphraseNotTypable:
+    case .passphraseNotTypable, .secureInputActive:
       nil
     }
   }

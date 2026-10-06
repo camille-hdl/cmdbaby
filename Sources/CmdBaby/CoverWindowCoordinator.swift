@@ -11,6 +11,7 @@ final class CoverWindowCoordinator {
     let screenIndex: Int
     let window: NSWindow
     let failsafe: FailsafeClickView
+    let parentBanner: NSTextField
   }
 
   var onAdultExit: (@Sendable (AdultExitKind) -> Void)?
@@ -23,7 +24,8 @@ final class CoverWindowCoordinator {
   private var exits = AdultExitSettings()
   private var timeLimit: SessionTimeLimit?
   private var outlineTimer: Timer?
-  private var screenObserver: NSObjectProtocol?
+  private var sessionObservers: [NSObjectProtocol] = []
+  private var parentWarningVisible = false
   private let displaySleep = DisplaySleepAssertion()
 
   /// Mémorise le mode et les sorties de la session qui va démarrer.
@@ -49,7 +51,7 @@ final class CoverWindowCoordinator {
     }
     refocus()
     startOutlineClock()
-    observeScreenChanges()
+    observeSessionNotifications()
     displaySleep.take()
     return screens.map(ScreenDescriptor.init(nsScreen:))
   }
@@ -92,8 +94,9 @@ final class CoverWindowCoordinator {
 
   func closeCoverWindows() {
     displaySleep.release()
-    stopObservingScreenChanges()
+    stopObservingSessionNotifications()
     stopOutlineClock()
+    parentWarningVisible = false
     let remaining = covers
     covers.removeAll(keepingCapacity: false)
     nextScreenIndex = 0
@@ -119,19 +122,22 @@ final class CoverWindowCoordinator {
       screenIndex: screenIndex,
       scale: screen.backingScaleFactor
     )
+    let banner = ParentWarningBanner.make()
+    banner.isHidden = !parentWarningVisible
     let window = CoverWindow(
       screen: screen,
       descriptor: descriptor,
       background: mode.windowBackground(screenIndex: screenIndex),
       inputBridge: bridge,
-      contentView: PlayStageHost(stage: stage, failsafe: failsafe)
+      contentView: PlayStageHost(stage: stage, failsafe: failsafe, banner: banner)
     )
     covers.append(
       Cover(
         screenID: screen.screenID,
         screenIndex: screenIndex,
         window: window,
-        failsafe: failsafe
+        failsafe: failsafe,
+        parentBanner: banner
       )
     )
     window.orderFrontRegardless()
@@ -145,23 +151,47 @@ final class CoverWindowCoordinator {
     window.close()
   }
 
-  private func observeScreenChanges() {
-    screenObserver = NotificationCenter.default.addObserver(
-      forName: NSApplication.didChangeScreenParametersNotification,
-      object: nil,
-      queue: .main
-    ) { [weak self] _ in
-      MainActor.assumeIsolated {
-        self?.followScreenChanges()
-      }
+  /// Bandeau pour l’adulte quand la protection du clavier n’est plus garantie. Jamais la phrase.
+  func showParentWarning(_ visible: Bool) {
+    guard visible != parentWarningVisible else { return }
+    parentWarningVisible = visible
+    for cover in covers {
+      cover.parentBanner.isHidden = !visible
     }
   }
 
-  private func stopObservingScreenChanges() {
-    if let screenObserver {
-      NotificationCenter.default.removeObserver(screenObserver)
+  private func observeSessionNotifications() {
+    let center = NotificationCenter.default
+    sessionObservers = [
+      center.addObserver(
+        forName: NSApplication.didChangeScreenParametersNotification,
+        object: nil,
+        queue: .main
+      ) { [weak self] _ in
+        MainActor.assumeIsolated {
+          self?.followScreenChanges()
+        }
+      },
+      // Une notification ou une autre app ne garde pas le clavier : les lettres restent dans la scène.
+      center.addObserver(
+        forName: NSApplication.didResignActiveNotification,
+        object: nil,
+        queue: .main
+      ) { [weak self] _ in
+        MainActor.assumeIsolated {
+          guard let self, !self.covers.isEmpty else { return }
+          LifecycleLogRecorder.shared.emit(.guardRefocus)
+          self.refocus()
+        }
+      },
+    ]
+  }
+
+  private func stopObservingSessionNotifications() {
+    for observer in sessionObservers {
+      NotificationCenter.default.removeObserver(observer)
     }
-    screenObserver = nil
+    sessionObservers.removeAll()
   }
 
   /// Couvre les écrans branchés, ferme ceux débranchés, recadre ceux redimensionnés.
@@ -289,7 +319,7 @@ final class KioskInputBridge {
 
 /// Scène de jeu en dessous, carré de secours au-dessus. Les calques du mode (sol, poissons, glyphes) restent dans la scène.
 private final class PlayStageHost: NSView {
-  init(stage: NSView, failsafe: FailsafeClickView) {
+  init(stage: NSView, failsafe: FailsafeClickView, banner: NSTextField) {
     super.init(frame: .zero)
     wantsLayer = true
     stage.translatesAutoresizingMaskIntoConstraints = false
@@ -298,6 +328,9 @@ private final class PlayStageHost: NSView {
 
     failsafe.translatesAutoresizingMaskIntoConstraints = false
     addSubview(failsafe)
+
+    banner.translatesAutoresizingMaskIntoConstraints = false
+    addSubview(banner)
 
     NSLayoutConstraint.activate([
       stage.leadingAnchor.constraint(equalTo: leadingAnchor),
@@ -308,12 +341,31 @@ private final class PlayStageHost: NSView {
       failsafe.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -12),
       failsafe.widthAnchor.constraint(equalToConstant: FailsafeClickView.side),
       failsafe.heightAnchor.constraint(equalToConstant: FailsafeClickView.side),
+      banner.centerXAnchor.constraint(equalTo: centerXAnchor),
+      banner.topAnchor.constraint(equalTo: topAnchor, constant: 12),
     ])
   }
 
   @available(*, unavailable)
   required init?(coder: NSCoder) {
     fatalError("init(coder:) n’est pas supporté")
+  }
+}
+
+/// Petit bandeau discret en haut de chaque couverture, au-dessus de la scène.
+@MainActor
+private enum ParentWarningBanner {
+  static func make() -> NSTextField {
+    let label = NSTextField(labelWithString: L10n.current("session.guard.warning"))
+    label.font = .systemFont(ofSize: 13, weight: .medium)
+    label.textColor = .white
+    label.drawsBackground = true
+    label.backgroundColor = NSColor.black.withAlphaComponent(0.6)
+    label.wantsLayer = true
+    label.layer?.zPosition = 100
+    label.layer?.cornerRadius = 6
+    label.layer?.masksToBounds = true
+    return label
   }
 }
 

@@ -6,17 +6,19 @@ import Testing
 func onlyUntypablePassphraseBlocksLaunch() {
   let decision = SessionLaunchCheck.evaluate(
     exits: AdultExitSettings(enabledMethods: [.passphrase]),
-    typability: PassphraseTypability(missingLetters: ["é"])
+    typability: PassphraseTypability(missingLetters: ["é"]),
+    secureInputActive: false
   )
 
-  #expect(decision == .blocked(missingLetters: ["é"]))
+  #expect(decision == .blocked(.passphraseNotTypable(["é"])))
 }
 
 @Test("La phrase et Maj-Échap, même intapable, autorisent le lancement")
 func passphraseAndShiftEscapeAllowLaunchWhenUntypable() {
   let decision = SessionLaunchCheck.evaluate(
     exits: AdultExitSettings(enabledMethods: [.passphrase, .shiftEscape]),
-    typability: PassphraseTypability(missingLetters: ["é"])
+    typability: PassphraseTypability(missingLetters: ["é"]),
+    secureInputActive: false
   )
 
   #expect(decision == .allowed)
@@ -26,7 +28,8 @@ func passphraseAndShiftEscapeAllowLaunchWhenUntypable() {
 func onlyTypablePassphraseAllowsLaunch() {
   let decision = SessionLaunchCheck.evaluate(
     exits: AdultExitSettings(enabledMethods: [.passphrase]),
-    typability: PassphraseTypability(missingLetters: [])
+    typability: PassphraseTypability(missingLetters: []),
+    secureInputActive: false
   )
 
   #expect(decision == .allowed)
@@ -36,8 +39,20 @@ func onlyTypablePassphraseAllowsLaunch() {
 func disabledPassphraseAllowsLaunchWhenUntypable() {
   let decision = SessionLaunchCheck.evaluate(
     exits: AdultExitSettings(enabledMethods: [.shiftEscape, .failsafeClick]),
-    typability: PassphraseTypability(missingLetters: ["é"])
+    typability: PassphraseTypability(missingLetters: ["é"]),
+    secureInputActive: false
   )
 
   #expect(decision == .allowed)
+}
+
+@Test("Une autre app qui protège la saisie bloque le lancement")
+func secureInputBlocksLaunch() {
+  let decision = SessionLaunchCheck.evaluate(
+    exits: AdultExitSettings(enabledMethods: [.passphrase, .shiftEscape]),
+    typability: PassphraseTypability(missingLetters: []),
+    secureInputActive: true
+  )
+
+  #expect(decision == .blocked(.secureInputActive))
 }

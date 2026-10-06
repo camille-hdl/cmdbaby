@@ -13,6 +13,10 @@ final class AppKitKioskEnvironment: KioskSessionServices {
   private let presentation = KioskPresentationController()
   private let covers = CoverWindowCoordinator()
   private let filterHolder = FilterHolder()
+  private lazy var watchdog = SessionWatchdog(
+    filter: { [filterHolder] in filterHolder.current() },
+    covers: covers
+  )
   private var sessionExits = AdultExitSettings()
 
   func prepareSession(_ configuration: CmdBabyConfiguration) {
@@ -36,6 +40,7 @@ final class AppKitKioskEnvironment: KioskSessionServices {
     try presentation.applyKiosk()
     // Le tap reste armé jusqu’à la sortie : on ne touche pas au filtre ici.
     await covers.ensurePrimaryCoverIsKey()
+    watchdog.start()
   }
 
   func startInputFilter() async throws {
@@ -100,6 +105,7 @@ final class AppKitKioskEnvironment: KioskSessionServices {
   }
 
   func stopInputFilter() {
+    watchdog.stop()
     filterHolder.stop()
     onFilterStatus?(.inactive)
   }
