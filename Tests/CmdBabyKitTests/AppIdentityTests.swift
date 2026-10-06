@@ -5,7 +5,7 @@ import Testing
 
 @Test("AppIdentity fournit le nom, le bundle ID, le dossier et le sous-système des journaux")
 func appIdentityValues() {
-  #expect(AppIdentity.displayName == "CmdBaby")
+  #expect(AppIdentity.displayName == "CmdBaby-cassé")
   #expect(AppIdentity.bundleIdentifier == "app.cmdbaby.CmdBaby")
   #expect(AppIdentity.supportDirectoryName == "CmdBaby")
   #expect(AppIdentity.logSubsystem == "app.cmdbaby.CmdBaby")
