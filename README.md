@@ -56,7 +56,7 @@ Personal project, no warranty, no roadmap promises — just something that works
 
 ### Release
 
-One-time setup of the signing and notarization credentials: `scripts/setup-release.sh`. Then `scripts/release.sh X.Y.Z` builds `dist/CmdBaby-X.Y.Z.dmg`, signed with Developer ID, notarized and stapled.
+One-time setup of the signing and notarization credentials: `scripts/setup-release.sh`. Then `scripts/release.sh X.Y.Z` builds `dist/CmdBaby-X.Y.Z.dmg` (signed with Developer ID, notarized and stapled) and the signed `dist/appcast.xml`, and `scripts/publish.sh X.Y.Z` puts them online: GitHub Release, appcast and download link on https://cmdbaby.app. Test versions are `0.0.x`, published with `--prerelease` and never reused (releases are immutable).
 
 ### Git hooks
 
