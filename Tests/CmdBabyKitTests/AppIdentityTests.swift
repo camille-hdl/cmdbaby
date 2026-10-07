@@ -45,6 +45,9 @@ func infoPlistIsDistributable() throws {
   #expect(plist["NSHighResolutionCapable"] as? Bool == true)
   #expect(plist["NSInputMonitoringUsageDescription"] == nil)
   #expect(plist["NSAppTransportSecurity"] == nil)
+  #expect(plist["CFBundleIconName"] as? String == "AppIcon")
+  #expect(plist["CFBundleIconFile"] as? String == "AppIcon")
+  #expect(FileManager.default.fileExists(atPath: repositoryFile("Resources/AppIcon.icon/icon.json").path))
 }
 
 @Test("Le manifeste de confidentialité déclare l’absence de suivi et les API à motif")

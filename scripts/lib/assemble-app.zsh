@@ -23,3 +23,29 @@ assemble_app() {
         cp -R "$binary_dir/$name" "$contents/Resources/$name"
     done
 }
+
+# compile_app_icon <racine du projet> <chemin du .app> <required|optional>
+# Compile Resources/AppIcon.icon (Icon Composer) avec actool : Assets.car pour macOS 26
+# (Jour, Nuit, Transparent, Teinté) et AppIcon.icns statique (Jour) pour macOS 13 à 15.
+compile_app_icon() {
+    local project_dir="$1" app_path="$2" mode="$3"
+    if ! xcrun --find actool >/dev/null 2>&1; then
+        if [[ "$mode" == required ]]; then
+            print -u2 "actool introuvable : installer Xcode 26 ou plus récent (icône de l’app requise pour publier)."
+            return 1
+        fi
+        print -u2 "Avertissement : actool introuvable (Xcode absent), l’app n’aura pas d’icône."
+        return 0
+    fi
+    local partial
+    partial=$(mktemp "${TMPDIR:-/tmp}/cmdbaby-icon.XXXXXX")
+    xcrun actool "$project_dir/Resources/AppIcon.icon" \
+        --compile "$app_path/Contents/Resources" \
+        --platform macosx --minimum-deployment-target 13.0 \
+        --app-icon AppIcon --output-partial-info-plist "$partial" >/dev/null
+    rm -f "$partial"
+    if [[ ! -f "$app_path/Contents/Resources/Assets.car" || ! -f "$app_path/Contents/Resources/AppIcon.icns" ]]; then
+        print -u2 "actool n’a pas produit Assets.car et AppIcon.icns."
+        return 1
+    fi
+}

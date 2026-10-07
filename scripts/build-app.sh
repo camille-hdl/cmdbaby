@@ -38,6 +38,7 @@ binary_dir=$(swift build --configuration "$configuration" --show-bin-path)
 
 source "$script_dir/lib/assemble-app.zsh"
 assemble_app "$binary_dir" "$project_dir" "$app_path"
+compile_app_icon "$project_dir" "$app_path" optional
 
 if [[ "$sandbox_mode" == 1 || "$sandbox_mode" == true || "$sandbox_mode" == TRUE || "$sandbox_mode" == yes || "$sandbox_mode" == YES ]]; then
     /usr/bin/plutil -replace CFBundleIdentifier -string "app.cmdbaby.CmdBaby.sandbox" "$info_path"

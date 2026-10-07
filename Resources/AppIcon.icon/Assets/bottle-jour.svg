@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <g transform="translate(668 512) rotate(12) scale(300) translate(0 -0.93)">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <path d="M-0.27,0.42 C-0.27,0.29 -0.17,0.25 -0.095,0.215 L-0.095,0.115
+             A0.095,0.095 0 0 1 0.095,0.115 L0.095,0.215 C0.17,0.25 0.27,0.29 0.27,0.42 Z"
+          fill="#bf5f80" stroke="#262a33" stroke-width="0.05"/>
+    <rect x="-0.39" y="0.52" width="0.78" height="1.28" rx="0.17" fill="#ffffff"/>
+    <clipPath id="body1"><rect x="-0.39" y="0.52" width="0.78" height="1.28" rx="0.17"/></clipPath>
+    <g clip-path="url(#body1)">
+      <path d="M-0.5,1.06 C-0.33,0.98 -0.19,0.98 -0.04,1.05 C0.11,1.12 0.25,1.12 0.5,1.02 L0.5,1.9 L-0.5,1.9 Z" fill="#fff1e5"/>
+      <circle cx="0.14" cy="1.44" r="0.07" fill="#f2dfce"/>
+      <circle cx="-0.08" cy="1.60" r="0.042" fill="#f2dfce"/>
+      <circle cx="0.22" cy="1.24" r="0.034" fill="#f2dfce"/>
+    </g>
+    <path d="M-0.39,0.80 h0.17 M-0.39,1.06 h0.11 M-0.39,1.32 h0.17" stroke="#262a33" stroke-width="0.04000000000000001" fill="none"/>
+    <rect x="-0.39" y="0.52" width="0.78" height="1.28" rx="0.17" fill="none" stroke="#262a33" stroke-width="0.05"/>
+    <rect x="-0.46" y="0.40" width="0.92" height="0.15" rx="0.065" fill="#0f5499" stroke="#262a33" stroke-width="0.05"/>
+  </g></g>
+</svg>

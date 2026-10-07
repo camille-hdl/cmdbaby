@@ -81,6 +81,7 @@ step "Assemblage d’un .app neuf"
 source "$src/scripts/lib/assemble-app.zsh"
 app="$work/CmdBaby.app"
 assemble_app "$binary_dir" "$src" "$app"
+compile_app_icon "$src" "$app" required
 /usr/bin/plutil -replace CFBundleShortVersionString -string "$version" "$app/Contents/Info.plist"
 /usr/bin/plutil -replace CFBundleVersion -string "$build_number" "$app/Contents/Info.plist"
 /usr/bin/plutil -lint "$app/Contents/Info.plist" >/dev/null

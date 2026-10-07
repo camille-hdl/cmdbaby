@@ -13,6 +13,10 @@
     <string>CmdBaby</string>
     <key>CFBundleExecutable</key>
     <string>CmdBaby</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>app.cmdbaby.CmdBaby</string>
     <key>CFBundleInfoDictionaryVersion</key>
