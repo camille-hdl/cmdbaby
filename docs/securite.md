@@ -103,7 +103,7 @@ commit signé sur main (#109, #123)
 spctl -a -vv /Applications/CmdBaby.app
 ```
 
-doit afficher `source=Notarized Developer ID` et `origin=Developer ID Application: Camille Hodoul (2B8R2FVJP6)`. Le Team ID, public, est `2B8R2FVJP6` ; les scripts le lisent dans `scripts/release.env` (`RELEASE_TEAM_ID`, #98, #99).
+doit afficher `source=Notarized Developer ID` et `origin=Developer ID Application: CAMILLE PAULIN HODOUL (2B8R2FVJP6)`. Le Team ID, public, est `2B8R2FVJP6` ; les scripts le lisent dans `scripts/release.env` (`RELEASE_TEAM_ID`, #98, #99).
 
 ```sh
 shasum -a 256 ~/Downloads/CmdBaby-<version>.dmg
