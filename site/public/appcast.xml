@@ -1,0 +1,18 @@
+<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
+--><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>CmdBaby</title>
+        <item>
+            <title>0.0.1</title>
+            <pubDate>Wed, 07 Oct 2026 14:04:41 +0200</pubDate>
+            <sparkle:version>137</sparkle:version>
+            <sparkle:shortVersionString>0.0.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/camille-hdl/cmdbaby/releases/download/v0.0.1/CmdBaby-0.0.1.dmg" length="12404009" type="application/octet-stream" sparkle:edSignature="B+v2B1W/4Zc0l1PSANwK54emquaEYpDaVpANAeTQGGpQ8P662/eZZQM0m4EHMocQiL0DdP763+9ijvc2Q7uLAw=="></enclosure>
+        </item>
+    </channel>
+</rss><!-- sparkle-signatures:
+edSignature: Z6TWJ641odJGej1gN2VA3jI5lShynqnkNb/rG3CH3A2NSPYiEEWeXUZ9zh8fgS6MzN4hDmRYtbRh/H1VfkGJDw==
+length: 1044
+-->
