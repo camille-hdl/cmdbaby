@@ -27,3 +27,14 @@ func creditsListsKenneyPacksInOrder() {
   ])
   #expect(Credits.assets.allSatisfy { $0.url.scheme == "https" })
 }
+
+@Test("Confidentialité et Support pointent vers le site, dans la langue de l’app, en https")
+func creditsLinkToPrivacyAndSupportPages() {
+  #expect(Credits.privacyURL(.language("en")).absoluteString == "https://cmdbaby.app/privacy/")
+  #expect(Credits.supportURL(.language("en")).absoluteString == "https://cmdbaby.app/support/")
+  #expect(Credits.privacyURL(.language("fr")).absoluteString == "https://cmdbaby.app/fr/privacy/")
+  #expect(Credits.supportURL(.language("fr")).absoluteString == "https://cmdbaby.app/fr/support/")
+  #expect(L10nTable.language("fr")("settings.about.privacy") == "Confidentialité")
+  #expect(L10nTable.language("en")("settings.about.privacy") == "Privacy")
+  #expect(L10nTable.language("fr")("settings.about.support") == "Support")
+}

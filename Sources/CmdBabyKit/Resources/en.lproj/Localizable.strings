@@ -104,3 +104,7 @@
 "menu.edit.selectAll" = "Select All";
 "menu.app.checkForUpdates" = "Check for Updates…";
 "settings.general.automaticUpdates.label" = "Check for Updates Automatically";
+"site.privacy.url" = "https://cmdbaby.app/privacy/";
+"site.support.url" = "https://cmdbaby.app/support/";
+"settings.about.privacy" = "Privacy";
+"settings.about.support" = "Support";

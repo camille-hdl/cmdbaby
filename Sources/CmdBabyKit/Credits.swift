@@ -13,6 +13,16 @@ public enum Credits {
   public static let authorName = "Camille"
   public static let authorURL = URL(string: "https://camillehdl.dev")!
 
+  /// Page Confidentialité du site, dans la langue de l’app.
+  public static func privacyURL(_ table: L10nTable = .current) -> URL {
+    URL(string: table("site.privacy.url"))!
+  }
+
+  /// Page Support du site, dans la langue de l’app.
+  public static func supportURL(_ table: L10nTable = .current) -> URL {
+    URL(string: table("site.support.url"))!
+  }
+
   /// Fish Pack, puis le vaisseau : Space Shooter, Alien UFO, Skyboxes.
   public static let assets: [CreditedAsset] = [
     asset("Fish Pack 2.0", "https://kenney.nl/assets/fish-pack"),

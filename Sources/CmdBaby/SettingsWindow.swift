@@ -1125,6 +1125,8 @@ struct SettingsView: View {
       aboutHeader
       SettingsGroup {
         aboutAuthorRow
+        SettingsGroupDivider()
+        aboutSiteLinksRow
       }
       SettingsGroup(title: L10n.current("settings.about.assets")) {
         ForEach(Array(Credits.assets.enumerated()), id: \.element.url) { index, asset in
@@ -1170,6 +1172,25 @@ struct SettingsView: View {
           .font(.system(size: 13))
           .focused($focusedAboutLink, equals: Credits.authorURL)
           .accessibilityLabel(madeByLine)
+      }
+    }
+  }
+
+  /// Confidentialité et Support, sur le site, dans la langue de l’app.
+  private var aboutSiteLinksRow: some View {
+    SettingsRow {
+      HStack(spacing: 16) {
+        ForEach(
+          [
+            (L10n.current("settings.about.privacy"), Credits.privacyURL()),
+            (L10n.current("settings.about.support"), Credits.supportURL()),
+          ],
+          id: \.1
+        ) { title, url in
+          Link(title, destination: url)
+            .font(.system(size: 13))
+            .focused($focusedAboutLink, equals: url)
+        }
       }
     }
   }
