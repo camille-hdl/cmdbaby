@@ -26,7 +26,7 @@ It is a small personal project, free, with no account. Made by [Camille](https:/
 
 ## What it does
 
-- **Something happens with every key.** Pick a calm scene: fish, a little starship, or green characters raining down the screen (your toddler will not get the film reference, you will). More scenes will come.
+- **The screen answers back.** Pick a calm scene: fish, a little starship, or green characters raining down the screen. (Your toddler won't get that reference, but parents can have fun too.)
 - **Your work stays where you left it.** A session covers every screen of the Mac and turns off the shortcuts that quit apps, switch windows or open Spotlight. CmdBaby never records what is typed.
 - **Lives in the menu bar.** Start a session or open Settings from the bottle icon. Settings choose the scene, the ways to end a session, the timer and the language (English or French).
 
