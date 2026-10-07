@@ -23,6 +23,18 @@ step() {
     print "\n▸ $1"
 }
 
+# curl_site [options…] URL : curl vers cmdbaby.app en résolvant par 1.1.1.1. Le cache DNS du Mac
+# (ou d’un VPN) peut garder un « nom inconnu » longtemps après la création du domaine.
+curl_site() {
+    local ip
+    ip=$(dig +short A cmdbaby.app @1.1.1.1 2>/dev/null | grep -E '^[0-9.]+$' | head -n1)
+    if [[ -n "$ip" ]]; then
+        curl --resolve "cmdbaby.app:443:$ip" "$@"
+    else
+        curl "$@"
+    fi
+}
+
 # ── Pré-vols ────────────────────────────────────────────────────────────────
 
 version=${1:-}
@@ -110,12 +122,12 @@ scripts/deploy-site.sh
 step "Contrôle du site en ligne"
 served=""
 for _ in $(seq 1 24); do
-    served=$(curl -fsS "https://cmdbaby.app/appcast.xml" 2>/dev/null || true)
+    served=$(curl_site -fsS "https://cmdbaby.app/appcast.xml" 2>/dev/null || true)
     [[ "$served" == "$(cat site/public/appcast.xml)" ]] && break
     sleep 5
 done
 [[ "$served" == "$(cat site/public/appcast.xml)" ]] || fail "L’appcast servi par https://cmdbaby.app diffère du fichier local."
-location=$(curl -sI "https://cmdbaby.app/download" | sed -nE 's/^[Ll]ocation: ([^[:space:]]+).*/\1/p')
+location=$(curl_site -sI "https://cmdbaby.app/download" | sed -nE 's/^[Ll]ocation: ([^[:space:]]+).*/\1/p')
 [[ "$location" == "$dmg_url" ]] || fail "https://cmdbaby.app/download redirige vers « $location », pas vers $dmg_url."
 
 # ── Enregistrement ──────────────────────────────────────────────────────────
