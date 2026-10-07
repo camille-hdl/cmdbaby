@@ -7,7 +7,7 @@
 
 <h1 align="center">CmdBaby</h1>
 
-<p align="center">Let your toddler bash the keyboard. Your Mac stays safe.</p>
+<p align="center">Your toddler wants to type like you. Let them, while your work stays safe.</p>
 
 <p align="center">
   <a href="https://cmdbaby.app">cmdbaby.app</a> ·
@@ -15,21 +15,20 @@
   <a href="https://github.com/camille-hdl/cmdbaby/actions/workflows/ci.yml"><img src="https://github.com/camille-hdl/cmdbaby/actions/workflows/ci.yml/badge.svg" alt="CI" align="center"></a>
 </p>
 
-I built CmdBaby so my kid could play with the Mac without opening Spotlight, switching Spaces or quitting my apps. It is a small personal project, free, with no account and no tracking.
+I work from home, and my daughter often climbs onto my lap to type on my keyboard, like I do. An unplugged keyboard does not fool her for long, since nothing happens on screen. CmdBaby covers the screen and turns off the shortcuts: every key she presses makes something appear, my open work stays untouched behind it, and after a few minutes she moves on to something else.
 
-Made by [Camille](https://camillehdl.dev). Every line of code in this repo was written by an AI coding agent, under my direction.
+It is a small personal project, free, with no account. Made by [Camille](https://camillehdl.dev). Every line of code in this repo was written by an AI coding agent, under my direction.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="site/public/img/screenshots/mode-dark-en.webp">
-  <img src="site/public/img/screenshots/mode-light-en.webp" alt="CmdBaby settings, with the three play modes: Ocean, Terminal and Starship.">
+  <img src="site/public/img/screenshots/mode-light-en.webp" alt="CmdBaby settings, with the play modes.">
 </picture>
 
 ## What it does
 
-- **Three play modes.** Ocean: fish swim in and bubbles rise with each key. Terminal: green code rains down the screen. Starship: a ship fires at the letter that was just typed.
-- **Every screen covered.** A session covers every connected display. Plug in a second screen and it is covered within a second.
-- **Shortcuts blocked.** During a session, Cmd and Ctrl shortcuts, function keys, media keys and the Globe key do nothing. CmdBaby never records what is typed.
-- **Lives in the menu bar.** Start a session or open Settings from the bottle icon. Settings choose the play mode, the exits, the timer and the language (English or French).
+- **Something happens with every key.** Pick a calm scene: fish, a little starship, or green characters raining down the screen (your toddler will not get the film reference, you will). More scenes will come.
+- **Your work stays where you left it.** A session covers every screen of the Mac and turns off the shortcuts that quit apps, switch windows or open Spotlight. CmdBaby never records what is typed.
+- **Lives in the menu bar.** Start a session or open Settings from the bottle icon. Settings choose the scene, the ways to end a session, the timer and the language (English or French).
 
 ## Install
 
@@ -47,7 +46,7 @@ CmdBaby opens its Settings on the Exits section, so you choose how a session end
 
 To block shortcuts, CmdBaby needs the Accessibility permission. macOS asks for it the first time you start a session. Settings, Permissions shows whether it is granted and opens the right pane of System Settings. macOS ties the permission to where the app lives, so keep CmdBaby in Applications.
 
-## Ending a session
+## Getting back to work
 
 - Type `parent`, then Return.
 - Hold Shift-Escape for 1.5 seconds.
