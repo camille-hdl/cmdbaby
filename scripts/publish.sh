@@ -127,7 +127,12 @@ for _ in $(seq 1 24); do
     sleep 5
 done
 [[ "$served" == "$(cat site/public/appcast.xml)" ]] || fail "L’appcast servi par https://cmdbaby.app diffère du fichier local."
-location=$(curl_site -sI "https://cmdbaby.app/download" | sed -nE 's/^[Ll]ocation: ([^[:space:]]+).*/\1/p')
+location=""
+for _ in $(seq 1 24); do
+    location=$(curl_site -sI "https://cmdbaby.app/download" | sed -nE 's/^[Ll]ocation: ([^[:space:]]+).*/\1/p')
+    [[ "$location" == "$dmg_url" ]] && break
+    sleep 5
+done
 [[ "$location" == "$dmg_url" ]] || fail "https://cmdbaby.app/download redirige vers « $location », pas vers $dmg_url."
 
 # ── Enregistrement ──────────────────────────────────────────────────────────
