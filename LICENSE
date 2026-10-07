@@ -1,0 +1,41 @@
+MIT License
+
+Copyright (c) 2026 Camille Hodoul
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Name and logo
+
+The name "CmdBaby" and the CmdBaby icon and logo (files under
+docs/assets/brand/, Resources/AppIcon.icon and their derivatives) are not
+licensed under the MIT License. You may not use them to identify a modified or
+redistributed version, or in a way that suggests endorsement, without prior
+written permission. Forks must use a different name and icon.
+
+Third-party content
+
+Third-party files keep their own license:
+
+- Game art by Kenney (https://www.kenney.nl), CC0 1.0: see
+  Sources/CmdBaby/Resources/Ocean/License.txt and
+  Sources/CmdBaby/Resources/Starship/License-Starship.txt.
+- Agent skills under .agents/skills/ that come from
+  https://github.com/mattpocock/skills (listed in skills-lock.json with that
+  source), MIT License, Copyright (c) 2026 Matt Pocock: see
+  .agents/skills/LICENSE-mattpocock-skills.
