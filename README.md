@@ -56,6 +56,10 @@ To block shortcuts, CmdBaby needs the Accessibility permission. macOS asks for i
 
 Each exit can be turned on or off in Settings. The default phrase `parent` is written here and on the website, so change it in Settings, Exits.
 
+## Questions and bug reports
+
+Write to [support@cmdbaby.app](mailto:support@cmdbaby.app). The repository does not take issues or pull requests: requests and fixes go through email.
+
 ## Privacy
 
 CmdBaby never records, stores or sends a keystroke. Its only network access is the update check, which reads [cmdbaby.app/appcast.xml](https://cmdbaby.app/appcast.xml). Details on the [privacy page](https://cmdbaby.app/privacy/).

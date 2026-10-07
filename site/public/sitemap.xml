@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://cmdbaby.app/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://cmdbaby.app/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://cmdbaby.app/fr/"/>
+  </url>
+  <url>
+    <loc>https://cmdbaby.app/fr/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://cmdbaby.app/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://cmdbaby.app/fr/"/>
+  </url>
+  <url>
+    <loc>https://cmdbaby.app/privacy/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://cmdbaby.app/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://cmdbaby.app/fr/privacy/"/>
+  </url>
+  <url>
+    <loc>https://cmdbaby.app/fr/privacy/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://cmdbaby.app/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://cmdbaby.app/fr/privacy/"/>
+  </url>
+  <url>
+    <loc>https://cmdbaby.app/support/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://cmdbaby.app/support/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://cmdbaby.app/fr/support/"/>
+  </url>
+  <url>
+    <loc>https://cmdbaby.app/fr/support/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://cmdbaby.app/support/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://cmdbaby.app/fr/support/"/>
+  </url>
+</urlset>

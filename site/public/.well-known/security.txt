@@ -1,0 +1,6 @@
+Contact: https://github.com/camille-hdl/cmdbaby/security/advisories/new
+Contact: mailto:support@cmdbaby.app
+Expires: 2027-10-06T00:00:00.000Z
+Preferred-Languages: en, fr
+Canonical: https://cmdbaby.app/.well-known/security.txt
+Policy: https://github.com/camille-hdl/cmdbaby/blob/main/SECURITY.md

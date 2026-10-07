@@ -6,7 +6,7 @@ Only the latest released version of CmdBaby receives security fixes.
 
 ## Reporting a vulnerability
 
-Please report vulnerabilities **privately**, never in a public issue:
+Please report vulnerabilities **privately**:
 
 - on GitHub: **Security › Report a vulnerability** in this repository;
 - or by email: support@cmdbaby.app.
