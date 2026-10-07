@@ -194,10 +194,23 @@ cd "$(dirname "$0")/.."
 
 wrangler() { npm exec --prefix site -- wrangler "$@"; }
 
-site_is_up() { curl -fsI "https://$DOMAIN/" >/dev/null 2>&1; }
-
 # dig_short TYPE NOM : réponses DNS via le résolveur de Cloudflare.
 dig_short() { dig +short "$1" "$2" @1.1.1.1 2>/dev/null || true; }
+
+# curl_cf NOM [options…] URL : curl en résolvant NOM par 1.1.1.1. Le cache DNS du Mac
+# (ou d'un VPN) peut garder un « nom inconnu » longtemps après la création du domaine.
+curl_cf() {
+  local host="$1" ip
+  shift
+  ip=$(dig_short A "$host" | grep -E '^[0-9.]+$' | head -n1)
+  if [[ -n "$ip" ]]; then
+    curl --resolve "$host:443:$ip" "$@"
+  else
+    curl "$@"
+  fi
+}
+
+site_is_up() { curl_cf "$DOMAIN" -fsI "https://$DOMAIN/" >/dev/null 2>&1; }
 
 yes_or_stop() {
   # yes_or_stop "question" "ce qu'il faut faire sinon"
@@ -316,7 +329,7 @@ stage_deploy() {
 
 www_redirects() {
   local headers
-  headers=$(curl -sI "https://www.$DOMAIN/" 2>/dev/null || true)
+  headers=$(curl_cf "www.$DOMAIN" -sI "https://www.$DOMAIN/" 2>/dev/null || true)
   grep -qE "^HTTP/[0-9.]+ 301" <<<"$headers" && grep -qiE "^location: https://$DOMAIN/" <<<"$headers"
 }
 
