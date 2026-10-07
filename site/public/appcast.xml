@@ -4,15 +4,19 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>CmdBaby</title>
         <item>
-            <title>0.0.1</title>
-            <pubDate>Wed, 07 Oct 2026 14:04:41 +0200</pubDate>
-            <sparkle:version>137</sparkle:version>
-            <sparkle:shortVersionString>0.0.1</sparkle:shortVersionString>
+            <title>0.0.2</title>
+            <pubDate>Wed, 07 Oct 2026 14:19:19 +0200</pubDate>
+            <sparkle:version>139</sparkle:version>
+            <sparkle:shortVersionString>0.0.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/camille-hdl/cmdbaby/releases/download/v0.0.1/CmdBaby-0.0.1.dmg" length="12404009" type="application/octet-stream" sparkle:edSignature="B+v2B1W/4Zc0l1PSANwK54emquaEYpDaVpANAeTQGGpQ8P662/eZZQM0m4EHMocQiL0DdP763+9ijvc2Q7uLAw=="></enclosure>
+            <description sparkle:format="markdown"><![CDATA[# CmdBaby 0.0.2
+
+Version de test de la mise à jour automatique. Aucun changement pour l'enfant.
+]]></description>
+            <enclosure url="https://github.com/camille-hdl/cmdbaby/releases/download/v0.0.2/CmdBaby-0.0.2.dmg" length="12404600" type="application/octet-stream" sparkle:edSignature="t/6TWk43s90wpcj1AiNHitx/3qHKJIJe5MRM7+jfx7IFl2RMZYyV4BtE9x0zTgzsRTK+CDfev9UCVIfn3SgXBA=="></enclosure>
         </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: Z6TWJ641odJGej1gN2VA3jI5lShynqnkNb/rG3CH3A2NSPYiEEWeXUZ9zh8fgS6MzN4hDmRYtbRh/H1VfkGJDw==
-length: 1044
+edSignature: mKf7kPFH6XBVmVQ0DjEW7YQPDDDTKQsJPjvlWk/o66JODonLpUDPKQkAi/kHgsSQJOKRLt7kz8jgGvSQc/InBQ==
+length: 1219
 -->
