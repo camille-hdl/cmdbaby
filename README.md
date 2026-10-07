@@ -15,7 +15,7 @@
   <a href="https://github.com/camille-hdl/cmdbaby/actions/workflows/ci.yml"><img src="https://github.com/camille-hdl/cmdbaby/actions/workflows/ci.yml/badge.svg" alt="CI" align="center"></a>
 </p>
 
-I work from home, and my daughter often climbs onto my lap to type on my keyboard, like I do. An unplugged keyboard does not fool her for long, since nothing happens on screen. CmdBaby covers the screen and turns off the shortcuts: every key she presses makes something appear, my open work stays untouched behind it, and after a few minutes she moves on to something else.
+You work from home, and your little one climbs onto your lap to type on the keyboard, like you. An unplugged keyboard does not fool them for long, since nothing happens on screen. CmdBaby covers the screen and turns off the shortcuts: every key makes something appear, your open work stays untouched behind it, and after a few minutes they move on to something else.
 
 It is a small personal project, free, with no account. Made by [Camille](https://camillehdl.dev). Every line of code in this repo was written by an AI coding agent, under my direction.
 
