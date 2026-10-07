@@ -31,31 +31,13 @@ esac
 
 app_path="$output_dir/$app_name"
 contents_path="$app_path/Contents"
-executable_path="$contents_path/MacOS/CmdBaby"
 info_path="$contents_path/Info.plist"
 
 swift build --configuration "$configuration" --product CmdBaby
 binary_dir=$(swift build --configuration "$configuration" --show-bin-path)
 
-mkdir -p "$contents_path/MacOS" "$contents_path/Resources"
-install -m 755 "$binary_dir/CmdBaby" "$executable_path"
-install -m 644 "$project_dir/Resources/CmdBaby-Info.plist" "$info_path"
-install -m 644 "$project_dir/Resources/PrivacyInfo.xcprivacy" "$contents_path/Resources/PrivacyInfo.xcprivacy"
-
-copy_resource_bundle() {
-    local name="$1"
-    local source="$binary_dir/$name"
-    if [[ ! -d "$source" ]]; then
-        print -u2 "Bundle de ressources introuvable : $source"
-        exit 1
-    fi
-    rm -rf "$app_path/$name"
-    rm -rf "$contents_path/Resources/$name"
-    cp -R "$source" "$contents_path/Resources/$name"
-}
-
-copy_resource_bundle "CmdBaby_CmdBaby.bundle"
-copy_resource_bundle "CmdBaby_CmdBabyKit.bundle"
+source "$script_dir/lib/assemble-app.zsh"
+assemble_app "$binary_dir" "$project_dir" "$app_path"
 
 if [[ "$sandbox_mode" == 1 || "$sandbox_mode" == true || "$sandbox_mode" == TRUE || "$sandbox_mode" == yes || "$sandbox_mode" == YES ]]; then
     /usr/bin/plutil -replace CFBundleIdentifier -string "app.cmdbaby.CmdBaby.sandbox" "$info_path"

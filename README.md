@@ -54,6 +54,10 @@ Grant **Accessibility** to CmdBaby when macOS asks — that’s what lets the ap
 
 Personal project, no warranty, no roadmap promises — just something that works on our family Mac.
 
+### Release
+
+One-time setup of the signing and notarization credentials: `scripts/setup-release.sh`. Then `scripts/release.sh X.Y.Z` builds `dist/CmdBaby-X.Y.Z.dmg`, signed with Developer ID, notarized and stapled.
+
 ### Git hooks
 
 Once per clone, enable the versioned pre-commit hook, which refuses keys, certificates and release artifacts:
