@@ -108,4 +108,4 @@ Set up the signing and notarization credentials once with `scripts/setup-release
 
 ### Website
 
-The site lives in `site/` and runs on Cloudflare Workers. Preview it with `npm run --prefix site dev`. Deploy with `scripts/deploy-site.sh`. First setup: `scripts/setup-site.sh`. Regenerate the Settings screenshots with `scripts/site-screenshots.sh`.
+The site lives in `site/` and runs on Cloudflare Workers. Preview it with `npm run --prefix site dev`. Deploy with `scripts/deploy-site.sh`. First setup: `scripts/setup-site.sh`. Regenerate the Settings screenshots with `scripts/site-screenshots.sh`. Download counts per version, from GitHub Releases: `scripts/download-stats.sh`. Clicks on the site's download buttons also show up in GoatCounter as the `download` event.
