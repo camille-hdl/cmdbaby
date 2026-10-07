@@ -5,10 +5,13 @@
   "devDependencies": {
     "@tailwindcss/cli": "4.3.3",
     "tailwindcss": "4.3.3",
-    "wrangler": "4.147.0"
+    "wrangler": "4.148.0"
   },
   "scripts": {
     "build": "tailwindcss -i src/style.css -o public/style.css --minify",
     "dev": "npm run build && wrangler dev"
+  },
+  "overrides": {
+    "sharp": "0.35.5"
   }
 }
