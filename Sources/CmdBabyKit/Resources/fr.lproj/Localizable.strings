@@ -102,3 +102,5 @@
 "menu.edit.copy" = "Copier";
 "menu.edit.paste" = "Coller";
 "menu.edit.selectAll" = "Tout sélectionner";
+"menu.app.checkForUpdates" = "Rechercher les mises à jour…";
+"settings.general.automaticUpdates.label" = "Rechercher automatiquement les mises à jour";

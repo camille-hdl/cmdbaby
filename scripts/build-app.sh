@@ -46,11 +46,20 @@ if [[ "$sandbox_mode" == 1 || "$sandbox_mode" == true || "$sandbox_mode" == TRUE
     /usr/bin/plutil -replace CFBundleName -string "CmdBabySandbox" "$info_path"
 fi
 
+# Hardened runtime, sauf en signature ad hoc : sans Team ID, la validation des bibliothèques
+# refuserait de charger Sparkle.framework. Un build ad hoc n’est jamais distribué.
+runtime_options=(--options runtime)
+if [[ "$signing_identity" == "-" ]]; then
+    runtime_options=()
+fi
+
+sign_sparkle "$signing_identity" "$app_path" "${runtime_options[@]}" --timestamp=none
+
 /usr/bin/codesign \
     --force \
     --sign "$signing_identity" \
     --entitlements "$entitlements_path" \
-    --options runtime \
+    "${runtime_options[@]}" \
     --timestamp=none \
     "$app_path"
 

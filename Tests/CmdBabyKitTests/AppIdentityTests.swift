@@ -47,6 +47,17 @@ func infoPlistIsDistributable() throws {
   #expect(plist["NSAppTransportSecurity"] == nil)
   #expect(plist["CFBundleIconName"] as? String == "AppIcon")
   #expect(plist["CFBundleIconFile"] as? String == "AppIcon")
+  // Sparkle (#102) : flux signé, vérification avant extraction, rien d’automatique ni de profilage.
+  #expect(plist["SUFeedURL"] as? String == "https://cmdbaby.app/appcast.xml")
+  #expect(plist["SURequireSignedFeed"] as? Bool == true)
+  #expect(plist["SUVerifyUpdateBeforeExtraction"] as? Bool == true)
+  #expect(plist["SUAutomaticallyUpdate"] as? Bool == false)
+  #expect(plist["SUEnableJavaScript"] as? Bool == false)
+  #expect(plist["SUEnableSystemProfiling"] as? Bool == false)
+  #expect(plist["SUEnableInstallerLauncherService"] == nil)
+  #expect(plist["SUEnableDownloaderService"] == nil)
+  let releaseEnv = try String(contentsOf: repositoryFile("scripts/release.env"), encoding: .utf8)
+  #expect(releaseEnv.contains("SPARKLE_PUBLIC_KEY=\(plist["SUPublicEDKey"] as? String ?? "?")"))
   #expect(FileManager.default.fileExists(atPath: repositoryFile("Resources/AppIcon.icon/icon.json").path))
 }
 

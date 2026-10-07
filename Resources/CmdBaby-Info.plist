@@ -35,6 +35,22 @@
     <string>13.0</string>
     <key>NSApplicationCrashOnExceptions</key>
     <true/>
+    <key>SUFeedURL</key>
+    <string>https://cmdbaby.app/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>MzBZjOqt476iQgfh/I/v0eWvOvALHYYVP4lmLCQLZOQ=</string>
+    <key>SUEnableAutomaticChecks</key>
+    <true/>
+    <key>SUAutomaticallyUpdate</key>
+    <false/>
+    <key>SUVerifyUpdateBeforeExtraction</key>
+    <true/>
+    <key>SURequireSignedFeed</key>
+    <true/>
+    <key>SUEnableJavaScript</key>
+    <false/>
+    <key>SUEnableSystemProfiling</key>
+    <false/>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSHumanReadableCopyright</key>

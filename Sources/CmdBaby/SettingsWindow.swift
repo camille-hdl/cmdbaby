@@ -329,6 +329,7 @@ private var timeLimitRejectionMessage: String {
 struct SettingsView: View {
   @ObservedObject var model: SettingsModel
   @ObservedObject var session: DiagnosticsSessionModel
+  @ObservedObject var updates: UpdateController
   @ObservedObject var presence: SettingsWindowPresence
   let onLaunch: () -> Void
   let onRelaunch: () -> Void
@@ -361,6 +362,7 @@ struct SettingsView: View {
     model: SettingsModel,
     loginItem: any LoginItemRegistration,
     session: DiagnosticsSessionModel,
+    updates: UpdateController,
     presence: SettingsWindowPresence,
     initialSection: SettingsSection,
     onLaunch: @escaping () -> Void,
@@ -368,6 +370,7 @@ struct SettingsView: View {
   ) {
     self.model = model
     self.session = session
+    self.updates = updates
     self.presence = presence
     self.onLaunch = onLaunch
     self.onRelaunch = onRelaunch
@@ -967,7 +970,21 @@ struct SettingsView: View {
         settingsSwitch(launchLabel, isOn: launchAtLogin)
           .focused($launchAtLoginFocused)
       }
+      if updates.isAvailable {
+        SettingsGroupDivider()
+        let updatesLabel = L10n.current("settings.general.automaticUpdates.label")
+        SettingsRow(label: updatesLabel) {
+          settingsSwitch(updatesLabel, isOn: automaticUpdates)
+        }
+      }
     }
+  }
+
+  private var automaticUpdates: Binding<Bool> {
+    Binding(
+      get: { updates.automaticallyChecksForUpdates },
+      set: { updates.automaticallyChecksForUpdates = $0 }
+    )
   }
 
   private var languageRow: some View {
@@ -1415,6 +1432,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
   private let languageSettings: AppLanguageSettings
   private let languageAtLaunch: AppLanguagePreference
   private let session: DiagnosticsSessionModel
+  private let updates: UpdateController
   private let log: LifecycleLogRecorder
   private let onLaunch: () -> Void
   private let onRelaunch: () -> Void
@@ -1433,6 +1451,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     languageSettings: AppLanguageSettings = AppLanguageSettings(store: UserDefaultsAppLanguageStore()),
     languageAtLaunch: AppLanguagePreference,
     session: DiagnosticsSessionModel,
+    updates: UpdateController,
     log: LifecycleLogRecorder = .shared,
     onRelaunch: @escaping () -> Void,
     onLaunch: @escaping () -> Void
@@ -1442,6 +1461,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     self.languageSettings = languageSettings
     self.languageAtLaunch = languageAtLaunch
     self.session = session
+    self.updates = updates
     self.log = log
     self.onRelaunch = onRelaunch
     self.onLaunch = onLaunch
@@ -1471,6 +1491,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         model: model,
         loginItem: loginItem,
         session: session,
+        updates: updates,
         presence: presence,
         initialSection: section,
         onLaunch: onLaunch,
@@ -1678,6 +1699,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         model: model,
         loginItem: loginItem,
         session: session,
+        updates: updates,
         presence: presence,
         initialSection: section,
         onLaunch: {},

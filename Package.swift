@@ -18,6 +18,10 @@ let package = Package(
       targets: ["CmdBaby"]
     ),
   ],
+  dependencies: [
+    // Mises à jour (#102). Version exacte : Package.resolved est commité, release.sh le fige.
+    .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.10.0"),
+  ],
   targets: [
     .target(
       name: "CmdBabyKit",
@@ -37,7 +41,11 @@ let package = Package(
     ),
     .executableTarget(
       name: "CmdBaby",
-      dependencies: ["CmdBabyKit", "CmdBabyAppKitBridge"],
+      dependencies: [
+        "CmdBabyKit",
+        "CmdBabyAppKitBridge",
+        .product(name: "Sparkle", package: "Sparkle"),
+      ],
       resources: [
         .process("Resources/Ocean"),
         .process("Resources/Starship"),

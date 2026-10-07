@@ -26,11 +26,13 @@ enum CmdBabyMain {
 @MainActor
 final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
   private let model: DiagnosticsSessionModel
+  private let updates: UpdateController
   private let languageAtLaunch: AppLanguagePreference
   private var statusItem: NSStatusItem?
   private lazy var settingsWindowController = SettingsWindowController(
     languageAtLaunch: languageAtLaunch,
     session: model,
+    updates: updates,
     onRelaunch: { [weak self] in
       self?.relaunchApplyingLanguage()
     },
@@ -42,6 +44,7 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
   override init() {
     languageAtLaunch = AppLanguageSettings(store: UserDefaultsAppLanguageStore()).current()
     model = DiagnosticsSessionModel()
+    updates = UpdateController(session: model)
     super.init()
   }
 
@@ -226,6 +229,7 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
     )
     item.keyEquivalentModifierMask = NSEvent.ModifierFlags(entry.modifiers)
     item.target = target
+    item.isHidden = entry.command == .checkForUpdates && !updates.isAvailable
     return item
   }
 
@@ -233,6 +237,7 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
   private func mainMenuAction(_ command: MenuBarAgent.MenuCommand) -> (Selector?, AnyObject?) {
     switch command {
     case .about: (#selector(openAboutFromMainMenu(_:)), self)
+    case .checkForUpdates: (#selector(UpdateController.checkForUpdates(_:)), updates)
     case .settings: (#selector(openSettingsFromMainMenu(_:)), self)
     case .hide: (#selector(NSApplication.hide(_:)), NSApp)
     case .hideOthers: (#selector(NSApplication.hideOtherApplications(_:)), NSApp)

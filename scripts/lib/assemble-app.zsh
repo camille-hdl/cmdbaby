@@ -22,6 +22,34 @@ assemble_app() {
         rm -rf "$app_path/$name" "$contents/Resources/$name"
         cp -R "$binary_dir/$name" "$contents/Resources/$name"
     done
+
+    # Sparkle (#102). L’app n’est pas sandboxée : ses services XPC sont inutiles et retirés,
+    # comme le permet la documentation Sparkle (« Sandboxing »).
+    if [[ ! -d "$binary_dir/Sparkle.framework" ]]; then
+        print -u2 "Sparkle.framework introuvable dans $binary_dir"
+        return 1
+    fi
+    mkdir -p "$contents/Frameworks"
+    rm -rf "$contents/Frameworks/Sparkle.framework"
+    ditto "$binary_dir/Sparkle.framework" "$contents/Frameworks/Sparkle.framework"
+    rm -rf "$contents/Frameworks/Sparkle.framework/Versions/B/XPCServices" \
+        "$contents/Frameworks/Sparkle.framework/XPCServices"
+    if ! otool -l "$contents/MacOS/CmdBaby" | grep -q "@executable_path/../Frameworks"; then
+        install_name_tool -add_rpath "@executable_path/../Frameworks" "$contents/MacOS/CmdBaby"
+    fi
+}
+
+# sign_sparkle <identité> <chemin du .app> [options de codesign…]
+# Signe Sparkle de l’intérieur vers l’extérieur, sans --deep, avant l’app,
+# avec les mêmes options que l’app (hardened runtime, horodatage).
+sign_sparkle() {
+    local identity="$1" app_path="$2"
+    shift 2
+    local framework="$app_path/Contents/Frameworks/Sparkle.framework"
+    local item
+    for item in "$framework/Versions/B/Autoupdate" "$framework/Versions/B/Updater.app" "$framework"; do
+        codesign --force --sign "$identity" "$@" "$item"
+    done
 }
 
 # compile_app_icon <racine du projet> <chemin du .app> <required|optional>

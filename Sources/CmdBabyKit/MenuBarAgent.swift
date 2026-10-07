@@ -26,6 +26,7 @@ public enum MenuBarAgent {
   /// Menu de l’app, visible quand les Réglages sont au premier plan. En session, la barre des menus est masquée.
   public static let applicationMenu: [MenuEntry] = [
     MenuEntry("menu.app.about", .about),
+    MenuEntry("menu.app.checkForUpdates", .checkForUpdates),
     .separator,
     MenuEntry("menu.settings", .settings, key: ","),
     .separator,
@@ -72,7 +73,7 @@ public enum MenuBarAgent {
   }
 
   public enum MenuCommand: Equatable, Sendable {
-    case about, settings, hide, hideOthers, showAll, quit
+    case about, checkForUpdates, settings, hide, hideOthers, showAll, quit
     case undo, redo, cut, copy, paste, selectAll
     case separator
   }

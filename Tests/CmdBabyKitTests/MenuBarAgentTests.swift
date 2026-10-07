@@ -57,7 +57,7 @@ func applicationMenuHasSettingsAndQuitShortcuts() throws {
   #expect(quit.keyEquivalent == "q")
   #expect(
     MenuBarAgent.applicationMenu.map(\.command)
-      == [.about, .separator, .settings, .separator, .hide, .hideOthers, .showAll, .separator, .quit]
+      == [.about, .checkForUpdates, .separator, .settings, .separator, .hide, .hideOthers, .showAll, .separator, .quit]
   )
   let hideOthers = try #require(MenuBarAgent.applicationMenu.first { $0.command == .hideOthers })
   #expect(hideOthers.keyEquivalent == "h")

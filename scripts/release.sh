@@ -40,6 +40,15 @@ identity=${RELEASE_SIGN_IDENTITY:-$(security find-identity -v -p codesigning \
 xcrun notarytool history --keychain-profile "$notary_profile" >/dev/null 2>&1 \
     || fail "Le profil notarytool « $notary_profile » ne répond pas : lancer scripts/setup-release.sh (étape 5)."
 
+sparkle_version=$(python3 -c 'import json; print(next(p["state"]["version"] for p in json.load(open("Package.resolved"))["pins"] if p["identity"] == "sparkle"))')
+sparkle_tools="$HOME/Library/Application Support/cmdbaby-release-tools/sparkle-$sparkle_version/bin"
+[[ -x "$sparkle_tools/generate_appcast" ]] \
+    || fail "Outils Sparkle $sparkle_version absents : lancer scripts/setup-release.sh (étape 6) avec SPARKLE_VERSION=$sparkle_version."
+sparkle_public=$("$sparkle_tools/generate_keys" -p 2>/dev/null || true)
+plist_public=$(/usr/bin/plutil -extract SUPublicEDKey raw Resources/CmdBaby-Info.plist)
+[[ "$sparkle_public" == "$plist_public" ]] \
+    || fail "La clé Sparkle du trousseau ne correspond pas à SUPublicEDKey de l’Info.plist : lancer scripts/setup-release.sh (étape 7)."
+
 xcode_major=$(xcodebuild -version | sed -nE 's/^Xcode ([0-9]+).*/\1/p')
 (( xcode_major >= 26 )) || fail "Xcode 26 ou plus récent est requis (trouvé : $(xcodebuild -version | head -n1))."
 
@@ -98,6 +107,7 @@ step "Signature Developer ID (de l’intérieur vers l’extérieur, sans --deep
 for bundle in "$app"/Contents/Resources/*.bundle; do
     codesign --force --sign "$identity" --timestamp "$bundle"
 done
+sign_sparkle "$identity" "$app" --options runtime --timestamp
 codesign --force --sign "$identity" --options runtime --timestamp \
     --entitlements "$src/Resources/CmdBaby.nosandbox.entitlements" "$app"
 
@@ -147,6 +157,25 @@ codesign --force --sign "$identity" --timestamp "$dmg"
 notarize "$dmg"
 xcrun stapler staple "$dmg"
 
+# ── Appcast ─────────────────────────────────────────────────────────────────
+
+# Un dossier qui ne contient que le nouveau DMG : generate_appcast applique le préfixe d’URL
+# à toutes les archives du dossier. Le flux n’a donc qu’une entrée, la dernière version.
+step "Appcast signé"
+mkdir -p "$work/appcast"
+cp "$dmg" "$work/appcast/"
+if [[ -f "$src/release-notes/$version.md" ]]; then
+    cp "$src/release-notes/$version.md" "$work/appcast/CmdBaby-$version.md"
+fi
+"$sparkle_tools/generate_appcast" --embed-release-notes \
+    --download-url-prefix "https://github.com/camille-hdl/cmdbaby/releases/download/v$version/" \
+    "$work/appcast"
+appcast="$work/appcast/appcast.xml"
+[[ -f "$appcast" ]] || fail "generate_appcast n’a pas produit appcast.xml."
+grep -qF "https://github.com/camille-hdl/cmdbaby/releases/download/v$version/CmdBaby-$version.dmg" "$appcast" \
+    || fail "L’appcast ne contient pas l’URL attendue du DMG."
+"$sparkle_tools/sign_update" "$appcast"
+
 # ── Contrôles finaux ────────────────────────────────────────────────────────
 
 step "Contrôles Gatekeeper"
@@ -160,6 +189,7 @@ xcrun stapler validate "$dmg"
 mkdir -p dist
 cp "$dmg" "dist/CmdBaby-$version.dmg"
 (cd dist && shasum -a 256 "CmdBaby-$version.dmg" > "CmdBaby-$version.dmg.sha256")
+cp "$appcast" dist/appcast.xml
 
-print "\n✓ dist/CmdBaby-$version.dmg"
+print "\n✓ dist/CmdBaby-$version.dmg et dist/appcast.xml"
 print "SHA-256 : $(cut -d' ' -f1 "dist/CmdBaby-$version.dmg.sha256")"
