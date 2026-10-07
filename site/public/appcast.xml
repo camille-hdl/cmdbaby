@@ -4,19 +4,39 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>CmdBaby</title>
         <item>
-            <title>0.0.2</title>
-            <pubDate>Wed, 07 Oct 2026 14:19:19 +0200</pubDate>
-            <sparkle:version>139</sparkle:version>
-            <sparkle:shortVersionString>0.0.2</sparkle:shortVersionString>
+            <title>1.0.0</title>
+            <pubDate>Wed, 07 Oct 2026 17:51:40 +0200</pubDate>
+            <sparkle:version>148</sparkle:version>
+            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[# CmdBaby 0.0.2
+            <description sparkle:format="markdown"><![CDATA[# CmdBaby 1.0
 
-Version de test de la mise à jour automatique. Aucun changement pour l'enfant.
+First public release.
+
+- Three full-screen play modes: Ocean, Terminal and Starship.
+- A session covers every connected display, including displays plugged in or removed during the session.
+- During a session, Command and Control shortcuts, function keys, media keys and the Globe key are blocked. This requires the Accessibility permission. Keystrokes are not recorded.
+- Ways to end a session: the exit phrase followed by Return (`parent` by default), Shift-Escape held for 1.5 seconds, five clicks on the square in the bottom right corner, and a timer (3 minutes by default). Each can be turned on or off in Settings.
+- Menu bar app, with Settings in English and French and an optional launch at login.
+- Checks for updates automatically, never during a session. The check can be turned off in Settings.
+- Requires macOS 13 or later. Runs on Apple Silicon and Intel.
+
+## En français
+
+Première version publique.
+
+- Trois modes de jeu plein écran : Océan, Terminal et Vaisseau.
+- Une session couvre tous les écrans branchés, y compris ceux branchés ou débranchés pendant la session.
+- Pendant une session, les raccourcis avec Commande et Contrôle, les touches de fonction, les touches média et la touche Globe sont bloqués. Cela demande l’autorisation Accessibilité. Les frappes ne sont pas enregistrées.
+- Pour finir une session : la phrase de sortie suivie d’Entrée (`parent` par défaut), Maj-Échap maintenu 1,5 seconde, cinq clics sur le carré en bas à droite, et un minuteur (3 minutes par défaut). Chacune s’active ou se désactive dans les Réglages.
+- App de la barre des menus, avec des Réglages en anglais et en français et un lancement à la connexion facultatif.
+- Recherche les mises à jour automatiquement, jamais pendant une session. On peut désactiver cette recherche dans les Réglages.
+- Nécessite macOS 13 ou plus récent. Fonctionne sur Apple Silicon et Intel.
 ]]></description>
-            <enclosure url="https://github.com/camille-hdl/cmdbaby/releases/download/v0.0.2/CmdBaby-0.0.2.dmg" length="12404600" type="application/octet-stream" sparkle:edSignature="t/6TWk43s90wpcj1AiNHitx/3qHKJIJe5MRM7+jfx7IFl2RMZYyV4BtE9x0zTgzsRTK+CDfev9UCVIfn3SgXBA=="></enclosure>
+            <enclosure url="https://github.com/camille-hdl/cmdbaby/releases/download/v1.0.0/CmdBaby-1.0.0.dmg" length="12394815" type="application/octet-stream" sparkle:edSignature="06DbQ8pG6U/4creMG1uALKklLkC7RU2aeoEd3CRLOGIf6PkYyQoVHn1EQl0IjXFfy4Lx5Y+ds2I1xOD6Ey5ZDA=="></enclosure>
         </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: mKf7kPFH6XBVmVQ0DjEW7YQPDDDTKQsJPjvlWk/o66JODonLpUDPKQkAi/kHgsSQJOKRLt7kz8jgGvSQc/InBQ==
-length: 1219
+edSignature: ctfA/PWA8M8vJyQECdeZftOzLHNAYrVNBvSUdnpsCmYZQW27JXrhtia6g22kEYb+3XcFWdsrW/zlkHxmzFYXBw==
+length: 3049
 -->
