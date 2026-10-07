@@ -370,10 +370,19 @@ stage_git_signing() {
       confirm "Activer $key pour tous les dépôts ?" && git config --global "$key" true
     fi
   done
-  if command -v gh >/dev/null 2>&1 && ! gh ssh-key list 2>/dev/null | grep -q "signing"; then
-    warn "Aucune clé de signature visible sur GitHub (ou droit gh manquant)."
-    step "gh ssh-key add $(git config --get user.signingkey) --type signing --title cmdbaby-signing"
-    pause "Entrée une fois la clé ajoutée (ou si elle l'est déjà)"
+  # GitHub ne marque « verified » un commit que si la clé de signature y est enregistrée.
+  # Cette lecture ne demande que le droit « repo » (lister les clés exigerait admin:ssh_signing_key).
+  local verified
+  verified=$(gh api "repos/{owner}/{repo}/commits/$(git rev-parse origin/main)" \
+    --jq .commit.verification.verified 2>/dev/null || true)
+  if [[ "$verified" == "true" ]]; then
+    say "${GREEN}✓${RESET} GitHub vérifie la signature du dernier commit de main."
+  else
+    warn "GitHub ne vérifie pas la signature du dernier commit de main."
+    step "Ajouter la clé comme clé de signature : github.com › Settings › SSH and GPG keys › New SSH key › Key type : Signing Key"
+    step "Clé publique : $(git config --get user.signingkey)"
+    open_url "https://github.com/settings/ssh/new"
+    pause "Entrée une fois la clé ajoutée"
   fi
   local tag="test-signature-$$"
   git tag -s "$tag" -m test >/dev/null
