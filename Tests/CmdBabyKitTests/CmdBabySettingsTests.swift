@@ -280,6 +280,24 @@ func missingLoginItemKeepsLaunchAtLoginRequest() throws {
   }
 }
 
+@Test("Une config illisible n’est pas réécrite par l’alignement du démarrage automatique")
+func unreadableConfigurationSurvivesLoginItemReconciliation() throws {
+  let file = TemporarySettingsFile()
+  defer { file.remove() }
+  try FileManager.default.createDirectory(at: file.directory, withIntermediateDirectories: true)
+  try Data("{".utf8).write(to: file.fileURL)
+  let loginItem = FakeLoginItemRegistration()
+  loginItem.isRegistered = true
+  loginItem.status = .enabled
+  let store = CmdBabyConfigurationStore(fileURL: file.fileURL)
+  let settings = CmdBabySettings(store: store, loginItem: loginItem)
+
+  #expect(settings.current().launchAtLogin == true)
+
+  #expect(try Data(contentsOf: file.fileURL) == Data("{".utf8))
+  #expect(store.isUnreadable)
+}
+
 private struct LoginItemFailure: Error {}
 
 private struct TemporarySettingsFile {

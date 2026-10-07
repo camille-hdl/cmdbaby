@@ -59,9 +59,15 @@ public struct CmdBabySettings: Sendable {
   /// Config sur disque. Un Login Item activé hors de l’app allume le réglage.
   /// Une demande déjà enregistrée reste si l’item est introuvable ou non enregistré,
   /// pour que Permissions puisse l’expliquer.
+  /// Une config illisible n’est jamais réécrite ici : seul un changement de l’adulte la remplace,
+  /// et Permissions peut la signaler entre-temps.
   public func current() -> CmdBabyConfiguration {
     let registered = loginItem.isRegistered
     var configuration = store.load()
+    guard !store.isUnreadable else {
+      configuration.launchAtLogin = registered
+      return configuration
+    }
     let keepUnregisteredRequest = configuration.launchAtLogin
       && !registered
       && (loginItem.status == .notRegistered || loginItem.status == .notFound)
