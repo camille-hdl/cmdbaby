@@ -46,6 +46,9 @@ final class StarshipDirector {
   private var skyboxTimer: Timer?
   /// Image précédente, à sortir du cache une fois le fondu terminé.
   private var skyboxToForget: (name: String, at: TimeInterval)?
+  /// Instant de média où la dérive du ciel est partie. Le même pour chaque écran,
+  /// y compris un écran ajouté ensuite. `nil` tant qu’aucun ciel n’est affiché.
+  private var skyboxDriftMediaBegin: CFTimeInterval?
   /// Le premier affichage attend la fin du tour : les écrans s’enregistrent un par un.
   private var initialChoiceScheduled = false
   private var placementGeneration = 0
@@ -201,6 +204,7 @@ final class StarshipDirector {
     screens.removeAll(keepingCapacity: false)
     skybox = nil
     skyboxName = nil
+    skyboxDriftMediaBegin = nil
     rng = SystemRandomNumberGenerator()
     lastPointerScreenIndex = nil
     homeScreenIndex = nil
@@ -229,12 +233,54 @@ final class StarshipDirector {
   private func publishSkybox() {
     guard let skybox else { return }
     let framed = framedScreens()
+    var begin: CFTimeInterval?
     for slot in screens {
-      guard slot.frame != nil,
-        let rect = StarshipSkyboxFraming.contentsRect(forScreen: slot.index, among: framed)
+      guard slot.frame != nil, let drift = skyboxDrift(forScreen: slot.index, among: framed)
       else { continue }
-      slot.painter.showSkybox(image: skybox, contentsRect: rect)
+      let mediaBegin: CFTimeInterval
+      if let begin {
+        mediaBegin = begin
+      } else {
+        mediaBegin = skyboxDriftBeginTime()
+        begin = mediaBegin
+      }
+      slot.painter.showSkybox(
+        image: skybox,
+        driftFrom: drift.from,
+        driftTo: drift.to,
+        driftDuration: tuning.skyboxDriftDuration,
+        mediaBeginTime: mediaBegin
+      )
     }
+  }
+
+  /// Cadre à la dérive 0 et à la dérive 1. L’animation du painter fait le trajet.
+  private func skyboxDrift(
+    forScreen index: Int,
+    among framed: [TerminalScreen]
+  ) -> (from: StarshipUnitRect, to: StarshipUnitRect)? {
+    guard
+      let from = StarshipSkyboxFraming.contentsRect(
+        forScreen: index,
+        among: framed,
+        drift: 0,
+        verticalMargin: tuning.skyboxDriftMargin
+      ),
+      let to = StarshipSkyboxFraming.contentsRect(
+        forScreen: index,
+        among: framed,
+        drift: 1,
+        verticalMargin: tuning.skyboxDriftMargin
+      )
+    else { return nil }
+    return (from, to)
+  }
+
+  private func skyboxDriftBeginTime() -> CFTimeInterval {
+    if let skyboxDriftMediaBegin { return skyboxDriftMediaBegin }
+    let begin = CACurrentMediaTime()
+    skyboxDriftMediaBegin = begin
+    return begin
   }
 
   /// Copie l’idée de `TerminalDirector.choosePromptScreenIfReady`.
@@ -339,14 +385,11 @@ final class StarshipDirector {
     guard let skyboxName else { return }
     let name = StarshipSkyboxRotation.next(after: skyboxName, using: &rng)
     guard let image = StarshipSprite.cgImage(named: name) else { return }
-    let framed = framedScreens()
     let duration = tuning.skyboxFadeDuration
     CATransaction.begin()
     for slot in screens {
-      guard slot.frame != nil,
-        let rect = StarshipSkyboxFraming.contentsRect(forScreen: slot.index, among: framed)
-      else { continue }
-      slot.painter.crossfadeSkybox(to: image, contentsRect: rect, duration: duration)
+      guard slot.frame != nil else { continue }
+      slot.painter.crossfadeSkybox(to: image, duration: duration)
     }
     CATransaction.commit()
     let previousName = skyboxName

@@ -3,6 +3,7 @@ import CmdBabyKit
 import QuartzCore
 
 /// Ciel, vaisseau et jauge d’un écran. Le `contentsRect` choisit le morceau du ciel.
+/// Sa dérive est une animation, la même sur les deux calques : le tick ne l’écrit pas.
 @MainActor
 final class StarshipPainter {
   let skyboxBack = CALayer()
@@ -23,6 +24,8 @@ final class StarshipPainter {
   private var spinQueue = StarshipSpinQueue()
   /// Fin du fondu en cours. `nil` quand le ciel du dessous est le ciel courant.
   private var skyboxFadeEndsAt: TimeInterval?
+  /// Dérive déjà posée. On ne la repose pas : la remplacer ferait sauter le ciel.
+  private var installedDrift: SkyboxDrift?
   /// Rotation z déjà posée sur `shipAim`. 0 : nez vers le haut.
   private var currentAimRotation = 0.0
   private let gaugeFill = CALayer()
@@ -38,8 +41,17 @@ final class StarshipPainter {
     let label: String?
   }
 
+  /// Aller de la dérive. `mediaBeginTime` est l’instant de média commun à tous les écrans.
+  private struct SkyboxDrift: Equatable {
+    var from: StarshipUnitRect
+    var to: StarshipUnitRect
+    var duration: TimeInterval
+    var mediaBeginTime: CFTimeInterval
+  }
+
   private static let warpKey = "warp"
   private static let skyboxFadeKey = "skyboxFade"
+  private static let skyboxDriftKey = "skyboxDrift"
   /// Sprite 9 × 54 px agrandi 1,6 fois.
   private static let boltSize = CGSize(width: 14, height: 86)
   private static let burstSide: CGFloat = 120
@@ -349,6 +361,9 @@ final class StarshipPainter {
     skyboxFadeEndsAt = nil
     shipRoot.removeAnimation(forKey: Self.warpKey)
     skyboxFront.removeAnimation(forKey: Self.skyboxFadeKey)
+    skyboxBack.removeAnimation(forKey: Self.skyboxDriftKey)
+    skyboxFront.removeAnimation(forKey: Self.skyboxDriftKey)
+    installedDrift = nil
     gaugeTrack.removeAnimation(forKey: Self.gaugePulseKey)
     for target in targetsByID.values {
       target.root.removeFromSuperlayer()
@@ -694,7 +709,6 @@ final class StarshipPainter {
 
   private func settleSkyboxFade() {
     skyboxBack.contents = skyboxFront.contents
-    skyboxBack.contentsRect = skyboxFront.contentsRect
     skyboxFront.removeAnimation(forKey: Self.skyboxFadeKey)
     skyboxFront.contents = nil
     skyboxFront.opacity = 0
@@ -781,28 +795,38 @@ final class StarshipPainter {
 
   /// `contentsRect` partage l’origine en bas à gauche du calque non retourné.
   /// Vérifié avec `skybox-space-band` : la bande claire reste dans le même sens que le PNG.
-  func showSkybox(image: CGImage, contentsRect: StarshipUnitRect) {
-    let rect = Self.cgRect(contentsRect)
+  /// La dérive va de `driftFrom` à `driftTo`, linéaire, en aller-retour. `mediaBeginTime`
+  /// est le même sur tous les écrans, donc un écran ajouté reprend la dérive en cours.
+  func showSkybox(
+    image: CGImage,
+    driftFrom: StarshipUnitRect,
+    driftTo: StarshipUnitRect,
+    driftDuration: TimeInterval,
+    mediaBeginTime: CFTimeInterval
+  ) {
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     if skyboxFadeEndsAt == nil {
       skyboxBack.contents = image
-      skyboxBack.contentsRect = rect
-    } else {
-      skyboxBack.contentsRect = rect
-      skyboxFront.contentsRect = rect
     }
     CATransaction.commit()
+    let drift = SkyboxDrift(
+      from: driftFrom,
+      to: driftTo,
+      duration: driftDuration,
+      mediaBeginTime: mediaBeginTime
+    )
+    guard drift != installedDrift else { return }
+    installSkyboxDrift(drift)
+    installedDrift = drift
   }
 
   /// Fondu du calque du dessus vers `image`. Le dessous garde le ciel courant jusqu’à la fin.
-  func crossfadeSkybox(to image: CGImage, contentsRect: StarshipUnitRect, duration: TimeInterval) {
-    let rect = Self.cgRect(contentsRect)
+  /// Ni le fondu ni sa fin ne touchent au `contentsRect` : la dérive en cours continue.
+  func crossfadeSkybox(to image: CGImage, duration: TimeInterval) {
     CATransaction.begin()
     CATransaction.setDisableActions(true)
-    skyboxBack.contentsRect = rect
     skyboxFront.contents = image
-    skyboxFront.contentsRect = rect
     skyboxFront.opacity = 0
     CATransaction.commit()
 
@@ -817,6 +841,35 @@ final class StarshipPainter {
     CATransaction.commit()
     skyboxFront.add(fade, forKey: Self.skyboxFadeKey)
     skyboxFadeEndsAt = ProcessInfo.processInfo.systemUptime + duration
+  }
+
+  /// Pose la même animation sur les deux calques. Le modèle reste l’arrivée :
+  /// l’animation, partie à `mediaBeginTime`, montre la dérive en cours.
+  private func installSkyboxDrift(_ drift: SkyboxDrift) {
+    let from = Self.cgRect(drift.from)
+    let to = Self.cgRect(drift.to)
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    for layer in [skyboxBack, skyboxFront] {
+      layer.removeAnimation(forKey: Self.skyboxDriftKey)
+      guard drift.duration > 0, from != to else {
+        layer.contentsRect = from
+        continue
+      }
+      layer.contentsRect = to
+      let animation = CABasicAnimation(keyPath: "contentsRect")
+      animation.fromValue = from
+      animation.toValue = to
+      animation.duration = drift.duration
+      animation.autoreverses = true
+      animation.repeatCount = .infinity
+      animation.timingFunction = CAMediaTimingFunction(name: .linear)
+      animation.beginTime = drift.mediaBeginTime
+      animation.fillMode = .both
+      animation.isRemovedOnCompletion = false
+      layer.add(animation, forKey: Self.skyboxDriftKey)
+    }
+    CATransaction.commit()
   }
 
   private static func cgRect(_ rect: StarshipUnitRect) -> CGRect {

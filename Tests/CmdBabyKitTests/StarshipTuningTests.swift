@@ -46,6 +46,16 @@ func starshipTuningStandardSkybox() {
   #expect(abs(tuning.skyboxFadeDuration - 2) < 1e-6)
 }
 
+@Test("La dérive standard du ciel garde 8 % de marge et met 3 minutes pour un aller")
+func starshipTuningStandardSkyboxDrift() {
+  let tuning = StarshipTuning.standard
+  #expect(abs(tuning.skyboxDriftMargin - 0.08) < 1e-6)
+  #expect(tuning.skyboxDriftMargin >= 0.05)
+  #expect(tuning.skyboxDriftMargin <= 0.10)
+  #expect(abs(tuning.skyboxDriftDuration - 180) < 1e-6)
+  #expect(tuning.skyboxDriftDuration >= 120)
+}
+
 @Test("La jauge standard compte 10 s et sature à 300 touches par minute")
 func starshipTuningStandardGauge() {
   let tuning = StarshipTuning.standard

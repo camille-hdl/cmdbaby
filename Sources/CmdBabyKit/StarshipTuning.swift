@@ -40,6 +40,11 @@ public struct StarshipTuning: Equatable, Sendable {
   // Skybox
   public var skyboxInterval: Double = 60
   public var skyboxFadeDuration: Double = 2
+  /// Marge verticale de la dérive, fraction de la hauteur de l’image. 0,08 : 8 %, entre 5 et 10 %.
+  public var skyboxDriftMargin: Double = 0.08
+  /// Durée d’un aller de la dérive, en secondes. 180 s : trois minutes, assez lent pour un bébé.
+  /// Le retour dure autant ; le tick ne déplace pas le ciel.
+  public var skyboxDriftDuration: Double = 180
 
   // Décor. Une profondeur plus grande est plus loin : la vitesse en découle.
   /// Vitesse d’une couche de profondeur 1, en points par seconde.
