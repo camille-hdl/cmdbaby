@@ -114,7 +114,7 @@ func starshipTuningStandardPlanetsAreDistant() {
 }
 
 @Test("Le décor standard défile vite, peu d’astéroïdes, les proches plus grands")
-func starshipTuningStandardSceneryIsCalm() {
+func starshipTuningStandardSceneryScrollsFastWithFewAsteroidsAndLargerNearOnes() {
   let tuning = StarshipTuning.standard
   let far = tuning.scenery(for: .farAsteroid)
   let near = tuning.scenery(for: .nearAsteroid)

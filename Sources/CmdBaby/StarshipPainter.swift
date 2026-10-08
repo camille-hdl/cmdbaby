@@ -813,7 +813,8 @@ final class StarshipPainter {
 
   /// `contentsRect` partage l’origine en bas à gauche du calque non retourné.
   /// Vérifié avec `skybox-space-band` : la bande claire reste dans le même sens que le PNG.
-  /// La dérive va de `driftFrom` à `driftTo`, linéaire, en aller-retour. `mediaBeginTime`
+  /// La dérive va de `driftFrom` à `driftTo`, linéaire, une fois. Pas de retour : il ferait
+  /// monter le ciel. Pas de répétition : elle ramènerait `y` d’un coup. `mediaBeginTime`
   /// est le même sur tous les écrans, donc un écran ajouté reprend la dérive en cours.
   func showSkybox(
     image: CGImage,
@@ -879,8 +880,7 @@ final class StarshipPainter {
       animation.fromValue = from
       animation.toValue = to
       animation.duration = drift.duration
-      animation.autoreverses = true
-      animation.repeatCount = .infinity
+      animation.autoreverses = false
       animation.timingFunction = CAMediaTimingFunction(name: .linear)
       animation.beginTime = drift.mediaBeginTime
       animation.fillMode = .both

@@ -44,7 +44,7 @@ public struct StarshipTuning: Equatable, Sendable {
   public var skyboxDriftMargin: Double = 0.08
   /// Durée d’un aller de la dérive, en secondes. 4 s : les 8 % se voient en quelques secondes.
   /// Sur un écran 1440 × 900, cela fait environ 20 pt/s, sous les 80 pt/s d’une planète.
-  /// Le retour dure autant ; le tick ne déplace pas le ciel. `y` augmente : le ciel visible descend.
+  /// Un seul aller, sans retour : le ciel ne remonte pas. `y` augmente : le ciel visible descend.
   public var skyboxDriftDuration: Double = 4
 
   // Décor. Une profondeur plus grande est plus loin : la vitesse en découle.
