@@ -39,23 +39,23 @@ func starshipTuningStandardFire() {
   #expect(abs(tuning.explosionDuration - 0.35) < 1e-6)
 }
 
-@Test("La skybox standard change toutes les 60 s et fond en 2 s")
+@Test("La skybox standard change toutes les 30 s et fond en 2 s")
 func starshipTuningStandardSkybox() {
   let tuning = StarshipTuning.standard
-  #expect(abs(tuning.skyboxInterval - 60) < 1e-6)
+  #expect(abs(tuning.skyboxInterval - 30) < 1e-6)
   #expect(abs(tuning.skyboxFadeDuration - 2) < 1e-6)
 }
 
-@Test("La dérive standard zoome à 80 % de marge et descend pendant les 3 min d’une session")
+@Test("La dérive standard zoome à 40 % de marge et descend pendant les 3 min d’une session")
 func starshipTuningStandardSkyboxDrift() {
   let tuning = StarshipTuning.standard
-  #expect(abs(tuning.skyboxDriftMargin - 0.80) < 1e-6)
+  #expect(abs(tuning.skyboxDriftMargin - 0.40) < 1e-6)
   #expect(tuning.skyboxDriftMargin > 0.10)
   #expect(abs(tuning.skyboxDriftDuration - 180) < 1e-6)
   #expect(tuning.skyboxDriftDuration >= 60)
 }
 
-@Test("Sur un écran 1440 × 900, le ciel standard descend à 20 pt/s pendant 3 min, plus lent que les planètes")
+@Test("Sur un écran 1440 × 900, le ciel standard descend à 3,3 pt/s pendant 3 min, plus lent que les planètes")
 func standardSkyboxDriftDescendsSlowerThanPlanets() {
   let tuning = StarshipTuning.standard
   let screens = [TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900)]
@@ -70,14 +70,14 @@ func standardSkyboxDriftDescendsSlowerThanPlanets() {
   guard let from, let to else { return }
 
   // L’origine de contentsRect est en bas à gauche : y augmente, le ciel visible descend.
-  // Fenêtre haute de 0,20 : 0,80 / 0,20 × 900 pt = 3 600 pt, en 180 s, soit 20 pt/s.
+  // Fenêtre haute de 0,60 : 0,40 / 0,60 × 900 pt = 600 pt, en 180 s, soit 10/3 pt/s.
   #expect(to.y > from.y)
-  #expect(abs(from.height - 0.20) < 1e-6)
-  #expect(abs(to.y - from.y - 0.80) < 1e-6)
+  #expect(abs(from.height - 0.60) < 1e-6)
+  #expect(abs(to.y - from.y - 0.40) < 1e-6)
   let points = (to.y - from.y) / from.height * 900
   let skySpeed = points / tuning.skyboxDriftDuration
-  #expect(abs(points - 3600) < 1e-6)
-  #expect(abs(skySpeed - 20) < 1e-6)
+  #expect(abs(points - 600) < 1e-6)
+  #expect(abs(skySpeed - 10.0 / 3.0) < 1e-6)
   #expect(skySpeed < 80)
 }
 
