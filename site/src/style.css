@@ -71,6 +71,13 @@
     @apply text-claret underline decoration-1 underline-offset-2 hover:decoration-2;
   }
 
+  /* Un seul anneau de focus pour tout le site, dans la couleur d'action. */
+  :focus-visible {
+    outline: 2px solid var(--color-claret);
+    outline-offset: 3px;
+    border-radius: 0.25rem;
+  }
+
   code {
     @apply bg-surface-2 rounded-md px-1.5 py-0.5 text-[0.9em] break-words;
   }
