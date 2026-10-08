@@ -97,7 +97,9 @@ Le site vise surtout des visiteurs sur Mac, où ces piles donnent New York et Sa
 
 ## Layout
 
-Colonne centrée, conteneurs `max-w-3xl` à `max-w-6xl`, gouttière de 1rem sur téléphone et 2rem au-delà de 640px. L'accueil alterne des sections de texte seul, des panneaux arrondis colorés et des grilles à deux colonnes (texte et illustration) à partir de 768px. Les pages secondaires sont une colonne de 42rem.
+Colonne centrée, conteneurs `max-w-3xl` à `max-w-6xl`, gouttière de 1rem sur téléphone et 2rem au-delà de 640px. L'accueil alterne des sections de texte seul, des panneaux arrondis colorés et des grilles à deux colonnes (texte et illustration) à partir de 768px. Toutes les sections de l'accueil partagent le conteneur `max-w-6xl` et son bord gauche ; un texte seul y garde 48rem au plus. Seuls l'accroche et l'encadré de téléchargement final sont centrés. Les pages secondaires sont une colonne de 42rem ; dans la FAQ, une question est à 12px de sa réponse et à 36px du paragraphe précédent.
+
+Les titres équilibrent leurs lignes (`text-wrap: balance`), les paragraphes évitent le mot seul en dernière ligne (`text-wrap: pretty`). Un mot composé d'un grand titre ou une commande à copier ne se coupe pas (`whitespace-nowrap`), tant que la page ne déborde pas à 320px.
 
 ## Elevation & Depth
 
@@ -113,6 +115,13 @@ Pilules pour le bouton et le lien de langue, panneaux à 2.5rem, captures à 16p
 - **Surligneur** (`.marker`) : dégradé de 0.55em de haut sous le mot. Sa teinte vient d’une classe `marker-<teinte>` posée sur la section ; sur un panneau `teal-soft`, `marker-teal` mélange 30 % de `teal` pour rester visible.
 - **Touche** (`kbd`) : fond `raised`, bordure `rule` épaissie en bas, texte `muted` barré en `velvet`.
 - **Panneau** : fond doux, coins de 2.5rem, sans bordure ni ombre.
+
+### Surfaces du navigateur
+
+- **Focus** : anneau `claret` de 2px, décalé de 3px, sur tout élément focalisé au clavier.
+- **Sélection** : fond `mandarin-soft`, encre `ink`, comme le surligneur.
+- **Page courante** : `aria-current="page"` sur le lien de l'en-tête, en `claret`.
+- **Mouvement** : le bouton ne se soulève au survol que hors `prefers-reduced-motion`.
 
 ## Do's and Don'ts
 
