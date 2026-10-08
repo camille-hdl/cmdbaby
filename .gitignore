@@ -63,5 +63,5 @@ docs/assets/brand/out/
 # scripts/VERSION), et l’état de session reste local.
 .claude/skills/impeccable/scripts/bin/
 .agents/skills/impeccable/scripts/bin/
-.impeccable/*
-!.impeccable/config.json
+site/.impeccable/*
+!site/.impeccable/config.json

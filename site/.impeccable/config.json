@@ -1,0 +1,10 @@
+{
+  "buildPath": "code",
+  "detector": {
+    "ignoreRules": [
+      "cream-palette"
+    ],
+    "ignoreFiles": [],
+    "ignoreValues": []
+  }
+}
