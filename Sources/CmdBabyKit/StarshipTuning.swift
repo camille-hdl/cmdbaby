@@ -40,12 +40,15 @@ public struct StarshipTuning: Equatable, Sendable {
   // Skybox
   public var skyboxInterval: Double = 60
   public var skyboxFadeDuration: Double = 2
-  /// Marge verticale de la dérive, fraction de la hauteur de l’image. 0,08 : 8 %, entre 5 et 10 %.
-  public var skyboxDriftMargin: Double = 0.08
-  /// Durée d’un aller de la dérive, en secondes. 4 s : les 8 % se voient en quelques secondes.
-  /// Sur un écran 1440 × 900, cela fait environ 20 pt/s, sous les 80 pt/s d’une planète.
-  /// Un seul aller, sans retour : le ciel ne remonte pas. `y` augmente : le ciel visible descend.
-  public var skyboxDriftDuration: Double = 4
+  /// Marge verticale de la dérive, fraction de la hauteur de l’image.
+  /// 0,80 : la fenêtre ne garde que 20 % de la hauteur, cinq fois plus serrée qu’un écran
+  /// qui remplissait l’image. Ce zoom laisse 80 % au-dessus pour un seul aller.
+  public var skyboxDriftMargin: Double = 0.80
+  /// Durée de l’aller unique, en secondes. 180 s : la session par défaut.
+  /// Sur un écran 1440 × 900, 0,80 / 0,20 × 900 pt = 3 600 pt, soit 20 pt/s,
+  /// sous les 80 pt/s d’une planète. Pas de retour : le ciel ne remonte pas.
+  /// `y` augmente : le ciel visible descend.
+  public var skyboxDriftDuration: Double = 180
 
   // Décor. Une profondeur plus grande est plus loin : la vitesse en découle.
   /// Vitesse d’une couche de profondeur 1, en points par seconde.

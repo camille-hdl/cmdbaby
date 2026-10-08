@@ -8,14 +8,26 @@ import Testing
 @Test("La dérive du ciel descend une fois, sans retour ni saut vers le haut")
 @MainActor
 func skyboxDriftDescendsOnceWithoutReversingOrJumping() throws {
-  let painter = StarshipPainter(tuning: .standard, scale: 2)
-  let from = StarshipUnitRect(x: 0.132, y: 0, width: 0.736, height: 0.92)
-  let to = StarshipUnitRect(x: 0.132, y: 0.08, width: 0.736, height: 0.92)
+  let tuning = StarshipTuning.standard
+  let painter = StarshipPainter(tuning: tuning, scale: 2)
+  let screens = [TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900)]
+  let from = try #require(
+    StarshipSkyboxFraming.contentsRect(
+      forScreen: 0, among: screens, drift: 0, verticalMargin: tuning.skyboxDriftMargin
+    )
+  )
+  let to = try #require(
+    StarshipSkyboxFraming.contentsRect(
+      forScreen: 0, among: screens, drift: 1, verticalMargin: tuning.skyboxDriftMargin
+    )
+  )
+  #expect(to.y > from.y)
+  #expect(abs(tuning.skyboxDriftDuration - 180) < 1e-6)
   painter.showSkybox(
     image: try #require(onePixelSky()),
     driftFrom: from,
     driftTo: to,
-    driftDuration: 4,
+    driftDuration: tuning.skyboxDriftDuration,
     mediaBeginTime: CACurrentMediaTime()
   )
 
@@ -26,6 +38,7 @@ func skyboxDriftDescendsOnceWithoutReversingOrJumping() throws {
     // 0 joue une fois. Répéter, même sans retour, ramène y au départ : le ciel saute vers le haut.
     #expect(animation.repeatCount == 0)
     #expect(animation.repeatDuration == 0)
+    #expect(abs(animation.duration - 180) < 1e-6)
   }
 
   let backFrom = try #require(unitRect(back.fromValue))

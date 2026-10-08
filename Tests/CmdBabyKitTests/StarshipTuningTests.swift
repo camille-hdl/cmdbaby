@@ -46,17 +46,16 @@ func starshipTuningStandardSkybox() {
   #expect(abs(tuning.skyboxFadeDuration - 2) < 1e-6)
 }
 
-@Test("La dérive standard du ciel garde 8 % de marge et met 4 s pour un aller")
+@Test("La dérive standard zoome à 80 % de marge et descend pendant les 3 min d’une session")
 func starshipTuningStandardSkyboxDrift() {
   let tuning = StarshipTuning.standard
-  #expect(abs(tuning.skyboxDriftMargin - 0.08) < 1e-6)
-  #expect(tuning.skyboxDriftMargin >= 0.05)
-  #expect(tuning.skyboxDriftMargin <= 0.10)
-  #expect(abs(tuning.skyboxDriftDuration - 4) < 1e-6)
-  #expect(tuning.skyboxDriftDuration <= 6)
+  #expect(abs(tuning.skyboxDriftMargin - 0.80) < 1e-6)
+  #expect(tuning.skyboxDriftMargin > 0.10)
+  #expect(abs(tuning.skyboxDriftDuration - 180) < 1e-6)
+  #expect(tuning.skyboxDriftDuration >= 60)
 }
 
-@Test("Sur un écran 1440 × 900, le ciel standard descend à 19,6 pt/s, plus lent que les planètes")
+@Test("Sur un écran 1440 × 900, le ciel standard descend à 20 pt/s pendant 3 min, plus lent que les planètes")
 func standardSkyboxDriftDescendsSlowerThanPlanets() {
   let tuning = StarshipTuning.standard
   let screens = [TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900)]
@@ -71,12 +70,14 @@ func standardSkyboxDriftDescendsSlowerThanPlanets() {
   guard let from, let to else { return }
 
   // L’origine de contentsRect est en bas à gauche : y augmente, le ciel visible descend.
-  // 0,08 / 0,92 × 900 pt = 78,26 pt, en 4 s.
+  // Fenêtre haute de 0,20 : 0,80 / 0,20 × 900 pt = 3 600 pt, en 180 s, soit 20 pt/s.
   #expect(to.y > from.y)
+  #expect(abs(from.height - 0.20) < 1e-6)
+  #expect(abs(to.y - from.y - 0.80) < 1e-6)
   let points = (to.y - from.y) / from.height * 900
   let skySpeed = points / tuning.skyboxDriftDuration
-  #expect(abs(points - 78.26086956521739) < 1e-6)
-  #expect(abs(skySpeed - 19.565217391304348) < 1e-6)
+  #expect(abs(points - 3600) < 1e-6)
+  #expect(abs(skySpeed - 20) < 1e-6)
   #expect(skySpeed < 80)
 }
 
