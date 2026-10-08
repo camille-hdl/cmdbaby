@@ -35,6 +35,43 @@ func planetsAreSlowerAndLargerThanAsteroids() {
   #expect(planet.duration <= 90)
 }
 
+@Test("Sur un écran de 1 440 pt de haut, une planète traverse en 40 à 90 s, plus longtemps que les astéroïdes")
+func planetCrossesATallScreenWithinFortyToNinetySeconds() {
+  let height = 1_440.0
+  let screen = [TerminalScreen(index: 0, x: 0, y: 0, width: 800, height: height)]
+
+  // 30 % : 432 pt, départ 1 656, arrivée −216. 60 % : 864 pt, départ 1 872, arrivée −432.
+  let cases: [(fraction: Double, size: Double, startY: Double, endY: Double)] = [
+    (0.30, 432, 1_656, -216),
+    (0.60, 864, 1_872, -432),
+  ]
+  for specimen in cases {
+    var rng = SplitMix64(seed: 1)
+    var scenery = StarshipScenery()
+    var tuning = StarshipTuning.standard
+    tuning.planetScenery.sizeFractionOfTallestScreen = specimen.fraction...specimen.fraction
+
+    let launched = scenery.launch(screens: screen, now: 0, tuning: tuning, rng: &rng)
+    let planet = launched.first { $0.layer == .planet }
+    let far = launched.first { $0.layer == .farAsteroid }
+    let near = launched.first { $0.layer == .nearAsteroid }
+    #expect(planet != nil)
+    #expect(far != nil)
+    #expect(near != nil)
+    guard let planet, let far, let near else { continue }
+
+    #expect(abs(planet.size - specimen.size) < 1e-6)
+    #expect(abs(planet.startY - specimen.startY) < 1e-6)
+    #expect(abs(planet.endY - specimen.endY) < 1e-6)
+    #expect(planet.duration >= 40)
+    #expect(planet.duration <= 90)
+    #expect(planet.duration > far.duration)
+    #expect(planet.duration > near.duration)
+    #expect(abs(far.duration - 74.8) < 1e-6)
+    #expect(abs(near.duration - 38.4) < 1e-6)
+  }
+}
+
 @Test("Un astéroïde part au-dessus de l’union et arrive en dessous")
 func sceneryCrossesFromAboveTheUnionToBelow() {
   var rng = SplitMix64(seed: 1)

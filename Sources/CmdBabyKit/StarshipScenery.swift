@@ -21,6 +21,8 @@ public struct StarshipSceneryLayerTuning: Equatable, Sendable {
   /// Si posée, chaque élément tire sa taille dans cette fraction de la hauteur de l’écran le plus haut.
   /// `size` est alors ignorée.
   public var sizeFractionOfTallestScreen: ClosedRange<Double>?
+  /// Si posée, la traversée dure au plus ce nombre de secondes. La vitesse augmente pour tenir ce plafond.
+  public var maximumCrossingDuration: Double?
 
   public init(
     depth: Double,
@@ -28,7 +30,8 @@ public struct StarshipSceneryLayerTuning: Equatable, Sendable {
     opacity: Double,
     ceiling: Int,
     meanInterval: Double,
-    sizeFractionOfTallestScreen: ClosedRange<Double>? = nil
+    sizeFractionOfTallestScreen: ClosedRange<Double>? = nil,
+    maximumCrossingDuration: Double? = nil
   ) {
     self.depth = depth
     self.size = size
@@ -36,10 +39,11 @@ public struct StarshipSceneryLayerTuning: Equatable, Sendable {
     self.ceiling = ceiling
     self.meanInterval = meanInterval
     self.sizeFractionOfTallestScreen = sizeFractionOfTallestScreen
+    self.maximumCrossingDuration = maximumCrossingDuration
   }
 }
 
-/// Astéroïde de décor, en coordonnées de l’union des écrans. L’ordonnée décroît de `startY` à `endY`.
+/// Élément de décor, planète ou astéroïde, en coordonnées de l’union des écrans. L’ordonnée décroît de `startY` à `endY`.
 public struct StarshipSceneryElement: Equatable, Sendable {
   public let id: Int
   public let layer: StarshipSceneryLayer
@@ -136,6 +140,11 @@ public struct StarshipScenery: Equatable, Sendable {
     nextID += 1
     // Écart dans [0,5 ; 1,5] fois la moyenne : l’espérance reste le réglage, sans rafale.
     nextAppearance[layer] = now + layerTuning.meanInterval * Double.random(in: 0.5...1.5, using: &rng)
+    let travel = startY - endY
+    var duration = travel / speed
+    if let limit = layerTuning.maximumCrossingDuration, limit > 0 {
+      duration = min(duration, limit)
+    }
     return StarshipSceneryElement(
       id: id,
       layer: layer,
@@ -146,7 +155,7 @@ public struct StarshipScenery: Equatable, Sendable {
       size: size,
       opacity: layerTuning.opacity,
       start: now,
-      duration: (startY - endY) / speed
+      duration: duration
     )
   }
 

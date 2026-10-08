@@ -77,6 +77,8 @@ func starshipTuningStandardPlanetsAreDistant() {
   #expect(planet.ceiling == 2)
   #expect(abs(planet.meanInterval - 90) < 1e-6)
   #expect(planet.meanInterval > far.meanInterval)
+  #expect(planet.maximumCrossingDuration == 90)
+  #expect(far.maximumCrossingDuration == nil)
 }
 
 @Test("Le décor standard défile lentement, peu d’astéroïdes, les proches plus grands")
