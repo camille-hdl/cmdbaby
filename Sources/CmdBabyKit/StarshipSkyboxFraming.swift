@@ -16,7 +16,8 @@ public struct StarshipUnitRect: Equatable, Sendable {
 }
 
 /// Découpe une skybox en aspect-fill sur l’union des écrans.
-/// `drift` (0…1) descend ce cadre dans une marge verticale, fraction de la hauteur de l’image.
+/// `drift` (0…1) monte ce cadre dans une marge verticale, fraction de la hauteur de l’image.
+/// L’origine est en bas à gauche : un `y` plus haut montre une tranche plus haute, le ciel visible descend.
 public enum StarshipSkyboxFraming: Sendable {
   /// Rapport largeur / hauteur des skyboxes Kenney (4096 × 2048).
   public static let imageAspect: Double = 2
@@ -24,7 +25,7 @@ public enum StarshipSkyboxFraming: Sendable {
   /// Morceau d’image à afficher sur l’écran `index`.
   /// `nil` si `index` n’est pas dans `screens` ou si l’union est vide (largeur ou hauteur ≤ 0).
   /// Sans marge, le résultat est l’aspect-fill de l’union. Avec une marge, la dérive 0
-  /// reste cet aspect-fill tant que l’image a déjà la place en dessous ; sinon le cadre
+  /// reste cet aspect-fill tant que l’image a déjà la place au-dessus ; sinon le cadre
   /// se resserre juste assez pour que la dérive 1 tienne encore dans l’image.
   public static func contentsRect(
     forScreen index: Int,
@@ -76,7 +77,7 @@ public enum StarshipSkyboxFraming: Sendable {
     )
   }
 
-  /// Fenêtre d’aspect-fill, décalée vers le bas de `drift` × marge.
+  /// Fenêtre d’aspect-fill, décalée vers le haut de `drift` × marge.
   /// La marge est une fraction de la hauteur de l’image. Une marge hors de (0, 1)
   /// ne déplace rien : le cadre reste l’aspect-fill.
   private static func driftedWindow(
@@ -100,9 +101,10 @@ public enum StarshipSkyboxFraming: Sendable {
       windowHeight = height * scale
       windowX = x + width / 2 - windowWidth / 2
     }
-    let start = min(max(y, verticalMargin), 1 - windowHeight)
     let offset = min(max(drift, 0), 1) * verticalMargin
-    let driftedY = min(max(start - offset, 0), max(0, 1 - windowHeight))
+    let headroom = max(0, 1 - windowHeight - verticalMargin)
+    let start = min(max(y, 0), headroom)
+    let driftedY = min(max(start + offset, 0), max(0, 1 - windowHeight))
     return (windowX, driftedY, windowWidth, windowHeight)
   }
 }

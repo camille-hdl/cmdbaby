@@ -84,24 +84,24 @@ func skyboxFramingReturnsNilWhenTheUnionIsEmpty() {
   #expect(StarshipSkyboxFraming.contentsRect(forScreen: 0, among: flat) == nil)
 }
 
-@Test("La dérive 0 et 1 d’un écran 1440 × 900 restent dans l’image, écartées de la marge")
-func skyboxFramingKeepsASingleScreenDriftInsideTheImage() {
+@Test("La dérive 1 d’un écran 1440 × 900 monte le cadre : y passe de 0 à 0,08")
+func skyboxFramingRaisesASingleScreenWindowAsTheSkyDescends() {
   let screens = [TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900)]
   expectUnit(
     StarshipSkyboxFraming.contentsRect(
       forScreen: 0, among: screens, drift: 0, verticalMargin: 0.08
     ),
-    x: 0.132, y: 0.08, width: 0.736, height: 0.92
+    x: 0.132, y: 0, width: 0.736, height: 0.92
   )
   expectUnit(
     StarshipSkyboxFraming.contentsRect(
       forScreen: 0, among: screens, drift: 1, verticalMargin: 0.08
     ),
-    x: 0.132, y: 0, width: 0.736, height: 0.92
+    x: 0.132, y: 0.08, width: 0.736, height: 0.92
   )
 }
 
-@Test("Sans dérive, deux écrans côte à côte gardent l’aspect-fill ; la dérive 1 descend de la marge")
+@Test("Sans dérive, deux écrans côte à côte gardent l’aspect-fill ; la dérive 1 monte le cadre de la marge")
 func skyboxFramingAtDriftZeroStaysTheSideBySideAspectFill() {
   let screens = [
     TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900),
@@ -123,13 +123,13 @@ func skyboxFramingAtDriftZeroStaysTheSideBySideAspectFill() {
     StarshipSkyboxFraming.contentsRect(
       forScreen: 0, among: screens, drift: 1, verticalMargin: 0.08
     ),
-    x: 0, y: 0.1075, width: 0.5, height: 0.625
+    x: 0, y: 0.2675, width: 0.5, height: 0.625
   )
   expectUnit(
     StarshipSkyboxFraming.contentsRect(
       forScreen: 1, among: screens, drift: 1, verticalMargin: 0.08
     ),
-    x: 0.5, y: 0.1075, width: 0.5, height: 0.625
+    x: 0.5, y: 0.2675, width: 0.5, height: 0.625
   )
 }
 
@@ -162,7 +162,7 @@ func skyboxFramingKeepsNeighborsJoinedAtAnyDrift() {
     StarshipSkyboxFraming.contentsRect(
       forScreen: 0, among: screens, drift: 0.25, verticalMargin: 0.08
     ),
-    x: 0, y: 0.1675, width: 0.5, height: 0.625
+    x: 0, y: 0.2075, width: 0.5, height: 0.625
   )
 }
 
