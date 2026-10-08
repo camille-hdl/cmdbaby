@@ -118,6 +118,7 @@ Pilules pour le bouton et le lien de langue, panneaux à 2.5rem, captures à 16p
 
 - **Faire** passer toute nouvelle couleur par les jetons de `site/src/style.css`, de jour et de nuit.
 - **Faire** les variantes par des classes de `site/src/style.css`, jamais par un attribut `style` : la CSP les bloque.
+- **Faire** suivre `paper` aux balises `theme-color` de chaque page si la palette change : elles recopient sa valeur de jour et de nuit.
 - **Ne pas** charger de police ou de ressource externe.
 - **Ne pas** retoucher les captures de l'app à la main : elles sortent de `scripts/site-screenshots.sh`.
 - **Ne pas** changer le texte sans l'accord de Camille.

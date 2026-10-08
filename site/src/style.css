@@ -78,6 +78,12 @@
     border-radius: 0.25rem;
   }
 
+  /* La sélection reprend le surligneur mandarin des titres. */
+  ::selection {
+    background-color: var(--color-mandarin-soft);
+    color: var(--color-ink);
+  }
+
   code {
     @apply bg-surface-2 rounded-md px-1.5 py-0.5 text-[0.9em] break-words;
   }
