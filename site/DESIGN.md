@@ -49,7 +49,7 @@ Les couleurs ne sont pas recopiées ici : elles vivent dans le bloc `@theme` de 
 
 **Étoile du nord : « Le papier saumon »**
 
-Une page de produit posée sur le papier ft-paper : fond saumon, encre ardoise, titres en serif, texte en sans-serif système. Une seule couleur d'action, le bordeaux (`claret`). Les autres teintes de la palette n'apparaissent qu'en version douce (`*-soft`), comme fonds de panneaux et comme coups de surligneur sous un mot par titre.
+Une page de produit posée sur le papier ft-paper : fond saumon, encre ardoise, titres en serif, texte en sans-serif système. Une seule couleur d'action, le bordeaux (`claret`). Les autres teintes de la palette n'apparaissent qu'en version douce (`*-soft`), comme fonds de panneaux et comme coups de surligneur sous un mot par titre. La nuit, les surligneurs reprennent 30 % de leur teinte pleine.
 
 La nuit, c'est le même papier dans le noir : fond brun chaud, encre blé, les mêmes accents éclaircis jusqu'à 4.5:1. Le site suit le thème du système.
 
@@ -79,7 +79,7 @@ Palette ft-paper (jour) et ft-paper-night (nuit), de camillehdl.dev/palette. Tou
 ### Tertiary
 
 - **Teintes douces** (`claret-soft`, `teal-soft`, `velvet-soft`, `jade-soft`, `mandarin-soft`) : fonds de panneaux et surligneurs. Leurs teintes pleines (`teal`, `velvet`, `jade`, `mandarin`, `oxford`) existent dans la palette ; `velvet` barre les raccourcis, et les teintes pleines entrent dans les surligneurs.
-- **Surligneurs** (`--marker-claret`, `--marker-teal`, `--marker-velvet`, `--marker-mandarin`, `--marker-jade`) : la teinte douce, mélangée en oklab à 30 % de sa teinte pleine là où la douce ne se verrait pas. Seul `--marker-teal` est mélangé, car il se pose sur un panneau `teal-soft`, où `teal-soft` serait invisible (1.00:1).
+- **Surligneurs** (`--marker-claret`, `--marker-teal`, `--marker-velvet`, `--marker-mandarin`, `--marker-jade`) : la teinte douce, mélangée en oklab à 30 % de sa teinte pleine là où la douce ne se verrait pas. Le jour, seul `--marker-teal` est mélangé, car il se pose sur un panneau `teal-soft`. La nuit, tous le sont : les teintes douces n'y font que 1.13 à 1.30:1 contre `paper`, les mélanges 1.66 à 2.11:1, et l'encre reste au-dessus de 6.3:1.
 
 ### Named Rules
 

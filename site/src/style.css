@@ -102,14 +102,24 @@
 
 @layer base {
   /* Surligneurs : la teinte douce de la section, plus 30 % de sa teinte
-     pleine là où la douce ne se verrait pas, comme sur le panneau
-     teal-soft. */
+     pleine là où la douce ne se verrait pas. Le jour, seul le panneau
+     teal-soft en a besoin ; la nuit, les teintes douces sont trop proches
+     du papier (1.13 à 1.30:1), toutes prennent le mélange. */
   :root {
     --marker-claret: var(--color-claret-soft);
     --marker-velvet: var(--color-velvet-soft);
     --marker-mandarin: var(--color-mandarin-soft);
     --marker-jade: var(--color-jade-soft);
     --marker-teal: color-mix(in oklab, var(--color-teal) 30%, var(--color-teal-soft));
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --marker-claret: color-mix(in oklab, var(--color-claret) 30%, var(--color-claret-soft));
+      --marker-velvet: color-mix(in oklab, var(--color-velvet) 30%, var(--color-velvet-soft));
+      --marker-mandarin: color-mix(in oklab, var(--color-mandarin) 30%, var(--color-mandarin-soft));
+      --marker-jade: color-mix(in oklab, var(--color-jade) 30%, var(--color-jade-soft));
+    }
   }
 }
 
