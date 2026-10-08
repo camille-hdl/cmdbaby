@@ -175,7 +175,12 @@ final class StarshipDirector {
     guard let homeScreenIndex,
       let frame = screens.first(where: { $0.index == homeScreenIndex })?.frame
     else { return nil }
-    return CGPoint(x: frame.width / 2, y: frame.height / 2)
+    let center = StarshipShip.center(
+      width: Double(frame.width),
+      height: Double(frame.height),
+      fractionFromBottom: tuning.shipCenterFromBottom
+    )
+    return CGPoint(x: center.x, y: center.y)
   }
 
   func reset() {
@@ -400,7 +405,7 @@ final class StarshipDirector {
     }
 
     let margin = tuning.targetWidth / 2 + 10
-    let start = StarshipSpawn.edgePoint(
+    let start = StarshipSpawn.topEdgePoint(
       width: Double(frame.width),
       height: Double(frame.height),
       margin: margin,

@@ -6,6 +6,10 @@ public struct StarshipTuning: Equatable, Sendable {
 
   // Vaisseau
   public var shipWidth: Double = 140
+  /// Fraction de la hauteur de l’écran, depuis le bas, où se tient le centre du vaisseau.
+  /// 0 le pose sur le bord bas, 1 sur le bord haut. 0,18 le laisse au-dessus du bord
+  /// et à gauche de la jauge, toupie comprise.
+  public var shipCenterFromBottom: Double = 0.18
   public var shipWarpDuration: Double = 0.25
   /// Secondes de session avant d’autoriser un changement d’écran.
   /// Avant cela, le vaisseau reste sur le plus grand, sans warp.

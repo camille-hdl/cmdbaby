@@ -73,7 +73,12 @@ final class StarshipPainter {
     CATransaction.setDisableActions(true)
     skyboxBack.frame = bounds
     skyboxFront.frame = bounds
-    shipRoot.position = CGPoint(x: bounds.midX, y: bounds.midY)
+    let center = StarshipShip.center(
+      width: Double(bounds.width),
+      height: Double(bounds.height),
+      fractionFromBottom: tuning.shipCenterFromBottom
+    )
+    shipRoot.position = CGPoint(x: center.x, y: center.y)
     gaugeTrack.frame = CGRect(
       x: bounds.width - Self.gaugeFromRight,
       y: Self.gaugeBottom,

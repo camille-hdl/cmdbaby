@@ -57,3 +57,8 @@ func starshipTuningStandardGauge() {
 func starshipTuningStandardSpinBacklog() {
   #expect(abs(StarshipTuning.standard.spinBacklog - 1.8) < 1e-6)
 }
+
+@Test("Le vaisseau standard se tient à 18 % de la hauteur depuis le bas")
+func starshipTuningStandardShipRestsNearTheBottom() {
+  #expect(abs(StarshipTuning.standard.shipCenterFromBottom - 0.18) < 1e-6)
+}
