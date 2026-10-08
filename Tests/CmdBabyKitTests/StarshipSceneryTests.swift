@@ -31,19 +31,24 @@ func planetsAreSlowerAndLargerThanAsteroids() {
   #expect(StarshipCatalog.planets.contains(planet.sprite))
   #expect(planet.startY > 600)
   #expect(planet.endY < 0)
-  #expect(planet.duration >= 40)
-  #expect(planet.duration <= 90)
+  // 80, 120 et 240 pt/s. L’entrée-sortie d’une planète de 180 à 360 pt dure 9,75 à 12 s.
+  #expect(abs(speed(of: planet) - 80) < 1e-6)
+  #expect(abs(speed(of: far) - 120) < 1e-6)
+  #expect(abs(speed(of: near) - 240) < 1e-6)
+  #expect(planet.duration >= 9.75)
+  #expect(planet.duration <= 12)
 }
 
-@Test("Sur un écran de 1 440 pt, le centre d’une planète met 40 à 90 s, plus lentement que les astéroïdes")
+@Test("Sur un écran de 1 440 pt, le centre d’une planète met 18 s, plus lentement que les astéroïdes")
 func planetCenterCrossesATallScreenSlowerThanAsteroids() {
   let height = 1_440.0
   let screen = [TerminalScreen(index: 0, x: 0, y: 0, width: 800, height: height)]
 
-  // 30 % : 432 pt, départ 1 656, arrivée −216. 60 % : 864 pt, départ 1 872, arrivée −432.
-  let cases: [(fraction: Double, size: Double, startY: Double, endY: Double)] = [
-    (0.30, 432, 1_656, -216),
-    (0.60, 864, 1_872, -432),
+  // 30 % : 432 pt, départ 1 656, arrivée −216, traversée 23,4 s.
+  // 60 % : 864 pt, départ 1 872, arrivée −432, traversée 28,8 s.
+  let cases: [(fraction: Double, size: Double, startY: Double, endY: Double, duration: Double)] = [
+    (0.30, 432, 1_656, -216, 23.4),
+    (0.60, 864, 1_872, -432, 28.8),
   ]
   for specimen in cases {
     var rng = SplitMix64(seed: 1)
@@ -63,16 +68,17 @@ func planetCenterCrossesATallScreenSlowerThanAsteroids() {
     #expect(abs(planet.size - specimen.size) < 1e-6)
     #expect(abs(planet.startY - specimen.startY) < 1e-6)
     #expect(abs(planet.endY - specimen.endY) < 1e-6)
-    // 40 à 90 s : le centre traverse la hauteur. L’entrée-sortie, diamètre compris, dure davantage.
+    // 18 s : le centre traverse la hauteur à 80 pt/s. L’entrée-sortie, diamètre compris, dure davantage.
     let planetSpeed = speed(of: planet)
+    #expect(abs(planetSpeed - 80) < 1e-6)
     #expect(planetSpeed < speed(of: far))
     #expect(planetSpeed < speed(of: near))
     let centerCrossing = height / planetSpeed
-    #expect(centerCrossing >= 40)
-    #expect(centerCrossing <= 90)
-    #expect(planet.duration > 90)
-    #expect(abs(far.duration - 74.8) < 1e-6)
-    #expect(abs(near.duration - 38.4) < 1e-6)
+    #expect(abs(centerCrossing - 18) < 1e-6)
+    #expect(abs(planet.duration - specimen.duration) < 1e-6)
+    // 56 pt : 1 496 pt à 120 pt/s. 96 pt : 1 536 pt à 240 pt/s.
+    #expect(abs(far.duration - 12.466666666666667) < 1e-6)
+    #expect(abs(near.duration - 6.4) < 1e-6)
   }
 }
 
@@ -487,6 +493,23 @@ func sameSeedReplaysTheSameAppearances() {
   #expect(a == b)
 }
 
+@Test("Un trait standard traverse un écran de 800×600 en 0,51875 s")
+func standardSpeedStreakKeepsItsCrossingTime() {
+  var rng = SplitMix64(seed: 1)
+  var scenery = StarshipScenery()
+
+  let launched = scenery.launch(
+    screens: oneScreen, now: 0, tuning: .standard, shipAbscissa: 400, rng: &rng
+  )
+  let streak = launched.first { $0.layer == .speedStreak }
+
+  #expect(streak != nil)
+  guard let streak else { return }
+  // 64 pt : 664 pt à 1 280 pt/s.
+  #expect(abs(speed(of: streak) - 1_280) < 1e-6)
+  #expect(abs(streak.duration - 0.51875) < 1e-6)
+}
+
 @Test("Un trait de vitesse traverse un écran de 800×600 en 0,51875 s, plus vite que les astéroïdes")
 func speedStreakCrossesFasterThanAsteroids() {
   var rng = SplitMix64(seed: 1)
@@ -648,15 +671,15 @@ func speedStreakDoesNotLaunchWhenTheCorridorCoversTheScreen() {
   #expect(launched.isEmpty)
 }
 
-@Test("Huit éléments en vol au plus : la somme des plafonds, un calque de décor par écran")
-func flyingSceneryStaysWithinEightLayersPerScreen() {
+@Test("Quatorze éléments en vol au plus : la somme des plafonds, un calque de décor par écran")
+func flyingSceneryStaysWithinTheSumOfCeilings() {
   let standard = StarshipTuning.standard
-  // 2 planètes + 2 astéroïdes lointains + 2 proches + 2 traits.
-  let layersPerScreen = 8
+  // 2 planètes + 2 astéroïdes lointains + 2 proches + 8 traits.
+  let layersPerScreen = 14
   #expect(standard.planetScenery.ceiling == 2)
   #expect(standard.farAsteroidScenery.ceiling == 2)
   #expect(standard.nearAsteroidScenery.ceiling == 2)
-  #expect(standard.speedStreakScenery.ceiling == 2)
+  #expect(standard.speedStreakScenery.ceiling == 8)
 
   // Intervalles raccourcis pour saturer les quatre plafonds ensemble.
   // Les plafonds restent ceux du réglage standard : le painter pose un calque par élément.

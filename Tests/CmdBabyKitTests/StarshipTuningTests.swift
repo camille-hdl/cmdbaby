@@ -46,14 +46,38 @@ func starshipTuningStandardSkybox() {
   #expect(abs(tuning.skyboxFadeDuration - 2) < 1e-6)
 }
 
-@Test("La dérive standard du ciel garde 8 % de marge et met 3 minutes pour un aller")
+@Test("La dérive standard du ciel garde 8 % de marge et met 4 s pour un aller")
 func starshipTuningStandardSkyboxDrift() {
   let tuning = StarshipTuning.standard
   #expect(abs(tuning.skyboxDriftMargin - 0.08) < 1e-6)
   #expect(tuning.skyboxDriftMargin >= 0.05)
   #expect(tuning.skyboxDriftMargin <= 0.10)
-  #expect(abs(tuning.skyboxDriftDuration - 180) < 1e-6)
-  #expect(tuning.skyboxDriftDuration >= 120)
+  #expect(abs(tuning.skyboxDriftDuration - 4) < 1e-6)
+  #expect(tuning.skyboxDriftDuration <= 6)
+}
+
+@Test("Sur un écran 1440 × 900, le ciel standard descend à 19,6 pt/s, plus lent que les planètes")
+func standardSkyboxDriftDescendsSlowerThanPlanets() {
+  let tuning = StarshipTuning.standard
+  let screens = [TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900)]
+  let from = StarshipSkyboxFraming.contentsRect(
+    forScreen: 0, among: screens, drift: 0, verticalMargin: tuning.skyboxDriftMargin
+  )
+  let to = StarshipSkyboxFraming.contentsRect(
+    forScreen: 0, among: screens, drift: 1, verticalMargin: tuning.skyboxDriftMargin
+  )
+  #expect(from != nil)
+  #expect(to != nil)
+  guard let from, let to else { return }
+
+  // L’origine de contentsRect est en bas à gauche : y augmente, le ciel visible descend.
+  // 0,08 / 0,92 × 900 pt = 78,26 pt, en 4 s.
+  #expect(to.y > from.y)
+  let points = (to.y - from.y) / from.height * 900
+  let skySpeed = points / tuning.skyboxDriftDuration
+  #expect(abs(points - 78.26086956521739) < 1e-6)
+  #expect(abs(skySpeed - 19.565217391304348) < 1e-6)
+  #expect(skySpeed < 80)
 }
 
 @Test("La jauge standard compte 10 s et sature à 300 touches par minute")
@@ -89,13 +113,13 @@ func starshipTuningStandardPlanetsAreDistant() {
   #expect(planet.meanInterval > far.meanInterval)
 }
 
-@Test("Le décor standard défile lentement, peu d’astéroïdes, les proches plus grands")
+@Test("Le décor standard défile vite, peu d’astéroïdes, les proches plus grands")
 func starshipTuningStandardSceneryIsCalm() {
   let tuning = StarshipTuning.standard
   let far = tuning.scenery(for: .farAsteroid)
   let near = tuning.scenery(for: .nearAsteroid)
 
-  #expect(abs(tuning.sceneryReferenceSpeed - 80) < 1e-6)
+  #expect(abs(tuning.sceneryReferenceSpeed - 480) < 1e-6)
   #expect(abs(far.depth - 4) < 1e-6)
   #expect(abs(near.depth - 2) < 1e-6)
   #expect(abs(far.size - 56) < 1e-6)
@@ -111,14 +135,15 @@ func starshipTuningStandardSceneryIsCalm() {
   #expect(abs(near.meanInterval - 12) < 1e-6)
 }
 
-@Test("Les traits de vitesse standard sont rares, fins, peu opaques et plus rapides que les astéroïdes")
+@Test("Les traits de vitesse standard sont nombreux, fins, peu opaques et plus rapides que les astéroïdes")
 func starshipTuningStandardSpeedStreaksAreFaint() {
   let tuning = StarshipTuning.standard
   let streak = tuning.scenery(for: .speedStreak)
   let near = tuning.scenery(for: .nearAsteroid)
 
   #expect(streak.depth < near.depth)
-  #expect(abs(streak.depth - 0.0625) < 1e-9)
+  // 480 / 0,375 = 1 280 pt/s : le trait reste le plus rapide, sans devenir un flash.
+  #expect(abs(streak.depth - 0.375) < 1e-9)
   #expect(abs(streak.size - 64) < 1e-6)
   #expect(abs(tuning.speedStreakWidth - 2) < 1e-6)
   #expect(tuning.speedStreakWidth >= 1)
@@ -126,10 +151,10 @@ func starshipTuningStandardSpeedStreaksAreFaint() {
   #expect(abs(streak.opacity - 0.2) < 1e-6)
   #expect(streak.opacity <= 0.3)
   #expect(streak.opacity > 0)
-  #expect(streak.ceiling == 2)
-  #expect(streak.ceiling <= 3)
-  #expect(abs(streak.meanInterval - 3) < 1e-6)
-  #expect(streak.meanInterval >= 1)
+  #expect(streak.ceiling == 8)
+  #expect(streak.ceiling >= 6)
+  #expect(streak.meanInterval == 0.125)
+  #expect(streak.meanInterval < 1)
   #expect(abs(tuning.speedStreakCorridorWidth - 200) < 1e-6)
   #expect(tuning.speedStreakCorridorWidth > tuning.shipWidth)
   #expect(tuning.speedStreakColor == StarshipRGB(hex: 0xFFFFFF))

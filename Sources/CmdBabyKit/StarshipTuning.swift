@@ -42,13 +42,14 @@ public struct StarshipTuning: Equatable, Sendable {
   public var skyboxFadeDuration: Double = 2
   /// Marge verticale de la dérive, fraction de la hauteur de l’image. 0,08 : 8 %, entre 5 et 10 %.
   public var skyboxDriftMargin: Double = 0.08
-  /// Durée d’un aller de la dérive, en secondes. 180 s : trois minutes, assez lent pour un bébé.
-  /// Le retour dure autant ; le tick ne déplace pas le ciel.
-  public var skyboxDriftDuration: Double = 180
+  /// Durée d’un aller de la dérive, en secondes. 4 s : les 8 % se voient en quelques secondes.
+  /// Sur un écran 1440 × 900, cela fait environ 20 pt/s, sous les 80 pt/s d’une planète.
+  /// Le retour dure autant ; le tick ne déplace pas le ciel. `y` augmente : le ciel visible descend.
+  public var skyboxDriftDuration: Double = 4
 
   // Décor. Une profondeur plus grande est plus loin : la vitesse en découle.
   /// Vitesse d’une couche de profondeur 1, en points par seconde.
-  public var sceneryReferenceSpeed: Double = 80
+  public var sceneryReferenceSpeed: Double = 480
   public var farAsteroidScenery = StarshipSceneryLayerTuning(
     depth: 4,
     size: 56,
@@ -63,9 +64,8 @@ public struct StarshipTuning: Equatable, Sendable {
     ceiling: 2,
     meanInterval: 12
   )
-  /// Profondeur 6 : 80 / 6 pt/s tant que le centre traverse l’écran en 90 s au plus (45 s sur 600 pt).
-  /// Sur un écran plus haut, la vitesse monte juste assez (16 pt/s sur 1 440 pt) et reste sous les 20 pt/s
-  /// des astéroïdes lointains. L’entrée-sortie, diamètre compris, peut dépasser 90 s.
+  /// Profondeur 6 : 480 / 6 = 80 pt/s. Le centre passe en 7,5 s sur 600 pt, en 18 s sur 1 440 pt,
+  /// sous les 120 pt/s des astéroïdes lointains. L’entrée-sortie, diamètre compris, dure davantage.
   /// La taille est tirée entre 30 et 60 % de l’écran le plus haut. Au plus deux en vol, intervalle moyen de 90 s.
   public var planetScenery = StarshipSceneryLayerTuning(
     depth: 6,
@@ -75,14 +75,16 @@ public struct StarshipTuning: Equatable, Sendable {
     meanInterval: 90,
     sizeFractionOfTallestScreen: 0.30...0.60
   )
-  /// Profondeur 1/16 : 1 280 pt/s. Un trait de 64 pt traverse 600 pt en 0,52 s, toujours plus vite que les astéroïdes.
-  /// Au plus deux en vol, intervalle moyen de 3 s, opacité 0,2.
+  /// Profondeur 0,375 : 480 / 0,375 = 1 280 pt/s. Un trait de 64 pt traverse 600 pt en 0,52 s,
+  /// toujours plus vite que les astéroïdes, sans devenir un flash.
+  /// Au plus huit en vol, intervalle moyen de 0,125 s : plusieurs traits pâles en même temps.
+  /// Opacité 0,2.
   public var speedStreakScenery = StarshipSceneryLayerTuning(
-    depth: 0.0625,
+    depth: 0.375,
     size: 64,
     opacity: 0.2,
-    ceiling: 2,
-    meanInterval: 3
+    ceiling: 8,
+    meanInterval: 0.125
   )
   /// Épaisseur du trait, en points. Entre 1 et 3.
   public var speedStreakWidth: Double = 2
