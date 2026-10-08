@@ -77,6 +77,10 @@ final class StarshipPainter {
     contentsScale = scale
     configureSkybox(skyboxBack, zPosition: 0)
     configureSkybox(skyboxFront, zPosition: 1)
+    skyboxBack.contentsScale = scale
+    skyboxFront.contentsScale = scale
+    // Image sans alpha, qui couvre l’écran. Le calque du dessus fond : il reste translucide.
+    skyboxBack.isOpaque = true
     skyboxFront.opacity = 0
     installShip(scale: scale)
     installGauge()
@@ -87,6 +91,11 @@ final class StarshipPainter {
     CATransaction.setDisableActions(true)
     skyboxBack.frame = bounds
     skyboxFront.frame = bounds
+    skyboxBack.contentsScale = scale
+    skyboxFront.contentsScale = scale
+    for item in ephemerals where item.sceneryID != nil {
+      item.layer.contentsScale = scale
+    }
     let center = StarshipShip.center(
       width: Double(bounds.width),
       height: Double(bounds.height),
@@ -384,6 +393,7 @@ final class StarshipPainter {
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     skyboxBack.contents = nil
+    skyboxBack.isOpaque = false
     skyboxFront.contents = nil
     skyboxFront.opacity = 0
     CATransaction.commit()

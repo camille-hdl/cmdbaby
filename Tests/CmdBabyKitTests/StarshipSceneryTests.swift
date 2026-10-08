@@ -648,6 +648,45 @@ func speedStreakDoesNotLaunchWhenTheCorridorCoversTheScreen() {
   #expect(launched.isEmpty)
 }
 
+@Test("Huit éléments en vol au plus : la somme des plafonds, un calque de décor par écran")
+func flyingSceneryStaysWithinEightLayersPerScreen() {
+  let standard = StarshipTuning.standard
+  // 2 planètes + 2 astéroïdes lointains + 2 proches + 2 traits.
+  let layersPerScreen = 8
+  #expect(standard.planetScenery.ceiling == 2)
+  #expect(standard.farAsteroidScenery.ceiling == 2)
+  #expect(standard.nearAsteroidScenery.ceiling == 2)
+  #expect(standard.speedStreakScenery.ceiling == 2)
+
+  // Intervalles raccourcis pour saturer les quatre plafonds ensemble.
+  // Les plafonds restent ceux du réglage standard : le painter pose un calque par élément.
+  var tuning = standard
+  tuning.planetScenery.meanInterval = 0.05
+  tuning.farAsteroidScenery.meanInterval = 0.05
+  tuning.nearAsteroidScenery.meanInterval = 0.05
+  tuning.speedStreakScenery.meanInterval = 0.05
+
+  var rng = SplitMix64(seed: 4)
+  var scenery = StarshipScenery()
+  var peak = 0
+  var now = 0.0
+  while now <= 20 {
+    _ = scenery.launch(
+      screens: oneScreen,
+      now: now,
+      tuning: tuning,
+      shipAbscissa: 400,
+      rng: &rng
+    )
+    let flying = scenery.flying(at: now).count
+    #expect(flying <= layersPerScreen)
+    peak = max(peak, flying)
+    now += 0.05
+  }
+
+  #expect(peak == layersPerScreen)
+}
+
 @Test("Sans l’abscisse du vaisseau, aucun trait ne part")
 func speedStreakWaitsUntilTheShipAbscissaIsKnown() {
   var rng = SplitMix64(seed: 1)

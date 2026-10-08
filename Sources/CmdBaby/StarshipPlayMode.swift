@@ -740,6 +740,7 @@ final class StarshipStageView: NSView {
     }
     root.backgroundColor = Self.backgroundColor.cgColor
     root.contentsScale = scale
+    root.isOpaque = true
     root.addSublayer(sceneLayer)
     let painter = StarshipPainter(tuning: director.tuning, scale: scale)
     self.painter = painter
