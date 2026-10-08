@@ -67,7 +67,7 @@ Décision du 2026-10-06. Pour qu’un enfant ne sorte pas par hasard, Maj-Échap
 |---|---|---|
 | Mac du mainteneur | build et signature d’une version piégée | FileVault, session verrouillée ; build depuis une copie propre du tag (#99) |
 | Certificat Developer ID | une app signée au nom de Camille Hodoul | trousseau, sauvegarde `.p12` chiffrée hors ligne (#98). Seul, il ne suffit pas à pousser une mise à jour : il faut aussi la clé EdDSA |
-| Clé EdDSA Sparkle | une mise à jour acceptée par Sparkle | trousseau, sauvegarde chiffrée hors ligne (#98). Seule, elle ne suffit pas : Sparkle vérifie aussi que la signature Apple vient de la même équipe (#102) |
+| Clé EdDSA Sparkle | une mise à jour acceptée par Sparkle | trousseau, sauvegarde chiffrée hors ligne (#98). Elle suffit à faire accepter une mise à jour : Sparkle vérifie l’intégrité de la signature Apple, pas son équipe, et accepte même une signature ad hoc. Il faut encore servir l’appcast, donc contrôler Cloudflare ou GitHub (#102) |
 | Compte Apple | nouveaux certificats, notarisation | 2FA |
 | Compte GitHub | Release ou code modifiés | clé d’accès ou clé de sécurité, Releases immuables, règles sur `main` et les tags `v*` (#109), hook pre-commit contre les secrets (#123), CODEOWNERS et règles pour les agents (#124) |
 | Compte Cloudflare | appcast, page de téléchargement, e-mail support | 2FA par clé de sécurité, verrou du registrar, DNSSEC, CAA, DMARC (#112) |
@@ -83,7 +83,7 @@ commit signé sur main (#109, #123)
   → sign_update : signature EdDSA de la mise à jour (#102)
   → scripts/publish.sh : tag signé, Release GitHub immuable, retéléchargement et SHA-256 comparé (#113)
   → appcast signé sur Cloudflare Workers, /download vers le DMG (#111, #113)
-  → chez l’utilisateur, Sparkle vérifie la signature EdDSA, la signature Apple et l’appcast signé (#102)
+  → chez l’utilisateur, Sparkle vérifie la signature EdDSA, l’intégrité de la signature Apple (sans contrôle d’équipe) et l’appcast signé (#102)
 ```
 
 ## 5. Réponse à incident
