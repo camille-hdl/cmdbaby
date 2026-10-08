@@ -58,8 +58,9 @@ public struct StarshipTuning: Equatable, Sendable {
     ceiling: 2,
     meanInterval: 12
   )
-  /// Profondeur 6 : 80 / 6 pt/s, tant que la traversée tient en 90 s.
-  /// Au-delà, ce plafond prime et la planète accélère, même au-delà des astéroïdes lointains.
+  /// Profondeur 6 : 80 / 6 pt/s tant que le centre traverse l’écran en 90 s au plus (45 s sur 600 pt).
+  /// Sur un écran plus haut, la vitesse monte juste assez (16 pt/s sur 1 440 pt) et reste sous les 20 pt/s
+  /// des astéroïdes lointains. L’entrée-sortie, diamètre compris, peut dépasser 90 s.
   /// La taille est tirée entre 30 et 60 % de l’écran le plus haut. Au plus deux en vol, intervalle moyen de 90 s.
   public var planetScenery = StarshipSceneryLayerTuning(
     depth: 6,
@@ -67,8 +68,7 @@ public struct StarshipTuning: Equatable, Sendable {
     opacity: 0.7,
     ceiling: 2,
     meanInterval: 90,
-    sizeFractionOfTallestScreen: 0.30...0.60,
-    maximumCrossingDuration: 90
+    sizeFractionOfTallestScreen: 0.30...0.60
   )
 
   // Jauge

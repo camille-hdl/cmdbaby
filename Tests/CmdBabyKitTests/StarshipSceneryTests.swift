@@ -35,8 +35,8 @@ func planetsAreSlowerAndLargerThanAsteroids() {
   #expect(planet.duration <= 90)
 }
 
-@Test("Sur un écran de 1 440 pt de haut, une planète traverse en 40 à 90 s, plus longtemps que les astéroïdes")
-func planetCrossesATallScreenWithinFortyToNinetySeconds() {
+@Test("Sur un écran de 1 440 pt, le centre d’une planète met 40 à 90 s, plus lentement que les astéroïdes")
+func planetCenterCrossesATallScreenSlowerThanAsteroids() {
   let height = 1_440.0
   let screen = [TerminalScreen(index: 0, x: 0, y: 0, width: 800, height: height)]
 
@@ -63,10 +63,14 @@ func planetCrossesATallScreenWithinFortyToNinetySeconds() {
     #expect(abs(planet.size - specimen.size) < 1e-6)
     #expect(abs(planet.startY - specimen.startY) < 1e-6)
     #expect(abs(planet.endY - specimen.endY) < 1e-6)
-    #expect(planet.duration >= 40)
-    #expect(planet.duration <= 90)
-    #expect(planet.duration > far.duration)
-    #expect(planet.duration > near.duration)
+    // 40 à 90 s : le centre traverse la hauteur. L’entrée-sortie, diamètre compris, dure davantage.
+    let planetSpeed = speed(of: planet)
+    #expect(planetSpeed < speed(of: far))
+    #expect(planetSpeed < speed(of: near))
+    let centerCrossing = height / planetSpeed
+    #expect(centerCrossing >= 40)
+    #expect(centerCrossing <= 90)
+    #expect(planet.duration > 90)
     #expect(abs(far.duration - 74.8) < 1e-6)
     #expect(abs(near.duration - 38.4) < 1e-6)
   }

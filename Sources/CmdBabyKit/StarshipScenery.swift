@@ -9,7 +9,9 @@ public enum StarshipSceneryLayer: Hashable, Sendable, CaseIterable {
   case nearAsteroid
 }
 
-/// Réglages d’une couche : la vitesse vaut `sceneryReferenceSpeed / depth`.
+/// Réglages d’une couche. La vitesse nominale vaut `sceneryReferenceSpeed / depth`.
+/// Une planète peut aller plus vite pour que son centre traverse la hauteur de l’écran
+/// le plus haut en 90 s, sans atteindre la vitesse d’un astéroïde.
 public struct StarshipSceneryLayerTuning: Equatable, Sendable {
   public var depth: Double
   public var size: Double
@@ -21,8 +23,6 @@ public struct StarshipSceneryLayerTuning: Equatable, Sendable {
   /// Si posée, chaque élément tire sa taille dans cette fraction de la hauteur de l’écran le plus haut.
   /// `size` est alors ignorée.
   public var sizeFractionOfTallestScreen: ClosedRange<Double>?
-  /// Si posée, la traversée dure au plus ce nombre de secondes. La vitesse augmente pour tenir ce plafond.
-  public var maximumCrossingDuration: Double?
 
   public init(
     depth: Double,
@@ -30,8 +30,7 @@ public struct StarshipSceneryLayerTuning: Equatable, Sendable {
     opacity: Double,
     ceiling: Int,
     meanInterval: Double,
-    sizeFractionOfTallestScreen: ClosedRange<Double>? = nil,
-    maximumCrossingDuration: Double? = nil
+    sizeFractionOfTallestScreen: ClosedRange<Double>? = nil
   ) {
     self.depth = depth
     self.size = size
@@ -39,7 +38,6 @@ public struct StarshipSceneryLayerTuning: Equatable, Sendable {
     self.ceiling = ceiling
     self.meanInterval = meanInterval
     self.sizeFractionOfTallestScreen = sizeFractionOfTallestScreen
-    self.maximumCrossingDuration = maximumCrossingDuration
   }
 }
 
@@ -118,7 +116,7 @@ public struct StarshipScenery: Equatable, Sendable {
   ) -> StarshipSceneryElement? {
     let layerTuning = tuning.scenery(for: layer)
     guard layerTuning.ceiling > 0, layerTuning.depth > 0 else { return nil }
-    let speed = tuning.sceneryReferenceSpeed / layerTuning.depth
+    let speed = crossingSpeed(layer, tuning: tuning, tallestHeight: union.tallestHeight)
     guard speed > 0, layerTuning.meanInterval > 0 else { return nil }
     let due = nextAppearance[layer] ?? -.infinity
     let flying = elements.filter { $0.layer == layer }.count
@@ -140,11 +138,6 @@ public struct StarshipScenery: Equatable, Sendable {
     nextID += 1
     // Écart dans [0,5 ; 1,5] fois la moyenne : l’espérance reste le réglage, sans rafale.
     nextAppearance[layer] = now + layerTuning.meanInterval * Double.random(in: 0.5...1.5, using: &rng)
-    let travel = startY - endY
-    var duration = travel / speed
-    if let limit = layerTuning.maximumCrossingDuration, limit > 0 {
-      duration = min(duration, limit)
-    }
     return StarshipSceneryElement(
       id: id,
       layer: layer,
@@ -155,8 +148,32 @@ public struct StarshipScenery: Equatable, Sendable {
       size: size,
       opacity: layerTuning.opacity,
       start: now,
-      duration: duration
+      duration: (startY - endY) / speed
     )
+  }
+
+  /// Vitesse en points par seconde. Nominale : `sceneryReferenceSpeed / depth`.
+  /// Le centre d’une planète traverse la hauteur de l’écran le plus haut en 90 s au plus,
+  /// le bout lent de la bande, et reste strictement plus lent que les astéroïdes.
+  /// Si tenir 90 s rattrapait un astéroïde, la vitesse nominale reste : plus lent, en cas de doute.
+  private func crossingSpeed(
+    _ layer: StarshipSceneryLayer,
+    tuning: StarshipTuning,
+    tallestHeight: Double
+  ) -> Double {
+    let nominal = tuning.sceneryReferenceSpeed / tuning.scenery(for: layer).depth
+    guard layer == .planet,
+      tuning.farAsteroidScenery.depth > 0,
+      tuning.nearAsteroidScenery.depth > 0
+    else { return nominal }
+    let slowestAsteroid = min(
+      tuning.sceneryReferenceSpeed / tuning.farAsteroidScenery.depth,
+      tuning.sceneryReferenceSpeed / tuning.nearAsteroidScenery.depth
+    )
+    let neededToCrossInNinetySeconds = tallestHeight / 90
+    let raised = max(nominal, neededToCrossInNinetySeconds)
+    guard raised < slowestAsteroid else { return nominal }
+    return raised
   }
 
   /// La planète qui vient de partir sort du tirage. Une liste d’une seule entrée reste tirable.
