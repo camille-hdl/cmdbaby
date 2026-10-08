@@ -395,11 +395,30 @@ final class StarshipDirector {
     installPendingGaugePulse()
   }
 
-  /// Distribue les nouveaux astéroïdes. Chaque écran reçoit le même `beginTime` de média.
+  /// Abscisse du vaisseau dans l’union des écrans. `nil` tant qu’il n’a pas d’écran.
+  private func shipAbscissa(in framed: [TerminalScreen]) -> Double? {
+    guard let homeScreenIndex,
+      let screen = framed.first(where: { $0.index == homeScreenIndex })
+    else { return nil }
+    let center = StarshipShip.center(
+      width: screen.width,
+      height: screen.height,
+      fractionFromBottom: tuning.shipCenterFromBottom
+    )
+    return screen.x + center.x
+  }
+
+  /// Distribue le décor, traits compris. Chaque écran reçoit le même `beginTime` de média.
   /// Aucun calque de décor n’est déplacé ici : l’animation posée à la création fait le trajet.
   private func launchScenery(now: TimeInterval) {
     let framed = framedScreens()
-    let fresh = scenery.launch(screens: framed, now: now, tuning: tuning, rng: &rng)
+    let fresh = scenery.launch(
+      screens: framed,
+      now: now,
+      tuning: tuning,
+      shipAbscissa: shipAbscissa(in: framed),
+      rng: &rng
+    )
     guard !fresh.isEmpty else { return }
     let mediaOffset = CACurrentMediaTime() - now
     for element in fresh {

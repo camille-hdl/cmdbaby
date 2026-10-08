@@ -447,6 +447,179 @@ func sameSeedReplaysTheSameAppearances() {
   #expect(a == b)
 }
 
+@Test("Un trait de vitesse traverse un écran de 800×600 en 0,51875 s, plus vite que les astéroïdes")
+func speedStreakCrossesFasterThanAsteroids() {
+  var rng = SplitMix64(seed: 1)
+  var scenery = StarshipScenery()
+  var tuning = StarshipTuning()
+  tuning.sceneryReferenceSpeed = 80
+  tuning.speedStreakScenery = StarshipSceneryLayerTuning(
+    depth: 0.0625, size: 64, opacity: 0.2, ceiling: 1, meanInterval: 10
+  )
+  tuning.speedStreakWidth = 2
+  let shipX = 400.0
+
+  let launched = scenery.launch(
+    screens: oneScreen, now: 0, tuning: tuning, shipAbscissa: shipX, rng: &rng
+  )
+  let streak = launched.first { $0.layer == .speedStreak }
+  let near = launched.first { $0.layer == .nearAsteroid }
+  let far = launched.first { $0.layer == .farAsteroid }
+  let planet = launched.first { $0.layer == .planet }
+
+  #expect(streak != nil)
+  #expect(near != nil)
+  #expect(far != nil)
+  #expect(planet != nil)
+  guard let streak, let near, let far, let planet else { return }
+
+  // 64 pt : départ 632, arrivée −32. 80 / 0,0625 = 1 280 pt/s. 664 / 1 280 = 0,51875 s.
+  #expect(streak.sprite.isEmpty)
+  #expect(abs(streak.size - 64) < 1e-6)
+  #expect(abs(streak.width - 2) < 1e-6)
+  #expect(abs(streak.opacity - 0.2) < 1e-6)
+  #expect(abs(streak.startY - 632) < 1e-6)
+  #expect(abs(streak.endY - (-32)) < 1e-6)
+  #expect(abs(streak.duration - 0.51875) < 1e-6)
+  #expect(streak.duration < 1)
+  #expect(speed(of: streak) > speed(of: near))
+  #expect(speed(of: streak) > speed(of: far))
+  #expect(speed(of: streak) > speed(of: planet))
+}
+
+@Test("Sur un écran de 2 000 pt, un trait traverse encore en moins d’une seconde")
+func speedStreakStillCrossesATallScreenWithinASecond() {
+  let height = 2_000.0
+  let screen = [TerminalScreen(index: 0, x: 0, y: 0, width: 800, height: height)]
+  var rng = SplitMix64(seed: 1)
+  var scenery = StarshipScenery()
+  var tuning = StarshipTuning()
+  tuning.sceneryReferenceSpeed = 80
+  tuning.speedStreakScenery = StarshipSceneryLayerTuning(
+    depth: 0.0625, size: 64, opacity: 0.2, ceiling: 1, meanInterval: 10
+  )
+
+  let launched = scenery.launch(
+    screens: screen, now: 0, tuning: tuning, shipAbscissa: 400, rng: &rng
+  )
+  let streak = launched.first { $0.layer == .speedStreak }
+  let near = launched.first { $0.layer == .nearAsteroid }
+  let far = launched.first { $0.layer == .farAsteroid }
+  let planet = launched.first { $0.layer == .planet }
+
+  #expect(streak != nil)
+  #expect(near != nil)
+  #expect(far != nil)
+  #expect(planet != nil)
+  guard let streak, let near, let far, let planet else { return }
+
+  #expect(streak.duration < 1)
+  #expect(speed(of: streak) > speed(of: near))
+  #expect(speed(of: streak) > speed(of: far))
+  #expect(speed(of: streak) > speed(of: planet))
+}
+
+@Test("Aucun trait n’entre dans le couloir central de l’écran du vaisseau")
+func speedStreaksStayOutsideTheShipCorridor() {
+  let screen = [TerminalScreen(index: 0, x: 100, y: 0, width: 800, height: 600)]
+  let shipX = 500.0
+  var rng = SplitMix64(seed: 4)
+  var scenery = StarshipScenery()
+  var tuning = StarshipTuning()
+  tuning.sceneryReferenceSpeed = 80
+  tuning.speedStreakScenery = StarshipSceneryLayerTuning(
+    depth: 0.0625, size: 64, opacity: 0.2, ceiling: 1, meanInterval: 0.2
+  )
+  tuning.speedStreakWidth = 2
+  tuning.speedStreakCorridorWidth = 200
+  tuning.planetScenery.ceiling = 0
+  tuning.farAsteroidScenery.ceiling = 0
+  tuning.nearAsteroidScenery.ceiling = 0
+
+  var count = 0
+  var sawLeft = false
+  var sawRight = false
+  var now = 0.0
+  for _ in 0..<40 {
+    let launched = scenery.launch(
+      screens: screen, now: now, tuning: tuning, shipAbscissa: shipX, rng: &rng
+    )
+    for streak in launched where streak.layer == .speedStreak {
+      count += 1
+      let clearance = abs(streak.x - shipX) - streak.width / 2
+      #expect(clearance >= 100)
+      #expect(streak.x >= 100)
+      #expect(streak.x <= 900)
+      if streak.x < shipX { sawLeft = true }
+      if streak.x > shipX { sawRight = true }
+    }
+    now += 1
+  }
+
+  #expect(count >= 20)
+  #expect(sawLeft)
+  #expect(sawRight)
+}
+
+@Test("Le plafond des traits tient : jamais plus de deux en vol, et d’autres partent ensuite")
+func speedStreakCeilingHoldsAtEveryInstant() {
+  var rng = SplitMix64(seed: 11)
+  var scenery = StarshipScenery()
+  var tuning = StarshipTuning()
+  tuning.speedStreakScenery.ceiling = 2
+  tuning.speedStreakScenery.meanInterval = 0.05
+  tuning.speedStreakCorridorWidth = 40
+  tuning.planetScenery.ceiling = 0
+  tuning.farAsteroidScenery.ceiling = 0
+  tuning.nearAsteroidScenery.ceiling = 0
+  let screen = [TerminalScreen(index: 0, x: 0, y: 0, width: 800, height: 600)]
+
+  var launchedCount = 0
+  var now = 0.0
+  var steps = 0
+  while now <= 3 {
+    let launched = scenery.launch(
+      screens: screen, now: now, tuning: tuning, shipAbscissa: 400, rng: &rng
+    )
+    launchedCount += launched.filter { $0.layer == .speedStreak }.count
+    #expect(scenery.flying(at: now).filter { $0.layer == .speedStreak }.count <= 2)
+    steps += 1
+    now += 0.01
+  }
+
+  #expect(steps == 301)
+  #expect(launchedCount > 2)
+}
+
+@Test("Un couloir plus large que l’écran ne lance aucun trait")
+func speedStreakDoesNotLaunchWhenTheCorridorCoversTheScreen() {
+  var rng = SplitMix64(seed: 1)
+  var scenery = StarshipScenery()
+  var tuning = StarshipTuning()
+  tuning.speedStreakCorridorWidth = 1_000
+  tuning.planetScenery.ceiling = 0
+  tuning.farAsteroidScenery.ceiling = 0
+  tuning.nearAsteroidScenery.ceiling = 0
+
+  let launched = scenery.launch(
+    screens: oneScreen, now: 0, tuning: tuning, shipAbscissa: 400, rng: &rng
+  )
+
+  #expect(launched.isEmpty)
+}
+
+@Test("Sans l’abscisse du vaisseau, aucun trait ne part")
+func speedStreakWaitsUntilTheShipAbscissaIsKnown() {
+  var rng = SplitMix64(seed: 1)
+  var scenery = StarshipScenery()
+
+  let launched = scenery.launch(screens: oneScreen, now: 0, tuning: .standard, rng: &rng)
+
+  #expect(launched.contains { $0.layer == .speedStreak } == false)
+  #expect(launched.contains { $0.layer == .planet })
+  #expect(launched.count == 3)
+}
+
 private func speed(of element: StarshipSceneryElement) -> Double {
   (element.startY - element.endY) / element.duration
 }

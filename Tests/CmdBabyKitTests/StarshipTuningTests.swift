@@ -100,3 +100,27 @@ func starshipTuningStandardSceneryIsCalm() {
   #expect(abs(far.meanInterval - 18) < 1e-6)
   #expect(abs(near.meanInterval - 12) < 1e-6)
 }
+
+@Test("Les traits de vitesse standard sont rares, fins, peu opaques et plus rapides que les astéroïdes")
+func starshipTuningStandardSpeedStreaksAreFaint() {
+  let tuning = StarshipTuning.standard
+  let streak = tuning.scenery(for: .speedStreak)
+  let near = tuning.scenery(for: .nearAsteroid)
+
+  #expect(streak.depth < near.depth)
+  #expect(abs(streak.depth - 0.0625) < 1e-9)
+  #expect(abs(streak.size - 64) < 1e-6)
+  #expect(abs(tuning.speedStreakWidth - 2) < 1e-6)
+  #expect(tuning.speedStreakWidth >= 1)
+  #expect(tuning.speedStreakWidth <= 3)
+  #expect(abs(streak.opacity - 0.2) < 1e-6)
+  #expect(streak.opacity <= 0.3)
+  #expect(streak.opacity > 0)
+  #expect(streak.ceiling == 2)
+  #expect(streak.ceiling <= 3)
+  #expect(abs(streak.meanInterval - 3) < 1e-6)
+  #expect(streak.meanInterval >= 1)
+  #expect(abs(tuning.speedStreakCorridorWidth - 200) < 1e-6)
+  #expect(tuning.speedStreakCorridorWidth > tuning.shipWidth)
+  #expect(tuning.speedStreakColor == StarshipRGB(hex: 0xFFFFFF))
+}

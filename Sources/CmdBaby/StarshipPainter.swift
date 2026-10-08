@@ -305,8 +305,9 @@ final class StarshipPainter {
     }
   }
 
-  /// Décor (planète ou astéroïde) : une seule animation linéaire de position, du départ à l’arrivée.
-  /// `mediaBeginTime` est l’instant de média commun à tous les écrans. Pas de glyphe, pas de cible.
+  /// Décor : une seule animation linéaire de position, du départ à l’arrivée.
+  /// Un trait est un calque de couleur unie, sans image. `mediaBeginTime` est l’instant de média
+  /// commun à tous les écrans. Pas de glyphe, pas de cible, pas de flash.
   func addScenery(
     _ element: StarshipSceneryElement,
     on screen: TerminalScreen,
@@ -374,12 +375,17 @@ final class StarshipPainter {
     on screen: TerminalScreen,
     mediaBeginTime: CFTimeInterval
   ) -> CALayer {
-    let image = StarshipSprite.cgImage(named: element.sprite)
-    let size = Self.spriteSize(width: element.size, image: image)
     let layer = CALayer()
-    layer.bounds = CGRect(origin: .zero, size: size)
-    layer.contents = image
-    layer.contentsGravity = .resizeAspect
+    if element.layer == .speedStreak {
+      layer.bounds = CGRect(x: 0, y: 0, width: element.width, height: element.size)
+      layer.backgroundColor = Self.cgColor(tuning.speedStreakColor)
+    } else {
+      let image = StarshipSprite.cgImage(named: element.sprite)
+      let size = Self.spriteSize(width: element.size, image: image)
+      layer.bounds = CGRect(origin: .zero, size: size)
+      layer.contents = image
+      layer.contentsGravity = .resizeAspect
+    }
     layer.contentsScale = contentsScale
     layer.opacity = Float(element.opacity)
     layer.zPosition = Self.sceneryZPosition(element.layer)
@@ -403,13 +409,15 @@ final class StarshipPainter {
     return layer
   }
 
-  /// Devant le ciel (`skyboxFront` à 1), derrière les cibles (10) et le vaisseau (20).
-  /// Planètes au fond du décor, puis astéroïdes lointains, puis proches.
+  /// Planètes, puis astéroïdes, devant le ciel (`skyboxFront` à 1) et derrière les cibles (10)
+  /// et le vaisseau (20). Le trait passe devant eux, sous les explosions (30) et la jauge (40).
+  /// C’est un calque : le clic reste sur la vue de la scène.
   private static func sceneryZPosition(_ layer: StarshipSceneryLayer) -> CGFloat {
     switch layer {
     case .planet: 2
     case .farAsteroid: 3
     case .nearAsteroid: 4
+    case .speedStreak: 25
     }
   }
 

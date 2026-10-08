@@ -70,6 +70,22 @@ public struct StarshipTuning: Equatable, Sendable {
     meanInterval: 90,
     sizeFractionOfTallestScreen: 0.30...0.60
   )
+  /// Profondeur 1/16 : 1 280 pt/s. Un trait de 64 pt traverse 600 pt en 0,52 s, toujours plus vite que les astéroïdes.
+  /// Au plus deux en vol, intervalle moyen de 3 s, opacité 0,2.
+  public var speedStreakScenery = StarshipSceneryLayerTuning(
+    depth: 0.0625,
+    size: 64,
+    opacity: 0.2,
+    ceiling: 2,
+    meanInterval: 3
+  )
+  /// Épaisseur du trait, en points. Entre 1 et 3.
+  public var speedStreakWidth: Double = 2
+  /// Couleur unie du trait. L’opacité faible est celle de la couche, pas un second alpha.
+  public var speedStreakColor = StarshipRGB(hex: 0xFFFFFF)
+  /// Largeur du couloir, autour de l’abscisse du vaisseau, où aucun trait ne passe.
+  /// 200 pt dépasse le vaisseau (140 pt) : le trait file à côté, épaisseur comprise.
+  public var speedStreakCorridorWidth: Double = 200
 
   // Jauge
   public var keyRateWindow: Double = 10
@@ -82,6 +98,7 @@ public struct StarshipTuning: Equatable, Sendable {
     case .planet: planetScenery
     case .farAsteroid: farAsteroidScenery
     case .nearAsteroid: nearAsteroidScenery
+    case .speedStreak: speedStreakScenery
     }
   }
 }
