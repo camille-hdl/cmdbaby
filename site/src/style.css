@@ -67,6 +67,17 @@
     @apply bg-paper text-ink font-sans antialiased;
   }
 
+  /* Titres en lignes de longueur égale, paragraphes sans mot seul en fin. */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
   a {
     @apply text-claret underline decoration-1 underline-offset-2 hover:decoration-2;
   }
