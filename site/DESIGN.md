@@ -25,7 +25,11 @@ typography:
     fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif"
     fontSize: "0.875rem (text-sm)"
     fontWeight: 400
+  code:
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+    fontSize: "0.9em"
 rounded:
+  focus: "0.25rem"
   code: "6px"
   screenshot: "16px"
   key: "12px"
@@ -94,6 +98,7 @@ Le site vise surtout des visiteurs sur Mac, où ces piles donnent New York et Sa
 - **Title** (700, 1.5rem) : h2 des pages secondaires ; les h3 de la FAQ sont en sans-serif 600, 1.125rem.
 - **Body** (400, 1.125rem puis 1.25rem, 1.625) : paragraphes, en `ink-2`, colonnes de 42 à 48rem au plus.
 - **Label** (400, 0.875rem) : mentions sous les boutons, pied de page, en `muted`.
+- **Code** (monospace système, 0.9em) : commande Homebrew, phrase de sortie, adresse de l'appcast, chemins de fichiers, sur fond `surface-2`.
 
 ## Layout
 
