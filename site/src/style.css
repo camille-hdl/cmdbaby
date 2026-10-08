@@ -90,4 +90,28 @@
     background-position: 0 88%;
     background-repeat: no-repeat;
   }
+
+  /* Teinte du surligneur par section. Des classes et non un attribut style :
+     la CSP (style-src 'self') bloque les styles en ligne. */
+  .marker-claret {
+    --marker: var(--color-claret-soft);
+  }
+
+  .marker-velvet {
+    --marker: var(--color-velvet-soft);
+  }
+
+  .marker-mandarin {
+    --marker: var(--color-mandarin-soft);
+  }
+
+  .marker-jade {
+    --marker: var(--color-jade-soft);
+  }
+
+  /* Le titre de cette section est posé sur un panneau teal-soft : la teinte
+     douce y serait invisible, on la fonce avec un peu de teal. */
+  .marker-teal {
+    --marker: color-mix(in oklab, var(--color-teal) 30%, var(--color-teal-soft));
+  }
 }

@@ -110,7 +110,7 @@ Pilules pour le bouton et le lien de langue, panneaux à 2.5rem, captures à 16p
 ## Components
 
 - **Bouton de téléchargement** : pilule `claret`, texte `on-claret` 600, 2rem sur 1rem de marge interne. Toujours suivi des deux mentions (prix et systèmes, cask Homebrew).
-- **Surligneur** (`.marker`) : dégradé de 0.55em de haut sous le mot, couleur par `--marker`.
+- **Surligneur** (`.marker`) : dégradé de 0.55em de haut sous le mot. Sa teinte vient d’une classe `marker-<teinte>` posée sur la section ; sur un panneau `teal-soft`, `marker-teal` mélange 30 % de `teal` pour rester visible.
 - **Touche** (`kbd`) : fond `raised`, bordure `rule` épaissie en bas, texte `muted` barré en `velvet`.
 - **Panneau** : fond doux, coins de 2.5rem, sans bordure ni ombre.
 
