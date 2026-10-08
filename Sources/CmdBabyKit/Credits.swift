@@ -23,12 +23,13 @@ public enum Credits {
     URL(string: table("site.support.url"))!
   }
 
-  /// Fish Pack, puis le vaisseau : Space Shooter, Alien UFO, Skyboxes.
+  /// Fish Pack, puis le vaisseau : Space Shooter, Alien UFO, Skyboxes, Planets.
   public static let assets: [CreditedAsset] = [
     asset("Fish Pack 2.0", "https://kenney.nl/assets/fish-pack"),
     asset("Space Shooter Remastered", "https://kenney.nl/assets/space-shooter-remastered"),
     asset("Alien UFO Pack", "https://kenney.nl/assets/alien-ufo-pack"),
     asset("Skyboxes Space", "https://kenney.nl/assets/skyboxes-space"),
+    asset("Planets", "https://kenney.nl/assets/planets"),
   ]
 
   private static func asset(_ name: String, _ url: String) -> CreditedAsset {

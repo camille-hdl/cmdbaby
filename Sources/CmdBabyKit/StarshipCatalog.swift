@@ -29,6 +29,18 @@ public enum StarshipCatalog: Sendable {
     "skybox-space-nebula",
   ]
 
+  /// Planètes du kit Kenney « Planets », lisibles sur les cinq skyboxes. `planet-04` et `planet-06` sont écartées : trop grise, trop sombre.
+  public static let planets = [
+    "planet-00",
+    "planet-01",
+    "planet-02",
+    "planet-03",
+    "planet-05",
+    "planet-07",
+    "planet-08",
+    "planet-09",
+  ]
+
   /// Sorte tirée uniformément par `kindRoll`, puis sprite tiré uniformément dans cette sorte par `spriteRoll`. Rolls dans `[0, 1)`.
   public static func pickTarget(kindRoll: Double, spriteRoll: Double) -> (kind: StarshipTargetKind, sprite: String) {
     let kinds = StarshipTargetKind.allCases
@@ -68,6 +80,7 @@ public enum StarshipCatalog: Sendable {
       + sprites(for: .alien)
       + sprites(for: .enemy)
       + skyboxes
+      + planets
       + [previewSkybox]
   }
 

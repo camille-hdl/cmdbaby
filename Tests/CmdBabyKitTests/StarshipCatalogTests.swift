@@ -68,7 +68,7 @@ func starshipCatalogPicksASpriteOfTheRolledKind() {
   #expect(StarshipCatalog.sprites(for: enemy.kind).contains(enemy.sprite))
 }
 
-@Test("Le catalogue nomme les 53 images du mode, sans doublon")
+@Test("Le catalogue nomme les 61 images du mode, sans doublon")
 func starshipCatalogNamesEveryImageOnce() {
   #expect(StarshipCatalog.shipSprite == "playerShip1_blue")
   #expect(StarshipCatalog.beamSprite == "laserBlue01")
@@ -122,10 +122,35 @@ func starshipCatalogNamesEveryImageOnce() {
     "skybox-space-day",
     "skybox-space-galaxy",
     "skybox-space-nebula",
+    "planet-00",
+    "planet-01",
+    "planet-02",
+    "planet-03",
+    "planet-05",
+    "planet-07",
+    "planet-08",
+    "planet-09",
     "starship_preview_skybox",
   ]
-  #expect(expected.count == 53)
-  #expect(names.count == 53)
+  #expect(expected.count == 61)
+  #expect(names.count == 61)
   #expect(Set(names).count == names.count)
   #expect(Set(names) == Set(expected))
+}
+
+@Test("Huit planètes, préfixe planet-, toutes présentes parmi les images du mode")
+func starshipCatalogListsPlanetsWithSharedPrefix() {
+  #expect(StarshipCatalog.planets == [
+    "planet-00",
+    "planet-01",
+    "planet-02",
+    "planet-03",
+    "planet-05",
+    "planet-07",
+    "planet-08",
+    "planet-09",
+  ])
+  #expect(StarshipCatalog.planets.count == 8)
+  #expect(StarshipCatalog.planets.allSatisfy { $0.hasPrefix("planet-") })
+  #expect(Set(StarshipCatalog.planets).isSubset(of: Set(StarshipCatalog.allImageNames)))
 }
