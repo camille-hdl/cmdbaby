@@ -55,6 +55,8 @@ final class StarshipDirector {
   /// Cibles en vol, dans l’ordre d’apparition.
   private var targets: [LiveTarget] = []
   private var nextTargetID = 0
+  /// Décor commun. Le tick ne fait que demander les nouveaux éléments.
+  private var scenery = StarshipScenery()
 
   init(tuning: StarshipTuning = .standard) {
     self.tuning = tuning
@@ -208,6 +210,7 @@ final class StarshipDirector {
     lastTick = 0
     targets.removeAll(keepingCapacity: false)
     nextTargetID = 0
+    scenery.reset()
   }
 
   private func framedScreens() -> [TerminalScreen] {
@@ -373,6 +376,7 @@ final class StarshipDirector {
       slot.painter.tick(now: now)
     }
     CATransaction.commit()
+    launchScenery(now: now)
     if let homeScreenIndex, let painter = painter(at: homeScreenIndex) {
       for beam in step.beams {
         painter.aimShip(at: beam.angle, duration: tuning.aimDuration)
@@ -389,6 +393,21 @@ final class StarshipDirector {
       explode(target, now: now)
     }
     installPendingGaugePulse()
+  }
+
+  /// Distribue les nouveaux astéroïdes. Chaque écran reçoit le même `beginTime` de média.
+  /// Aucun calque de décor n’est déplacé ici : l’animation posée à la création fait le trajet.
+  private func launchScenery(now: TimeInterval) {
+    let framed = framedScreens()
+    let fresh = scenery.launch(screens: framed, now: now, tuning: tuning, rng: &rng)
+    guard !fresh.isEmpty else { return }
+    let mediaOffset = CACurrentMediaTime() - now
+    for element in fresh {
+      let begin = element.start + mediaOffset
+      for screen in framed {
+        painter(at: screen.index)?.addScenery(element, on: screen, mediaBeginTime: begin)
+      }
+    }
   }
 
   /// Sans écran du vaisseau, la frappe ne fait rien. Au-delà de `maxTargets`, la plus ancienne explose.

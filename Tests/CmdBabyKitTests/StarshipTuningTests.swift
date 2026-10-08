@@ -62,3 +62,25 @@ func starshipTuningStandardSpinBacklog() {
 func starshipTuningStandardShipRestsNearTheBottom() {
   #expect(abs(StarshipTuning.standard.shipCenterFromBottom - 0.18) < 1e-6)
 }
+
+@Test("Le décor standard défile lentement, peu d’astéroïdes, les proches plus grands")
+func starshipTuningStandardSceneryIsCalm() {
+  let tuning = StarshipTuning.standard
+  let far = tuning.scenery(for: .farAsteroid)
+  let near = tuning.scenery(for: .nearAsteroid)
+
+  #expect(abs(tuning.sceneryReferenceSpeed - 80) < 1e-6)
+  #expect(abs(far.depth - 4) < 1e-6)
+  #expect(abs(near.depth - 2) < 1e-6)
+  #expect(abs(far.size - 56) < 1e-6)
+  #expect(abs(near.size - 96) < 1e-6)
+  #expect(near.size > far.size)
+  #expect(abs(far.opacity - 0.28) < 1e-6)
+  #expect(abs(near.opacity - 0.5) < 1e-6)
+  #expect(far.opacity < near.opacity)
+  #expect(near.opacity < 1)
+  #expect(far.ceiling == 2)
+  #expect(near.ceiling == 2)
+  #expect(abs(far.meanInterval - 18) < 1e-6)
+  #expect(abs(near.meanInterval - 12) < 1e-6)
+}

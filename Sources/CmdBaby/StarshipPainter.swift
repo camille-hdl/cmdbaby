@@ -305,6 +305,26 @@ final class StarshipPainter {
     }
   }
 
+  /// Astéroïde de décor : une seule animation linéaire de position, du départ à l’arrivée.
+  /// `mediaBeginTime` est l’instant de média commun à tous les écrans. Pas de glyphe, pas de cible.
+  func addScenery(
+    _ element: StarshipSceneryElement,
+    on screen: TerminalScreen,
+    mediaBeginTime: CFTimeInterval
+  ) {
+    guard element.duration > 0, let scene = skyboxFront.superlayer else { return }
+    let layer = sceneryLayer(element, on: screen, mediaBeginTime: mediaBeginTime)
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    if let shipIndex = scene.sublayers?.firstIndex(where: { $0 === shipRoot }) {
+      scene.insertSublayer(layer, at: UInt32(shipIndex))
+    } else {
+      scene.addSublayer(layer)
+    }
+    CATransaction.commit()
+    ephemerals.append((layer: layer, endsAt: element.start + element.duration))
+  }
+
   /// Ajoute `layer` à la scène et le retire automatiquement après `lifetime` secondes.
   func addEphemeral(_ layer: CALayer, lifetime: TimeInterval, now: TimeInterval) {
     skyboxBack.superlayer?.addSublayer(layer)
@@ -347,6 +367,48 @@ final class StarshipPainter {
     gaugeTrack.removeFromSuperlayer()
     skyboxFront.removeFromSuperlayer()
     skyboxBack.removeFromSuperlayer()
+  }
+
+  private func sceneryLayer(
+    _ element: StarshipSceneryElement,
+    on screen: TerminalScreen,
+    mediaBeginTime: CFTimeInterval
+  ) -> CALayer {
+    let image = StarshipSprite.cgImage(named: element.sprite)
+    let size = Self.spriteSize(width: element.size, image: image)
+    let layer = CALayer()
+    layer.bounds = CGRect(origin: .zero, size: size)
+    layer.contents = image
+    layer.contentsGravity = .resizeAspect
+    layer.contentsScale = contentsScale
+    layer.opacity = Float(element.opacity)
+    layer.zPosition = Self.sceneryZPosition(element.layer)
+
+    let start = element.localPoint(at: element.start, on: screen)
+    let arrival = element.localPoint(at: element.start + element.duration, on: screen)
+    let from = CGPoint(x: start.x, y: start.y)
+    let to = CGPoint(x: arrival.x, y: arrival.y)
+    let flight = CABasicAnimation(keyPath: "position")
+    flight.fromValue = from
+    flight.toValue = to
+    flight.beginTime = mediaBeginTime
+    flight.duration = element.duration
+    flight.timingFunction = CAMediaTimingFunction(name: .linear)
+    flight.fillMode = .backwards
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    layer.position = to
+    CATransaction.commit()
+    layer.add(flight, forKey: "flight")
+    return layer
+  }
+
+  /// Entre le ciel (`skyboxFront` à 1) et les cibles (10) puis le vaisseau (20).
+  private static func sceneryZPosition(_ layer: StarshipSceneryLayer) -> CGFloat {
+    switch layer {
+    case .farAsteroid: 2
+    case .nearAsteroid: 4
+    }
   }
 
   private func targetSprite(named name: String, kind: StarshipTargetKind, heading: Double) -> CALayer {

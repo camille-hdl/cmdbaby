@@ -41,9 +41,34 @@ public struct StarshipTuning: Equatable, Sendable {
   public var skyboxInterval: Double = 60
   public var skyboxFadeDuration: Double = 2
 
+  // Décor. Une profondeur plus grande est plus loin : la vitesse en découle.
+  /// Vitesse d’une couche de profondeur 1, en points par seconde.
+  public var sceneryReferenceSpeed: Double = 80
+  public var farAsteroidScenery = StarshipSceneryLayerTuning(
+    depth: 4,
+    size: 56,
+    opacity: 0.28,
+    ceiling: 2,
+    meanInterval: 18
+  )
+  public var nearAsteroidScenery = StarshipSceneryLayerTuning(
+    depth: 2,
+    size: 96,
+    opacity: 0.5,
+    ceiling: 2,
+    meanInterval: 12
+  )
+
   // Jauge
   public var keyRateWindow: Double = 10
   public var keyRateCap: Double = 300
 
   public init() {}
+
+  public func scenery(for layer: StarshipSceneryLayer) -> StarshipSceneryLayerTuning {
+    switch layer {
+    case .farAsteroid: farAsteroidScenery
+    case .nearAsteroid: nearAsteroidScenery
+    }
+  }
 }
