@@ -11,6 +11,8 @@ struct StarshipModePreview: View {
           let ship = shipFraction(in: size)
           ZStack {
             skybox(in: size)
+            sprite("planet-09", x: 0.16, y: 0.20, widthFraction: 0.52, in: size)
+              .opacity(StarshipTuning.standard.scenery(for: .planet).opacity)
             sprite("playerShip1_blue", x: ship.x, y: ship.y, widthFraction: 0.14, in: size)
             sprite(
               "laserBlue01",

@@ -63,6 +63,22 @@ func starshipTuningStandardShipRestsNearTheBottom() {
   #expect(abs(StarshipTuning.standard.shipCenterFromBottom - 0.18) < 1e-6)
 }
 
+@Test("Les planètes standard sont les plus lentes, immenses, rares et un peu atténuées")
+func starshipTuningStandardPlanetsAreDistant() {
+  let tuning = StarshipTuning.standard
+  let planet = tuning.scenery(for: .planet)
+  let far = tuning.scenery(for: .farAsteroid)
+
+  #expect(abs(planet.depth - 6) < 1e-6)
+  #expect(planet.depth > far.depth)
+  #expect(planet.sizeFractionOfTallestScreen == 0.30...0.60)
+  #expect(abs(planet.opacity - 0.7) < 1e-6)
+  #expect(planet.opacity < 1)
+  #expect(planet.ceiling == 2)
+  #expect(abs(planet.meanInterval - 90) < 1e-6)
+  #expect(planet.meanInterval > far.meanInterval)
+}
+
 @Test("Le décor standard défile lentement, peu d’astéroïdes, les proches plus grands")
 func starshipTuningStandardSceneryIsCalm() {
   let tuning = StarshipTuning.standard

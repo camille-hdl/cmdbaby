@@ -6,6 +6,35 @@ private let oneScreen = [
   TerminalScreen(index: 0, x: 0, y: 0, width: 800, height: 600)
 ]
 
+@Test("La planète est plus lente et plus grande que les astéroïdes, et son sprite est une planète")
+func planetsAreSlowerAndLargerThanAsteroids() {
+  var rng = SplitMix64(seed: 1)
+  var scenery = StarshipScenery()
+
+  let launched = scenery.launch(screens: oneScreen, now: 0, tuning: .standard, rng: &rng)
+  let planet = launched.first { $0.layer == .planet }
+  let far = launched.first { $0.layer == .farAsteroid }
+  let near = launched.first { $0.layer == .nearAsteroid }
+
+  #expect(planet != nil)
+  #expect(far != nil)
+  #expect(near != nil)
+  guard let planet, let far, let near else { return }
+
+  #expect(planet.size > near.size)
+  #expect(planet.size > far.size)
+  #expect(planet.size >= 0.30 * 600)
+  #expect(planet.size <= 0.60 * 600)
+  #expect(speed(of: planet) < speed(of: far))
+  #expect(speed(of: planet) < speed(of: near))
+  #expect(planet.opacity < 1)
+  #expect(StarshipCatalog.planets.contains(planet.sprite))
+  #expect(planet.startY > 600)
+  #expect(planet.endY < 0)
+  #expect(planet.duration >= 40)
+  #expect(planet.duration <= 90)
+}
+
 @Test("Un astéroïde part au-dessus de l’union et arrive en dessous")
 func sceneryCrossesFromAboveTheUnionToBelow() {
   var rng = SplitMix64(seed: 1)
@@ -37,7 +66,7 @@ func nearAsteroidsAreFasterAndLargerThanFarOnes() {
   #expect(near.opacity < 1)
   #expect(sprites.contains(far.sprite))
   #expect(sprites.contains(near.sprite))
-  #expect(Set(launched.map(\.layer)) == [.farAsteroid, .nearAsteroid])
+  #expect(Set(launched.map(\.layer)) == [.planet, .farAsteroid, .nearAsteroid])
 }
 
 @Test("Un écran de 800×600 lance un lointain de 40 pt qui met 12,8 s et passe par y = 300")
@@ -50,6 +79,7 @@ func farAsteroidFollowsAWorkedCrossing() {
     depth: 2, size: 40, opacity: 0.4, ceiling: 1, meanInterval: 100
   )
   tuning.nearAsteroidScenery.ceiling = 0
+  tuning.planetScenery.ceiling = 0
 
   let launched = scenery.launch(screens: oneScreen, now: 0, tuning: tuning, rng: &rng)
   #expect(launched.count == 1)
@@ -78,6 +108,7 @@ func sideBySideScreensShareTheVerticalPosition() {
     depth: 2, size: 40, opacity: 0.4, ceiling: 1, meanInterval: 100
   )
   tuning.nearAsteroidScenery.ceiling = 0
+  tuning.planetScenery.ceiling = 0
 
   let launched = scenery.launch(screens: [left, right], now: 0, tuning: tuning, rng: &rng)
   guard let element = launched.first else {
@@ -94,6 +125,176 @@ func sideBySideScreensShareTheVerticalPosition() {
   #expect(abs((onLeft.x - onRight.x) - 800) < 1e-6)
   #expect(element.x >= 0)
   #expect(element.x <= 1600)
+}
+
+@Test("Le plafond des planètes tient : jamais plus de deux en vol, et d’autres partent ensuite")
+func planetCeilingHoldsAtEveryInstant() {
+  var rng = SplitMix64(seed: 11)
+  var scenery = StarshipScenery()
+  var tuning = StarshipTuning()
+  tuning.sceneryReferenceSpeed = 4_000
+  tuning.planetScenery.depth = 1
+  tuning.planetScenery.ceiling = 2
+  tuning.planetScenery.meanInterval = 0.2
+  tuning.planetScenery.sizeFractionOfTallestScreen = 0.20...0.20
+  tuning.farAsteroidScenery.ceiling = 0
+  tuning.nearAsteroidScenery.ceiling = 0
+  let screen = [TerminalScreen(index: 0, x: 0, y: 0, width: 200, height: 100)]
+
+  var launchedCount = 0
+  var now = 0.0
+  var steps = 0
+  while now <= 3 {
+    let launched = scenery.launch(screens: screen, now: now, tuning: tuning, rng: &rng)
+    launchedCount += launched.filter { $0.layer == .planet }.count
+    #expect(scenery.flying(at: now).filter { $0.layer == .planet }.count <= 2)
+    steps += 1
+    now += 0.01
+  }
+
+  #expect(steps == 301)
+  #expect(launchedCount > 2)
+}
+
+@Test("Une planète mesure la moitié de l’écran le plus haut, pas celle de l’union empilée, et met 70 s")
+func planetSizeFollowsTheTallestScreen() {
+  let low = TerminalScreen(index: 0, x: 0, y: 0, width: 500, height: 400)
+  let high = TerminalScreen(index: 1, x: 0, y: 1000, width: 500, height: 200)
+  var rng = SplitMix64(seed: 2)
+  var scenery = StarshipScenery()
+  var tuning = StarshipTuning()
+  tuning.sceneryReferenceSpeed = 100
+  tuning.planetScenery = StarshipSceneryLayerTuning(
+    depth: 5,
+    size: 0,
+    opacity: 0.7,
+    ceiling: 1,
+    meanInterval: 100,
+    sizeFractionOfTallestScreen: 0.50...0.50
+  )
+  tuning.farAsteroidScenery.ceiling = 0
+  tuning.nearAsteroidScenery.ceiling = 0
+
+  let launched = scenery.launch(screens: [low, high], now: 0, tuning: tuning, rng: &rng)
+  #expect(launched.count == 1)
+  guard let planet = launched.first else { return }
+
+  #expect(planet.layer == .planet)
+  #expect(abs(planet.size - 200) < 1e-6)
+  #expect(abs(planet.startY - 1300) < 1e-6)
+  #expect(abs(planet.endY - (-100)) < 1e-6)
+  #expect(abs(planet.duration - 70) < 1e-6)
+  #expect(planet.x >= 0)
+  #expect(planet.x <= 500)
+}
+
+@Test("L’abscisse d’une planète peut chevaucher deux écrans côte à côte")
+func planetAbscissaCanStraddleTwoScreens() {
+  let left = TerminalScreen(index: 0, x: 0, y: 0, width: 800, height: 600)
+  let right = TerminalScreen(index: 1, x: 800, y: 0, width: 800, height: 600)
+  var rng = SplitMix64(seed: 3)
+  var scenery = StarshipScenery()
+  var tuning = StarshipTuning()
+  tuning.sceneryReferenceSpeed = 10_000
+  tuning.planetScenery.depth = 1
+  tuning.planetScenery.ceiling = 1
+  tuning.planetScenery.meanInterval = 1
+  tuning.planetScenery.sizeFractionOfTallestScreen = 0.50...0.50
+  tuning.farAsteroidScenery.ceiling = 0
+  tuning.nearAsteroidScenery.ceiling = 0
+
+  var sawLeft = false
+  var sawRight = false
+  var straddles = false
+  var now = 0.0
+  for _ in 0..<40 {
+    let launched = scenery.launch(screens: [left, right], now: now, tuning: tuning, rng: &rng)
+    guard let planet = launched.first(where: { $0.layer == .planet }) else {
+      #expect(Bool(false))
+      return
+    }
+    #expect(abs(planet.size - 300) < 1e-6)
+    #expect(planet.x >= 0)
+    #expect(planet.x <= 1600)
+    if planet.x < 800 { sawLeft = true }
+    if planet.x > 800 { sawRight = true }
+    if planet.x - 150 < 800, planet.x + 150 > 800 { straddles = true }
+    now += 5
+  }
+
+  #expect(sawLeft)
+  #expect(sawRight)
+  #expect(straddles)
+}
+
+@Test("reset oublie la planète précédente : le même germe rejoue la même apparition")
+func resetForgetsThePreviousPlanet() {
+  var tuning = StarshipTuning()
+  tuning.farAsteroidScenery.ceiling = 0
+  tuning.nearAsteroidScenery.ceiling = 0
+
+  var rng = SplitMix64(seed: 4)
+  var scenery = StarshipScenery()
+  _ = scenery.launch(screens: oneScreen, now: 0, tuning: tuning, rng: &rng)
+  scenery.reset()
+
+  var replayed = SplitMix64(seed: 4)
+  let afterReset = scenery.launch(screens: oneScreen, now: 0, tuning: tuning, rng: &replayed)
+  var freshRng = SplitMix64(seed: 4)
+  var fresh = StarshipScenery()
+  let fromScratch = fresh.launch(screens: oneScreen, now: 0, tuning: tuning, rng: &freshRng)
+
+  #expect(afterReset == fromScratch)
+}
+
+@Test("En cinq minutes, plusieurs planètes passent et jamais plus de deux à la fois")
+func fiveMinutesShowsSeveralPlanets() {
+  var rng = SplitMix64(seed: 8)
+  var scenery = StarshipScenery()
+  let screen = [TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900)]
+
+  var launched = 0
+  var now = 0.0
+  while now <= 300 {
+    let fresh = scenery.launch(screens: screen, now: now, tuning: .standard, rng: &rng)
+    launched += fresh.filter { $0.layer == .planet }.count
+    #expect(scenery.flying(at: now).filter { $0.layer == .planet }.count <= 2)
+    now += 0.5
+  }
+
+  #expect(launched >= 3)
+}
+
+@Test("Deux planètes successives ne sont jamais la même")
+func successivePlanetsDiffer() {
+  var rng = SplitMix64(seed: 1)
+  var scenery = StarshipScenery()
+  var tuning = StarshipTuning()
+  tuning.sceneryReferenceSpeed = 10_000
+  tuning.planetScenery.depth = 1
+  tuning.planetScenery.ceiling = 1
+  tuning.planetScenery.meanInterval = 1
+  tuning.planetScenery.sizeFractionOfTallestScreen = 0.30...0.30
+  tuning.farAsteroidScenery.ceiling = 0
+  tuning.nearAsteroidScenery.ceiling = 0
+
+  var previous: String?
+  var count = 0
+  var now = 0.0
+  for _ in 0..<12 {
+    let launched = scenery.launch(screens: oneScreen, now: now, tuning: tuning, rng: &rng)
+    let planets = launched.filter { $0.layer == .planet }
+    #expect(planets.count == 1)
+    guard let planet = planets.first else { return }
+    if let previous {
+      #expect(planet.sprite != previous)
+    }
+    previous = planet.sprite
+    count += 1
+    now += 10
+  }
+
+  #expect(count == 12)
 }
 
 @Test("Le plafond d’une couche tient à chaque instant, même quand l’intervalle est court")
@@ -153,7 +354,7 @@ func flyingStateMatchesLaunchedElements() {
   var scenery = StarshipScenery()
   let launched = scenery.launch(screens: oneScreen, now: 10, tuning: .standard, rng: &rng)
 
-  #expect(launched.count == 2)
+  #expect(launched.count == 3)
   for element in launched {
     #expect(scenery.flying(at: element.start).contains(element))
     #expect(scenery.flying(at: element.start + element.duration / 2).contains(element))

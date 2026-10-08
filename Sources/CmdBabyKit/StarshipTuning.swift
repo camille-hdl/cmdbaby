@@ -58,6 +58,16 @@ public struct StarshipTuning: Equatable, Sendable {
     ceiling: 2,
     meanInterval: 12
   )
+  /// Profondeur 6 : 80 / 6 pt/s. Le centre d’un écran de 1 000 pt met 75 s.
+  /// La taille est tirée entre 30 et 60 % de l’écran le plus haut. Au plus deux en vol, intervalle moyen de 90 s.
+  public var planetScenery = StarshipSceneryLayerTuning(
+    depth: 6,
+    size: 0,
+    opacity: 0.7,
+    ceiling: 2,
+    meanInterval: 90,
+    sizeFractionOfTallestScreen: 0.30...0.60
+  )
 
   // Jauge
   public var keyRateWindow: Double = 10
@@ -67,6 +77,7 @@ public struct StarshipTuning: Equatable, Sendable {
 
   public func scenery(for layer: StarshipSceneryLayer) -> StarshipSceneryLayerTuning {
     switch layer {
+    case .planet: planetScenery
     case .farAsteroid: farAsteroidScenery
     case .nearAsteroid: nearAsteroidScenery
     }

@@ -305,7 +305,7 @@ final class StarshipPainter {
     }
   }
 
-  /// Astéroïde de décor : une seule animation linéaire de position, du départ à l’arrivée.
+  /// Décor (planète ou astéroïde) : une seule animation linéaire de position, du départ à l’arrivée.
   /// `mediaBeginTime` est l’instant de média commun à tous les écrans. Pas de glyphe, pas de cible.
   func addScenery(
     _ element: StarshipSceneryElement,
@@ -403,10 +403,12 @@ final class StarshipPainter {
     return layer
   }
 
-  /// Entre le ciel (`skyboxFront` à 1) et les cibles (10) puis le vaisseau (20).
+  /// Devant le ciel (`skyboxFront` à 1), derrière les cibles (10) et le vaisseau (20).
+  /// Planètes au fond du décor, puis astéroïdes lointains, puis proches.
   private static func sceneryZPosition(_ layer: StarshipSceneryLayer) -> CGFloat {
     switch layer {
-    case .farAsteroid: 2
+    case .planet: 2
+    case .farAsteroid: 3
     case .nearAsteroid: 4
     }
   }
