@@ -16,7 +16,9 @@ final class StarshipPainter {
   private let shipSpin = CALayer()
   private let shipAim = CALayer()
   private let shipSprite = CALayer()
-  private var ephemerals: [(layer: CALayer, endsAt: TimeInterval)] = []
+  private var ephemerals: [(layer: CALayer, endsAt: TimeInterval, sceneryID: Int?)] = []
+  /// Éléments de décor déjà posés sur cet écran. Un second appel ne les empile pas.
+  private var sceneryIDs: Set<Int> = []
   private var warpToken = 0
   /// Compteur de tours, pour que chaque appui ait sa propre animation.
   private var spinCounter = 0
@@ -319,13 +321,15 @@ final class StarshipPainter {
 
   /// Décor : une seule animation linéaire de position, du départ à l’arrivée.
   /// Un trait est un calque de couleur unie, sans image. `mediaBeginTime` est l’instant de média
-  /// commun à tous les écrans. Pas de glyphe, pas de cible, pas de flash.
+  /// commun à tous les écrans, y compris quand l’élément est rejoué sur un écran branché ensuite.
+  /// Pas de glyphe, pas de cible, pas de flash. Un élément déjà posé n’est pas reposé.
   func addScenery(
     _ element: StarshipSceneryElement,
     on screen: TerminalScreen,
     mediaBeginTime: CFTimeInterval
   ) {
     guard element.duration > 0, let scene = skyboxFront.superlayer else { return }
+    guard sceneryIDs.insert(element.id).inserted else { return }
     let layer = sceneryLayer(element, on: screen, mediaBeginTime: mediaBeginTime)
     CATransaction.begin()
     CATransaction.setDisableActions(true)
@@ -335,13 +339,13 @@ final class StarshipPainter {
       scene.addSublayer(layer)
     }
     CATransaction.commit()
-    ephemerals.append((layer: layer, endsAt: element.start + element.duration))
+    ephemerals.append((layer: layer, endsAt: element.start + element.duration, sceneryID: element.id))
   }
 
   /// Ajoute `layer` à la scène et le retire automatiquement après `lifetime` secondes.
   func addEphemeral(_ layer: CALayer, lifetime: TimeInterval, now: TimeInterval) {
     skyboxBack.superlayer?.addSublayer(layer)
-    ephemerals.append((layer: layer, endsAt: now + lifetime))
+    ephemerals.append((layer: layer, endsAt: now + lifetime, sceneryID: nil))
   }
 
   /// Retire les éphémères expirés et pose le ciel fondu sur le calque du dessous.
@@ -352,6 +356,9 @@ final class StarshipPainter {
     ephemerals.removeAll { item in
       guard now >= item.endsAt else { return false }
       item.layer.removeFromSuperlayer()
+      if let sceneryID = item.sceneryID {
+        sceneryIDs.remove(sceneryID)
+      }
       return true
     }
   }
@@ -373,6 +380,7 @@ final class StarshipPainter {
       item.layer.removeFromSuperlayer()
     }
     ephemerals.removeAll(keepingCapacity: false)
+    sceneryIDs.removeAll(keepingCapacity: false)
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     skyboxBack.contents = nil

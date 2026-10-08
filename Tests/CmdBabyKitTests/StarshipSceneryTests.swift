@@ -168,6 +168,46 @@ func sideBySideScreensShareTheVerticalPosition() {
   #expect(element.x <= 1600)
 }
 
+@Test("Un élément en vol, rejoué sur un écran branché ensuite, reste à la même hauteur")
+func flyingElementReplayedOnAPluggedScreenKeepsTheSameHeight() {
+  let existing = TerminalScreen(index: 0, x: 0, y: 0, width: 800, height: 600)
+  // Plus haut : si l’union était recalculée, le départ passerait de 620 à 1 220.
+  let plugged = TerminalScreen(index: 1, x: 800, y: 0, width: 800, height: 1_200)
+  var rng = SplitMix64(seed: 7)
+  var scenery = StarshipScenery()
+  var tuning = StarshipTuning()
+  tuning.sceneryReferenceSpeed = 100
+  tuning.farAsteroidScenery = StarshipSceneryLayerTuning(
+    depth: 2, size: 40, opacity: 0.4, ceiling: 1, meanInterval: 100
+  )
+  tuning.nearAsteroidScenery.ceiling = 0
+  tuning.planetScenery.ceiling = 0
+  tuning.speedStreakScenery.ceiling = 0
+
+  let launched = scenery.launch(screens: [existing], now: 0, tuning: tuning, rng: &rng)
+  #expect(launched.count == 1)
+  guard let element = launched.first else { return }
+
+  // 40 pt : départ 620, arrivée −20. 640 pt à 50 pt/s → 12,8 s. À mi-parcours, y = 300.
+  #expect(abs(element.startY - 620) < 1e-6)
+  #expect(abs(element.endY - (-20)) < 1e-6)
+  #expect(abs(element.duration - 12.8) < 1e-6)
+  let onExisting = element.localPoint(at: 6.4, on: existing)
+  #expect(abs(onExisting.y - 300) < 1e-6)
+
+  let replay = scenery.launch(screens: [existing, plugged], now: 6.4, tuning: tuning, rng: &rng)
+  let flying = scenery.flying(at: 6.4)
+  #expect(replay.isEmpty)
+  #expect(flying == [element])
+  guard let still = flying.first else { return }
+
+  let onPlugged = still.localPoint(at: 6.4, on: plugged)
+  #expect(abs(onPlugged.y - 300) < 1e-6)
+  #expect(abs(onPlugged.y - onExisting.y) < 1e-6)
+  #expect(abs((onExisting.x - onPlugged.x) - 800) < 1e-6)
+  #expect(abs(still.ordinate(at: 6.4) - 300) < 1e-6)
+}
+
 @Test("Le plafond des planètes tient : jamais plus de deux en vol, et d’autres partent ensuite")
 func planetCeilingHoldsAtEveryInstant() {
   var rng = SplitMix64(seed: 11)

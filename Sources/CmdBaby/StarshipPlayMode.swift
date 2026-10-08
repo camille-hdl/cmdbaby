@@ -60,6 +60,9 @@ final class StarshipDirector {
   private var nextTargetID = 0
   /// Décor commun. Le tick ne fait que demander les nouveaux éléments.
   private var scenery = StarshipScenery()
+  /// `beginTime` de média de chaque élément, figé à son départ.
+  /// Un écran branché ensuite reprend l’animation là où en sont les autres.
+  private var sceneryMediaBegin: [Int: CFTimeInterval] = [:]
 
   init(tuning: StarshipTuning = .standard) {
     self.tuning = tuning
@@ -85,6 +88,7 @@ final class StarshipDirector {
     if screens[slot].frame == frame { return }
     screens[slot].frame = frame
     publishSkybox()
+    presentFlyingScenery(now: ProcessInfo.processInfo.systemUptime)
     chooseHomeScreenIfReady()
   }
 
@@ -215,6 +219,7 @@ final class StarshipDirector {
     targets.removeAll(keepingCapacity: false)
     nextTargetID = 0
     scenery.reset()
+    sceneryMediaBegin.removeAll(keepingCapacity: false)
   }
 
   private func framedScreens() -> [TerminalScreen] {
@@ -451,8 +456,10 @@ final class StarshipDirector {
     return screen.x + center.x
   }
 
-  /// Distribue le décor, traits compris. Chaque écran reçoit le même `beginTime` de média.
-  /// Aucun calque de décor n’est déplacé ici : l’animation posée à la création fait le trajet.
+  /// Distribue le décor, traits compris. Chaque écran reçoit le même `beginTime` de média,
+  /// y compris un écran branché pendant qu’un élément est déjà en vol.
+  /// Aucun calque déjà posé n’est déplacé : l’animation fait le trajet, et les coordonnées
+  /// d’un élément en vol ne sont pas recalculées.
   private func launchScenery(now: TimeInterval) {
     let framed = framedScreens()
     let fresh = scenery.launch(
@@ -462,14 +469,31 @@ final class StarshipDirector {
       shipAbscissa: shipAbscissa(in: framed),
       rng: &rng
     )
-    guard !fresh.isEmpty else { return }
-    let mediaOffset = CACurrentMediaTime() - now
-    for element in fresh {
-      let begin = element.start + mediaOffset
+    if !fresh.isEmpty {
+      let mediaOffset = CACurrentMediaTime() - now
+      for element in fresh {
+        sceneryMediaBegin[element.id] = element.start + mediaOffset
+      }
+    }
+    presentFlyingScenery(now: now)
+  }
+
+  /// Pose les éléments en vol sur les écrans qui ne les ont pas encore.
+  /// Le `beginTime` est celui du départ, donc l’animation reprend en phase.
+  /// La dérive du ciel, elle, est reprise par `publishSkybox`.
+  private func presentFlyingScenery(now: TimeInterval) {
+    let flying = scenery.flying(at: now)
+    var liveBegins: [Int: CFTimeInterval] = [:]
+    liveBegins.reserveCapacity(flying.count)
+    let framed = framedScreens()
+    for element in flying {
+      guard let begin = sceneryMediaBegin[element.id] else { continue }
+      liveBegins[element.id] = begin
       for screen in framed {
         painter(at: screen.index)?.addScenery(element, on: screen, mediaBeginTime: begin)
       }
     }
+    sceneryMediaBegin = liveBegins
   }
 
   /// Sans écran du vaisseau, la frappe ne fait rien. Au-delà de `maxTargets`, la plus ancienne explose.

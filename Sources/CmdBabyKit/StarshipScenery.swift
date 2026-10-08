@@ -81,6 +81,8 @@ public struct StarshipScenery: Equatable, Sendable {
   public init() {}
 
   /// Nouveaux éléments à lancer à `now`. Au plus un par couche, sous le plafond.
+  /// Ceux déjà en vol gardent les coordonnées de l’union où ils sont nés, jusqu’à leur sortie.
+  /// Brancher ou débrancher un écran ne les recalcule pas : les écrans déjà là ne sautent pas.
   public mutating func launch<R: RandomNumberGenerator>(
     screens: [TerminalScreen],
     now: TimeInterval,
@@ -103,6 +105,8 @@ public struct StarshipScenery: Equatable, Sendable {
   }
 
   /// Éléments dont la traversée contient `time`, départ inclus, arrivée exclue.
+  /// Leurs coordonnées sont celles de l’union d’origine. `localPoint` les rejoue sur un écran
+  /// branché ensuite, à la même hauteur que sur un écran déjà là.
   public func flying(at time: TimeInterval) -> [StarshipSceneryElement] {
     elements.filter { time >= $0.start && time < $0.start + $0.duration }
   }
