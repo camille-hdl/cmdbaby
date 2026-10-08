@@ -78,7 +78,8 @@ Palette ft-paper (jour) et ft-paper-night (nuit), de camillehdl.dev/palette. Tou
 
 ### Tertiary
 
-- **Teintes douces** (`claret-soft`, `teal-soft`, `velvet-soft`, `jade-soft`, `mandarin-soft`) : fonds de panneaux et surligneurs. Leurs teintes pleines (`teal`, `velvet`, `jade`, `mandarin`, `oxford`) existent dans la palette ; seul `velvet` sert, pour barrer les raccourcis.
+- **Teintes douces** (`claret-soft`, `teal-soft`, `velvet-soft`, `jade-soft`, `mandarin-soft`) : fonds de panneaux et surligneurs. Leurs teintes pleines (`teal`, `velvet`, `jade`, `mandarin`, `oxford`) existent dans la palette ; `velvet` barre les raccourcis, et les teintes pleines entrent dans les surligneurs.
+- **Surligneurs** (`--marker-claret`, `--marker-teal`, `--marker-velvet`, `--marker-mandarin`, `--marker-jade`) : la teinte douce, mélangée en oklab à 30 % de sa teinte pleine là où la douce ne se verrait pas. Seul `--marker-teal` est mélangé, car il se pose sur un panneau `teal-soft`, où `teal-soft` serait invisible (1.00:1).
 
 ### Named Rules
 
@@ -117,7 +118,7 @@ Pilules pour le bouton et le lien de langue, panneaux à 2.5rem, captures à 16p
 ## Components
 
 - **Bouton de téléchargement** : pilule `claret`, texte `on-claret` 600, 2rem sur 1rem de marge interne. Toujours suivi des deux mentions (prix et systèmes, cask Homebrew).
-- **Surligneur** (`.marker`) : dégradé de 0.55em de haut sous le mot. Sa teinte vient d’une classe `marker-<teinte>` posée sur la section ; sur un panneau `teal-soft`, `marker-teal` mélange 30 % de `teal` pour rester visible.
+- **Surligneur** (`.marker`) : dégradé de 0.55em de haut sous le mot. Sa teinte vient d’une classe `marker-<teinte>` posée sur la section, qui lit le rôle `--marker-<teinte>` décrit dans Colors. Sans classe, le surligneur est mandarin.
 - **Touche** (`kbd`) : fond `raised`, bordure `rule` épaissie en bas, texte `muted` barré en `velvet`.
 - **Panneau** : fond doux, coins de 2.5rem, sans bordure ni ombre.
 

@@ -100,14 +100,27 @@
   }
 }
 
+@layer base {
+  /* Surligneurs : la teinte douce de la section, plus 30 % de sa teinte
+     pleine là où la douce ne se verrait pas, comme sur le panneau
+     teal-soft. */
+  :root {
+    --marker-claret: var(--color-claret-soft);
+    --marker-velvet: var(--color-velvet-soft);
+    --marker-mandarin: var(--color-mandarin-soft);
+    --marker-jade: var(--color-jade-soft);
+    --marker-teal: color-mix(in oklab, var(--color-teal) 30%, var(--color-teal-soft));
+  }
+}
+
 @layer components {
   /* Surligneur à la main, pour un mot par titre. */
   .marker {
     background-image: linear-gradient(
       100deg,
       transparent 0.5%,
-      var(--marker, var(--color-mandarin-soft)) 2%,
-      var(--marker, var(--color-mandarin-soft)) 97%,
+      var(--marker, var(--marker-mandarin)) 2%,
+      var(--marker, var(--marker-mandarin)) 97%,
       transparent 99%
     );
     background-size: 100% 0.55em;
@@ -118,24 +131,22 @@
   /* Teinte du surligneur par section. Des classes et non un attribut style :
      la CSP (style-src 'self') bloque les styles en ligne. */
   .marker-claret {
-    --marker: var(--color-claret-soft);
+    --marker: var(--marker-claret);
   }
 
   .marker-velvet {
-    --marker: var(--color-velvet-soft);
+    --marker: var(--marker-velvet);
   }
 
   .marker-mandarin {
-    --marker: var(--color-mandarin-soft);
+    --marker: var(--marker-mandarin);
   }
 
   .marker-jade {
-    --marker: var(--color-jade-soft);
+    --marker: var(--marker-jade);
   }
 
-  /* Le titre de cette section est posé sur un panneau teal-soft : la teinte
-     douce y serait invisible, on la fonce avec un peu de teal. */
   .marker-teal {
-    --marker: color-mix(in oklab, var(--color-teal) 30%, var(--color-teal-soft));
+    --marker: var(--marker-teal);
   }
 }
