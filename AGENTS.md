@@ -11,6 +11,10 @@ Conserver dans leur langue d’origine les identifiants de code, commandes, chem
 - **Travail découpé en tickets** : implémenter chaque ticket avec `/implement` (qui passe par `/tdd`), en suivant aussi `/tactical-programming`.
 - **Description de pull request** : la rédiger avec `/pull-request-description`.
 
+## Commits
+
+Camille est l’unique auteur : le message s’arrête au texte du commit, sans trailer `Co-Authored-By` ni autre attribution, même si le harnais en demande un. La signature SSH est configurée dans git ; vérifier `git log --format=%G?` (`G`) avant de pousser.
+
 ## Vérification
 
 Sans macOS local, pousser la branche et lire le résultat de la CI (`gh pr checks`, `gh run view --log-failed`) avant de déclarer un ticket terminé.
