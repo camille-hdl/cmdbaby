@@ -11,6 +11,8 @@ public struct StarshipTuning: Equatable, Sendable {
   /// Avant cela, le vaisseau reste sur le plus grand, sans warp.
   public var screenChangeDelay: Double = 3
   public var spinDuration: Double = 0.6
+  /// Secondes de tours en attente au plus : trois tours. Les appuis au-delà sont ignorés.
+  public var spinBacklog: Double = 1.8
   public var aimDuration: Double = 0.1
 
   // Cibles

@@ -178,9 +178,10 @@ final class StarshipPainter {
 
   /// Un tour complet sur `shipSpin`, sens horaire. Les tours s’enchaînent :
   /// un nouvel appui allonge la toupie, il ne la remplace pas et ne l’accélère pas.
-  func spin(duration: Double) {
+  /// Au-delà de `maxBacklog` secondes de tours en attente, l’appui est ignoré.
+  func spin(duration: Double, maxBacklog: Double) {
     let now = shipSpin.convertTime(CACurrentMediaTime(), from: nil)
-    let start = spinQueue.addTurn(now: now, duration: duration)
+    guard let start = spinQueue.addTurn(now: now, duration: duration, maxBacklog: maxBacklog) else { return }
     let turn = CABasicAnimation(keyPath: "transform.rotation.z")
     turn.fromValue = 0
     turn.toValue = -2 * Double.pi

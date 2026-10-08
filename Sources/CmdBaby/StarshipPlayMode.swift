@@ -118,7 +118,7 @@ final class StarshipDirector {
     switch action {
     case .spin:
       guard let homeScreenIndex else { return }
-      painter(at: homeScreenIndex)?.spin(duration: tuning.spinDuration)
+      painter(at: homeScreenIndex)?.spin(duration: tuning.spinDuration, maxBacklog: tuning.spinBacklog)
     case .other:
       spawnTarget(label: StarshipGlyph.label(for: event.characters))
     case .ignored:

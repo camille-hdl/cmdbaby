@@ -52,3 +52,8 @@ func starshipTuningStandardGauge() {
   #expect(abs(tuning.keyRateWindow - 10) < 1e-6)
   #expect(abs(tuning.keyRateCap - 300) < 1e-6)
 }
+
+@Test("Le vaisseau garde au plus trois tours en attente")
+func starshipTuningStandardSpinBacklog() {
+  #expect(abs(StarshipTuning.standard.spinBacklog - 1.8) < 1e-6)
+}
