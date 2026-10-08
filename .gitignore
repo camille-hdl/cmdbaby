@@ -59,3 +59,9 @@ dist/
 notarization-*.json
 notarytool-*.log
 docs/assets/brand/out/
+# Impeccable : le binaire du moteur se télécharge par machine (version dans
+# scripts/VERSION), et l’état de session reste local.
+.claude/skills/impeccable/scripts/bin/
+.agents/skills/impeccable/scripts/bin/
+.impeccable/*
+!.impeccable/config.json
