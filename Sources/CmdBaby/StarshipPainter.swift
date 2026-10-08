@@ -40,7 +40,6 @@ final class StarshipPainter {
 
   private struct TargetView {
     let root: CALayer
-    let label: String?
   }
 
   /// Aller de la dérive. `mediaBeginTime` est l’instant de média commun à tous les écrans.
@@ -84,6 +83,7 @@ final class StarshipPainter {
     skyboxFront.opacity = 0
     installShip(scale: scale)
     installGauge()
+    warmFireSprites()
   }
 
   func setBounds(_ bounds: CGRect, scale: CGFloat) {
@@ -302,7 +302,7 @@ final class StarshipPainter {
     if kind == .meteor {
       spriteLayer.add(Self.meteorSpin(), forKey: "spin")
     }
-    targetsByID[id] = TargetView(root: root, label: label)
+    targetsByID[id] = TargetView(root: root)
   }
 
   func moveTarget(id: Int, to point: CGPoint) {
@@ -310,21 +310,24 @@ final class StarshipPainter {
   }
 
   /// Retire la cible et joue l’explosion là où elle se trouvait.
+  /// Le glyphe déjà dessiné grossit : on ne le redessine pas au moment de l’impact.
   func explodeTarget(id: Int, kind: StarshipTargetKind, now: TimeInterval) {
     guard let flying = targetsByID.removeValue(forKey: id) else { return }
     let point = flying.root.position
+    let glyph = flying.root.sublayers?.first { $0 is CATextLayer }
+    glyph?.removeFromSuperlayer()
     flying.root.removeFromSuperlayer()
     addEphemeral(burst(at: point), lifetime: tuning.explosionDuration, now: now)
     for _ in 0..<5 {
       guard let debris = debris(kind: kind, from: point) else { continue }
       addEphemeral(debris, lifetime: Self.debrisLifetime, now: now)
     }
-    if let label = flying.label {
-      let pop = glyphLayer(label, at: point)
-      pop.zPosition = 31
-      pop.opacity = 0
-      pop.add(Self.glyphPop(), forKey: "pop")
-      addEphemeral(pop, lifetime: Self.glyphPopDuration, now: now)
+    if let glyph {
+      glyph.position = point
+      glyph.zPosition = 31
+      glyph.opacity = 0
+      glyph.add(Self.glyphPop(), forKey: "pop")
+      addEphemeral(glyph, lifetime: Self.glyphPopDuration, now: now)
     }
   }
 
@@ -499,9 +502,9 @@ final class StarshipPainter {
     layer.zPosition = 30
     layer.contentsGravity = .resizeAspect
     layer.contentsScale = contentsScale
-    layer.setValue(Double.random(in: 0..<(2 * .pi)), forKeyPath: "transform.rotation.z")
     layer.opacity = 0
-    layer.add(Self.burstAnimation(duration: tuning.explosionDuration), forKey: "burst")
+    let angle = Double.random(in: 0..<(2 * .pi))
+    layer.add(Self.burstAnimation(duration: tuning.explosionDuration, angle: angle), forKey: "burst")
     return layer
   }
 
@@ -538,10 +541,13 @@ final class StarshipPainter {
     return spin
   }
 
-  private static func burstAnimation(duration: Double) -> CAAnimationGroup {
-    let scale = CABasicAnimation(keyPath: "transform.scale")
-    scale.fromValue = 0.3
-    scale.toValue = 1.3
+  /// Rotation et grossissement dans un seul `transform` : deux keypaths
+  /// (`rotation` puis `scale`) sortent du chemin GPU au moment de l’impact.
+  private static func burstAnimation(duration: Double, angle: Double) -> CAAnimationGroup {
+    let rotation = CATransform3DMakeRotation(angle, 0, 0, 1)
+    let scale = CABasicAnimation(keyPath: "transform")
+    scale.fromValue = CATransform3DScale(rotation, 0.3, 0.3, 1)
+    scale.toValue = CATransform3DScale(rotation, 1.3, 1.3, 1)
     let fade = CABasicAnimation(keyPath: "opacity")
     fade.fromValue = 1
     fade.toValue = 0
@@ -603,11 +609,17 @@ final class StarshipPainter {
     beam.contentsGravity = .resize
     beam.contentsScale = contentsScale
     beam.anchorPoint = CGPoint(x: 0.5, y: 0)
-    beam.bounds = CGRect(x: 0, y: 0, width: Self.boltSize.width, height: hypot(offsetX, offsetY))
+    // Le sprite reste 14 × 86. L’étirer dans les bornes du calque, à l’échelle de l’écran,
+    // recopiait l’image au moment du tir. Le scale Y le fait sur le GPU.
+    beam.bounds = CGRect(origin: .zero, size: Self.boltSize)
     beam.position = start
     beam.zPosition = 15
     beam.opacity = 0
-    beam.setValue(angle - .pi / 2, forKeyPath: "transform.rotation.z")
+    let length = max(hypot(offsetX, offsetY), 1)
+    let scale = CATransform3DMakeScale(1, length / Double(Self.boltSize.height), 1)
+    let rotation = CATransform3DMakeRotation(angle - .pi / 2, 0, 0, 1)
+    // scale d’abord (axe du sprite), puis rotation : le trait suit la visée.
+    beam.transform = CATransform3DConcat(rotation, scale)
 
     let flash = CAKeyframeAnimation(keyPath: "opacity")
     flash.values = [1, 1, 0]
@@ -641,10 +653,8 @@ final class StarshipPainter {
     flight.duration = duration
     flight.fillMode = .backwards
     flight.timingFunction = CAMediaTimingFunction(name: .linear)
-    CATransaction.begin()
-    CATransaction.setDisableActions(true)
+    // Pas encore dans la scène : la position ne s’anime pas toute seule.
     bolt.position = end
-    CATransaction.commit()
     bolt.add(flight, forKey: "flight")
     return bolt
   }
@@ -722,7 +732,9 @@ final class StarshipPainter {
     layer.zPosition = zPosition
     layer.contentsGravity = .resize
     layer.magnificationFilter = .linear
-    layer.minificationFilter = .trilinear
+    // Le ciel est agrandi. Le trilinéaire ne sert pas : il prépare les mipmaps
+    // de l’image 4096 au premier composite.
+    layer.minificationFilter = .linear
   }
 
   private func settleSkyboxFade() {
@@ -731,6 +743,15 @@ final class StarshipPainter {
     skyboxFront.contents = nil
     skyboxFront.opacity = 0
     skyboxFadeEndsAt = nil
+  }
+
+  /// Décode le tir, l’explosion et la fonte avant le premier impact.
+  /// Sinon le premier coup paie ce travail pendant que la scène se compose.
+  private func warmFireSprites() {
+    for name in [StarshipCatalog.beamSprite, StarshipCatalog.explosionSprite, "star1"] + StarshipCatalog.debrisSprites {
+      _ = StarshipSprite.cgImage(named: name)
+    }
+    _ = Self.roundedBlackFont(size: CGFloat(tuning.glyphFontSize))
   }
 
   private func installShip(scale: CGFloat) {
