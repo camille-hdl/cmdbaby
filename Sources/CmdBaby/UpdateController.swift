@@ -4,12 +4,13 @@ import Combine
 import Sparkle
 
 /// Mises à jour par Sparkle, avec la fenêtre standard. Rien ne s’affiche ni ne s’installe
-/// pendant une session : la vérification est refusée, puis relancée à la fin de la session.
+/// pendant une session : la vérification, ou la mise à jour trouvée par une vérification
+/// commencée avant la session, est refusée, puis recherchée de nouveau à la fin de la session.
 @MainActor
 final class UpdateController: NSObject, ObservableObject {
   private var controller: SPUStandardUpdaterController?
   private let isSessionActive: () -> Bool
-  private var checkDeferred = false
+  private var gate = UpdateSessionGate()
   private var sessionObserver: AnyCancellable?
 
   /// Démarre Sparkle seulement dans un `.app` : `swift run` et les tests n’ont pas d’Info.plist.
@@ -48,28 +49,36 @@ final class UpdateController: NSObject, ObservableObject {
   }
 
   private func sessionDidEnd() {
-    guard checkDeferred, let updater = controller?.updater else { return }
-    checkDeferred = false
+    guard gate.sessionDidEnd(), let updater = controller?.updater else { return }
     updater.checkForUpdatesInBackground()
   }
 
-  fileprivate func mayPerformCheck() -> Bool {
-    guard UpdatePresentationPolicy.allowsPresentation(sessionActive: isSessionActive()) else {
-      checkDeferred = true
-      return false
-    }
-    return true
+  fileprivate func mayProceed() -> Bool {
+    gate.allows(sessionActive: isSessionActive())
   }
 }
 
 extension UpdateController: SPUUpdaterDelegate {
   nonisolated func updater(_ updater: SPUUpdater, mayPerform updateCheck: SPUUpdateCheck) throws {
-    let allowed = MainActor.assumeIsolated { self.mayPerformCheck() }
+    try proceedOutsideSession()
+  }
+
+  /// Une session a pu commencer pendant que l’appcast arrivait.
+  nonisolated func updater(
+    _ updater: SPUUpdater,
+    shouldProceedWithUpdate updateItem: SUAppcastItem,
+    updateCheck: SPUUpdateCheck
+  ) throws {
+    try proceedOutsideSession()
+  }
+
+  private nonisolated func proceedOutsideSession() throws {
+    let allowed = MainActor.assumeIsolated { self.mayProceed() }
     guard allowed else {
       throw NSError(
         domain: "\(AppIdentity.bundleIdentifier).updates",
         code: 1,
-        userInfo: [NSLocalizedDescriptionKey: "Vérification reportée à la fin de la session."]
+        userInfo: [NSLocalizedDescriptionKey: "Mise à jour reportée à la fin de la session."]
       )
     }
   }
