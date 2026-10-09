@@ -18,14 +18,18 @@ protocol PlayMode: AnyObject {
 @MainActor
 enum PlayModeRegistry {
   /// Instancie le mode. L’autre `switch` sur les modes est `preview`.
-  static func make(_ id: KioskPlayModeID) -> any PlayMode {
+  /// `timeLimitMinutes` cale l’aller unique du ciel Vaisseau ; les autres modes l’ignorent.
+  static func make(
+    _ id: KioskPlayModeID,
+    timeLimitMinutes: Int = AdultExitSettings.defaultTimeLimitMinutes
+  ) -> any PlayMode {
     switch id {
     case .ocean:
       OceanPlayMode()
     case .terminal:
       TerminalPlayMode()
     case .starship:
-      StarshipPlayMode()
+      StarshipPlayMode(timeLimitMinutes: timeLimitMinutes)
     }
   }
 

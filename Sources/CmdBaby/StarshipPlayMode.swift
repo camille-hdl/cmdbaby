@@ -46,6 +46,9 @@ final class StarshipDirector {
   private var skyboxTimer: Timer?
   /// Image précédente, à sortir du cache une fois le fondu terminé.
   private var skyboxToForget: (name: String, at: TimeInterval)?
+  /// Instant de média où la dérive du ciel est partie. Le même pour chaque écran,
+  /// y compris un écran ajouté ensuite. `nil` tant qu’aucun ciel n’est affiché.
+  private var skyboxDriftMediaBegin: CFTimeInterval?
   /// Le premier affichage attend la fin du tour : les écrans s’enregistrent un par un.
   private var initialChoiceScheduled = false
   private var placementGeneration = 0
@@ -55,6 +58,11 @@ final class StarshipDirector {
   /// Cibles en vol, dans l’ordre d’apparition.
   private var targets: [LiveTarget] = []
   private var nextTargetID = 0
+  /// Décor commun. Le tick ne fait que demander les nouveaux éléments.
+  private var scenery = StarshipScenery()
+  /// `beginTime` de média de chaque élément, figé à son départ.
+  /// Un écran branché ensuite reprend l’animation là où en sont les autres.
+  private var sceneryMediaBegin: [Int: CFTimeInterval] = [:]
 
   init(tuning: StarshipTuning = .standard) {
     self.tuning = tuning
@@ -80,6 +88,7 @@ final class StarshipDirector {
     if screens[slot].frame == frame { return }
     screens[slot].frame = frame
     publishSkybox()
+    presentFlyingScenery(now: ProcessInfo.processInfo.systemUptime)
     chooseHomeScreenIfReady()
   }
 
@@ -175,7 +184,12 @@ final class StarshipDirector {
     guard let homeScreenIndex,
       let frame = screens.first(where: { $0.index == homeScreenIndex })?.frame
     else { return nil }
-    return CGPoint(x: frame.width / 2, y: frame.height / 2)
+    let center = StarshipShip.center(
+      width: Double(frame.width),
+      height: Double(frame.height),
+      fractionFromBottom: tuning.shipCenterFromBottom
+    )
+    return CGPoint(x: center.x, y: center.y)
   }
 
   func reset() {
@@ -194,6 +208,7 @@ final class StarshipDirector {
     screens.removeAll(keepingCapacity: false)
     skybox = nil
     skyboxName = nil
+    skyboxDriftMediaBegin = nil
     rng = SystemRandomNumberGenerator()
     lastPointerScreenIndex = nil
     homeScreenIndex = nil
@@ -203,6 +218,8 @@ final class StarshipDirector {
     lastTick = 0
     targets.removeAll(keepingCapacity: false)
     nextTargetID = 0
+    scenery.reset()
+    sceneryMediaBegin.removeAll(keepingCapacity: false)
   }
 
   private func framedScreens() -> [TerminalScreen] {
@@ -221,12 +238,54 @@ final class StarshipDirector {
   private func publishSkybox() {
     guard let skybox else { return }
     let framed = framedScreens()
+    var begin: CFTimeInterval?
     for slot in screens {
-      guard slot.frame != nil,
-        let rect = StarshipSkyboxFraming.contentsRect(forScreen: slot.index, among: framed)
+      guard slot.frame != nil, let drift = skyboxDrift(forScreen: slot.index, among: framed)
       else { continue }
-      slot.painter.showSkybox(image: skybox, contentsRect: rect)
+      let mediaBegin: CFTimeInterval
+      if let begin {
+        mediaBegin = begin
+      } else {
+        mediaBegin = skyboxDriftBeginTime()
+        begin = mediaBegin
+      }
+      slot.painter.showSkybox(
+        image: skybox,
+        driftFrom: drift.from,
+        driftTo: drift.to,
+        driftDuration: tuning.skyboxDriftDuration,
+        mediaBeginTime: mediaBegin
+      )
     }
+  }
+
+  /// Cadre à la dérive 0 et à la dérive 1. L’animation du painter fait le trajet.
+  private func skyboxDrift(
+    forScreen index: Int,
+    among framed: [TerminalScreen]
+  ) -> (from: StarshipUnitRect, to: StarshipUnitRect)? {
+    guard
+      let from = StarshipSkyboxFraming.contentsRect(
+        forScreen: index,
+        among: framed,
+        drift: 0,
+        verticalMargin: tuning.skyboxDriftMargin
+      ),
+      let to = StarshipSkyboxFraming.contentsRect(
+        forScreen: index,
+        among: framed,
+        drift: 1,
+        verticalMargin: tuning.skyboxDriftMargin
+      )
+    else { return nil }
+    return (from, to)
+  }
+
+  private func skyboxDriftBeginTime() -> CFTimeInterval {
+    if let skyboxDriftMediaBegin { return skyboxDriftMediaBegin }
+    let begin = CACurrentMediaTime()
+    skyboxDriftMediaBegin = begin
+    return begin
   }
 
   /// Copie l’idée de `TerminalDirector.choosePromptScreenIfReady`.
@@ -331,14 +390,11 @@ final class StarshipDirector {
     guard let skyboxName else { return }
     let name = StarshipSkyboxRotation.next(after: skyboxName, using: &rng)
     guard let image = StarshipSprite.cgImage(named: name) else { return }
-    let framed = framedScreens()
     let duration = tuning.skyboxFadeDuration
     CATransaction.begin()
     for slot in screens {
-      guard slot.frame != nil,
-        let rect = StarshipSkyboxFraming.contentsRect(forScreen: slot.index, among: framed)
-      else { continue }
-      slot.painter.crossfadeSkybox(to: image, contentsRect: rect, duration: duration)
+      guard slot.frame != nil else { continue }
+      slot.painter.crossfadeSkybox(to: image, duration: duration)
     }
     CATransaction.commit()
     let previousName = skyboxName
@@ -368,6 +424,7 @@ final class StarshipDirector {
       slot.painter.tick(now: now)
     }
     CATransaction.commit()
+    launchScenery(now: now)
     if let homeScreenIndex, let painter = painter(at: homeScreenIndex) {
       for beam in step.beams {
         painter.aimShip(at: beam.angle, duration: tuning.aimDuration)
@@ -386,6 +443,62 @@ final class StarshipDirector {
     installPendingGaugePulse()
   }
 
+  /// Abscisse du vaisseau dans l’union des écrans. `nil` tant qu’il n’a pas d’écran.
+  private func shipAbscissa(in framed: [TerminalScreen]) -> Double? {
+    guard let homeScreenIndex,
+      let screen = framed.first(where: { $0.index == homeScreenIndex })
+    else { return nil }
+    let center = StarshipShip.center(
+      width: screen.width,
+      height: screen.height,
+      fractionFromBottom: tuning.shipCenterFromBottom
+    )
+    return screen.x + center.x
+  }
+
+  /// Distribue le décor, traits compris. Chaque écran reçoit le même `beginTime` de média,
+  /// y compris un écran branché pendant qu’un élément est déjà en vol.
+  /// Un calque déjà posé reste en place : l’animation fait le trajet.
+  /// Si l’origine ou la taille de cet écran change, ses calques de décor sont retirés
+  /// et rejoués ici, avec le même `beginTime`. Les autres écrans ne bougent pas.
+  /// Les coordonnées dans l’union ne sont pas recalculées.
+  private func launchScenery(now: TimeInterval) {
+    let framed = framedScreens()
+    let fresh = scenery.launch(
+      screens: framed,
+      now: now,
+      tuning: tuning,
+      shipAbscissa: shipAbscissa(in: framed),
+      rng: &rng
+    )
+    if !fresh.isEmpty {
+      let mediaOffset = CACurrentMediaTime() - now
+      for element in fresh {
+        sceneryMediaBegin[element.id] = element.start + mediaOffset
+      }
+    }
+    presentFlyingScenery(now: now)
+  }
+
+  /// Pose les éléments en vol sur les écrans qui ne les ont pas encore,
+  /// et sur un écran dont l’origine ou la taille vient de changer.
+  /// Le `beginTime` est celui du départ, donc l’animation reprend en phase.
+  /// La dérive du ciel, elle, est reprise par `publishSkybox`.
+  private func presentFlyingScenery(now: TimeInterval) {
+    let flying = scenery.flying(at: now)
+    var liveBegins: [Int: CFTimeInterval] = [:]
+    liveBegins.reserveCapacity(flying.count)
+    let framed = framedScreens()
+    for element in flying {
+      guard let begin = sceneryMediaBegin[element.id] else { continue }
+      liveBegins[element.id] = begin
+      for screen in framed {
+        painter(at: screen.index)?.addScenery(element, on: screen, mediaBeginTime: begin)
+      }
+    }
+    sceneryMediaBegin = liveBegins
+  }
+
   /// Sans écran du vaisseau, la frappe ne fait rien. Au-delà de `maxTargets`, la plus ancienne explose.
   private func spawnTarget(label: String?) {
     guard let homeScreenIndex,
@@ -400,7 +513,7 @@ final class StarshipDirector {
     }
 
     let margin = tuning.targetWidth / 2 + 10
-    let start = StarshipSpawn.edgePoint(
+    let start = StarshipSpawn.topEdgePoint(
       width: Double(frame.width),
       height: Double(frame.height),
       margin: margin,
@@ -557,7 +670,12 @@ final class StarshipPlayMode: PlayMode {
   private var checkedCatalogImages = false
   #endif
 
-  init(tuning: StarshipTuning = .standard) {
+  init(
+    tuning: StarshipTuning = .standard,
+    timeLimitMinutes: Int = AdultExitSettings.defaultTimeLimitMinutes
+  ) {
+    var tuning = tuning
+    tuning.skyboxDriftDuration = StarshipTuning.skyboxDriftDuration(timeLimitMinutes: timeLimitMinutes)
     director = StarshipDirector(tuning: tuning)
   }
 
@@ -630,6 +748,7 @@ final class StarshipStageView: NSView {
     }
     root.backgroundColor = Self.backgroundColor.cgColor
     root.contentsScale = scale
+    root.isOpaque = true
     root.addSublayer(sceneLayer)
     let painter = StarshipPainter(tuning: director.tuning, scale: scale)
     self.painter = painter

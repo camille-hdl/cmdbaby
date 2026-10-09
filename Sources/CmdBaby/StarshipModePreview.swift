@@ -1,3 +1,4 @@
+import CmdBabyKit
 import SwiftUI
 
 /// Aperçu statique du mode Vaisseau pour la carte de Réglages.
@@ -7,27 +8,49 @@ struct StarshipModePreview: View {
       .playModePreviewFrame {
         GeometryReader { geo in
           let size = geo.size
+          let ship = shipFraction(in: size)
           ZStack {
             skybox(in: size)
-            sprite("playerShip1_blue", x: 0.50, y: 0.55, widthFraction: 0.14, rotation: 45, in: size)
+            sprite("planet-09", x: 0.16, y: 0.20, widthFraction: 0.52, in: size)
+              .opacity(StarshipTuning.standard.scenery(for: .planet).opacity)
+            sprite("meteorGrey_big1", x: 0.58, y: 0.62, widthFraction: 0.056, in: size)
+              .opacity(StarshipTuning.standard.farAsteroidScenery.opacity)
+            sprite("meteorBrown_big3", x: 0.88, y: 0.52, widthFraction: 0.096, in: size)
+              .opacity(StarshipTuning.standard.nearAsteroidScenery.opacity)
+            sprite("playerShip1_blue", x: ship.x, y: ship.y, widthFraction: 0.14, in: size)
             sprite(
               "laserBlue01",
-              x: 0.64,
-              y: 0.42,
+              x: ship.x,
+              y: ship.y - 0.20,
               widthFraction: 0.015,
               heightFraction: 0.22,
-              rotation: 45,
               in: size
             )
-            sprite("enemyRed1", x: 0.78, y: 0.28, widthFraction: 0.12, in: size)
-            sprite("meteorBrown_big1", x: 0.20, y: 0.25, widthFraction: 0.12, in: size)
-            sprite("ufoGreen", x: 0.22, y: 0.78, widthFraction: 0.11, in: size)
-            glyph("B", x: 0.78, y: 0.28, in: size)
-            glyph("A", x: 0.20, y: 0.25, in: size)
-            glyph("7", x: 0.22, y: 0.78, in: size)
+            sprite("enemyRed1", x: 0.78, y: 0.30, widthFraction: 0.12, in: size)
+            sprite("meteorBrown_big1", x: 0.20, y: 0.24, widthFraction: 0.12, in: size)
+            sprite("ufoGreen", x: 0.46, y: 0.14, widthFraction: 0.11, in: size)
+            glyph("B", x: 0.78, y: 0.30, in: size)
+            glyph("A", x: 0.20, y: 0.24, in: size)
+            glyph("7", x: 0.46, y: 0.14, in: size)
           }
         }
       }
+  }
+
+  /// Centre du vaisseau en fractions du cadre. SwiftUI compte depuis le haut, le Kit depuis le bas.
+  private func shipFraction(in size: CGSize) -> CGPoint {
+    guard size.width > 0, size.height > 0 else {
+      return CGPoint(x: 0.5, y: CGFloat(1 - StarshipTuning.standard.shipCenterFromBottom))
+    }
+    let center = StarshipShip.center(
+      width: Double(size.width),
+      height: Double(size.height),
+      fractionFromBottom: StarshipTuning.standard.shipCenterFromBottom
+    )
+    return CGPoint(
+      x: center.x / Double(size.width),
+      y: 1 - center.y / Double(size.height)
+    )
   }
 
   private func skybox(in size: CGSize) -> some View {

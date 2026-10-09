@@ -44,7 +44,7 @@ final class CoverWindowCoordinator {
     inputBridge = KioskInputBridge(exits: exits) { kind in
       exitHandler?(kind)
     }
-    playMode = PlayModeRegistry.make(sessionMode)
+    playMode = PlayModeRegistry.make(sessionMode, timeLimitMinutes: exits.timeLimitMinutes)
 
     for screen in screens {
       addCover(on: screen)

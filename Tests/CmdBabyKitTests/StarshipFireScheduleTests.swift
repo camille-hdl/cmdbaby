@@ -65,7 +65,7 @@ func starshipFireDelayOnALargeScreenStaysBeforeTheShield() {
   let goal = StarshipPoint(x: width / 2, y: height / 2)
 
   for _ in 0..<500 {
-    let start = StarshipSpawn.edgePoint(
+    let start = StarshipSpawn.topEdgePoint(
       width: width,
       height: height,
       margin: 0,

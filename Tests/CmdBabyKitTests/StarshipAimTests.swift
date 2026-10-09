@@ -73,6 +73,12 @@ func starshipAimNearestEquivalentTakesTheShortWay() {
   expectAngle(StarshipAim.nearestEquivalent(of: 1, to: 1), 1)
 }
 
+@Test("La visée tourne le sprite, qui pointe vers le haut, d’un quart de tour vers la gauche")
+func aimTurnsTheUpwardSpriteAQuarterTurnTowardTheLeft() {
+  let turn = StarshipAim.turn(from: 0, toward: .pi)
+  #expect(abs(turn.to - .pi / 2) < 1e-6)
+}
+
 @Test("Le tir au clic touche la cible la plus proche devant le vaisseau, sur la ligne de tir")
 func starshipAimFirstHitPicksTheClosestTargetOnTheLine() {
   let origin = StarshipPoint(x: 0, y: 0)

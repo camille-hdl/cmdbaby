@@ -84,6 +84,88 @@ func skyboxFramingReturnsNilWhenTheUnionIsEmpty() {
   #expect(StarshipSkyboxFraming.contentsRect(forScreen: 0, among: flat) == nil)
 }
 
+@Test("La dérive 1 d’un écran 1440 × 900 monte le cadre : y passe de 0 à 0,08")
+func skyboxFramingRaisesASingleScreenWindowAsTheSkyDescends() {
+  let screens = [TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900)]
+  expectUnit(
+    StarshipSkyboxFraming.contentsRect(
+      forScreen: 0, among: screens, drift: 0, verticalMargin: 0.08
+    ),
+    x: 0.132, y: 0, width: 0.736, height: 0.92
+  )
+  expectUnit(
+    StarshipSkyboxFraming.contentsRect(
+      forScreen: 0, among: screens, drift: 1, verticalMargin: 0.08
+    ),
+    x: 0.132, y: 0.08, width: 0.736, height: 0.92
+  )
+}
+
+@Test("Sans dérive, deux écrans côte à côte gardent l’aspect-fill ; la dérive 1 monte le cadre de la marge")
+func skyboxFramingAtDriftZeroStaysTheSideBySideAspectFill() {
+  let screens = [
+    TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900),
+    TerminalScreen(index: 1, x: 1440, y: 0, width: 1440, height: 900),
+  ]
+  expectUnit(
+    StarshipSkyboxFraming.contentsRect(
+      forScreen: 0, among: screens, drift: 0, verticalMargin: 0.08
+    ),
+    x: 0, y: 0.1875, width: 0.5, height: 0.625
+  )
+  expectUnit(
+    StarshipSkyboxFraming.contentsRect(
+      forScreen: 1, among: screens, drift: 0, verticalMargin: 0.08
+    ),
+    x: 0.5, y: 0.1875, width: 0.5, height: 0.625
+  )
+  expectUnit(
+    StarshipSkyboxFraming.contentsRect(
+      forScreen: 0, among: screens, drift: 1, verticalMargin: 0.08
+    ),
+    x: 0, y: 0.2675, width: 0.5, height: 0.625
+  )
+  expectUnit(
+    StarshipSkyboxFraming.contentsRect(
+      forScreen: 1, among: screens, drift: 1, verticalMargin: 0.08
+    ),
+    x: 0.5, y: 0.2675, width: 0.5, height: 0.625
+  )
+}
+
+@Test("Deux écrans voisins restent jointifs à toute dérive")
+func skyboxFramingKeepsNeighborsJoinedAtAnyDrift() {
+  let screens = [
+    TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900),
+    TerminalScreen(index: 1, x: 1440, y: 0, width: 1440, height: 900),
+  ]
+  for drift in [0.0, 0.25, 0.5, 1.0] {
+    let left = StarshipSkyboxFraming.contentsRect(
+      forScreen: 0, among: screens, drift: drift, verticalMargin: 0.08
+    )
+    let right = StarshipSkyboxFraming.contentsRect(
+      forScreen: 1, among: screens, drift: drift, verticalMargin: 0.08
+    )
+    #expect(left != nil)
+    #expect(right != nil)
+    #expect(abs((left?.x ?? 0) + (left?.width ?? 0) - (right?.x ?? 1)) < 1e-5)
+    #expect(abs((left?.y ?? 0) - (right?.y ?? 1)) < 1e-5)
+    #expect(abs((left?.height ?? 0) - (right?.height ?? 1)) < 1e-5)
+    #expect((left?.x ?? -1) >= 0)
+    #expect((left?.y ?? -1) >= 0)
+    #expect((left?.x ?? 0) + (left?.width ?? 2) <= 1 + 1e-9)
+    #expect((left?.y ?? 0) + (left?.height ?? 2) <= 1 + 1e-9)
+    #expect((right?.x ?? 0) + (right?.width ?? 2) <= 1 + 1e-9)
+    #expect((right?.y ?? 0) + (right?.height ?? 2) <= 1 + 1e-9)
+  }
+  expectUnit(
+    StarshipSkyboxFraming.contentsRect(
+      forScreen: 0, among: screens, drift: 0.25, verticalMargin: 0.08
+    ),
+    x: 0, y: 0.2075, width: 0.5, height: 0.625
+  )
+}
+
 @Test("Les morceaux de deux écrans côte à côte se touchent sans trou")
 func skyboxFramingMakesNeighborsMeet() {
   let screens = [

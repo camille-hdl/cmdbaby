@@ -39,11 +39,64 @@ func starshipTuningStandardFire() {
   #expect(abs(tuning.explosionDuration - 0.35) < 1e-6)
 }
 
-@Test("La skybox standard change toutes les 60 s et fond en 2 s")
+@Test("La skybox standard change toutes les 30 s et fond en 2 s")
 func starshipTuningStandardSkybox() {
   let tuning = StarshipTuning.standard
-  #expect(abs(tuning.skyboxInterval - 60) < 1e-6)
+  #expect(abs(tuning.skyboxInterval - 30) < 1e-6)
   #expect(abs(tuning.skyboxFadeDuration - 2) < 1e-6)
+}
+
+@Test("La dérive standard zoome à 40 % de marge et descend pendant les 3 min d’une session")
+func starshipTuningStandardSkyboxDrift() {
+  let tuning = StarshipTuning.standard
+  #expect(abs(tuning.skyboxDriftMargin - 0.40) < 1e-6)
+  #expect(tuning.skyboxDriftMargin > 0.10)
+  #expect(abs(tuning.skyboxDriftDuration - 180) < 1e-6)
+  #expect(tuning.skyboxDriftDuration >= 60)
+}
+
+@Test("L’aller unique du ciel dure toute la limite de session et dépasse les 3 min")
+func skyboxDriftLastsTheWholeSession() {
+  // 10 min : 600 s. Après 180 s le ciel est encore en route, sans repartir de zéro.
+  #expect(abs(StarshipTuning.skyboxDriftDuration(timeLimitMinutes: 10) - 600) < 1e-6)
+  #expect(StarshipTuning.skyboxDriftDuration(timeLimitMinutes: 10) > 180)
+  // 20 min, et les bornes réglables : 1 min et 120 min.
+  #expect(abs(StarshipTuning.skyboxDriftDuration(timeLimitMinutes: 20) - 1_200) < 1e-6)
+  #expect(abs(StarshipTuning.skyboxDriftDuration(timeLimitMinutes: 1) - 60) < 1e-6)
+  #expect(abs(StarshipTuning.skyboxDriftDuration(timeLimitMinutes: 120) - 7_200) < 1e-6)
+  // La session par défaut reste un aller de 3 min.
+  #expect(
+    abs(
+      StarshipTuning.skyboxDriftDuration(timeLimitMinutes: AdultExitSettings.defaultTimeLimitMinutes)
+        - 180
+    ) < 1e-6
+  )
+}
+
+@Test("Sur un écran 1440 × 900, le ciel standard descend à 3,3 pt/s pendant 3 min, plus lent que les planètes")
+func standardSkyboxDriftDescendsSlowerThanPlanets() {
+  let tuning = StarshipTuning.standard
+  let screens = [TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900)]
+  let from = StarshipSkyboxFraming.contentsRect(
+    forScreen: 0, among: screens, drift: 0, verticalMargin: tuning.skyboxDriftMargin
+  )
+  let to = StarshipSkyboxFraming.contentsRect(
+    forScreen: 0, among: screens, drift: 1, verticalMargin: tuning.skyboxDriftMargin
+  )
+  #expect(from != nil)
+  #expect(to != nil)
+  guard let from, let to else { return }
+
+  // L’origine de contentsRect est en bas à gauche : y augmente, le ciel visible descend.
+  // Fenêtre haute de 0,60 : 0,40 / 0,60 × 900 pt = 600 pt, en 180 s, soit 10/3 pt/s.
+  #expect(to.y > from.y)
+  #expect(abs(from.height - 0.60) < 1e-6)
+  #expect(abs(to.y - from.y - 0.40) < 1e-6)
+  let points = (to.y - from.y) / from.height * 900
+  let skySpeed = points / tuning.skyboxDriftDuration
+  #expect(abs(points - 600) < 1e-6)
+  #expect(abs(skySpeed - 10.0 / 3.0) < 1e-6)
+  #expect(skySpeed < 80)
 }
 
 @Test("La jauge standard compte 10 s et sature à 300 touches par minute")
@@ -56,4 +109,98 @@ func starshipTuningStandardGauge() {
 @Test("Le vaisseau garde au plus trois tours en attente")
 func starshipTuningStandardSpinBacklog() {
   #expect(abs(StarshipTuning.standard.spinBacklog - 1.8) < 1e-6)
+}
+
+@Test("Le vaisseau standard se tient à 18 % de la hauteur depuis le bas")
+func starshipTuningStandardShipRestsNearTheBottom() {
+  #expect(abs(StarshipTuning.standard.shipCenterFromBottom - 0.18) < 1e-6)
+}
+
+@Test("Les planètes standard sont les plus lentes, immenses, rares et un peu atténuées")
+func starshipTuningStandardPlanetsAreDistant() {
+  let tuning = StarshipTuning.standard
+  let planet = tuning.scenery(for: .planet)
+  let far = tuning.scenery(for: .farAsteroid)
+
+  #expect(abs(planet.depth - 6) < 1e-6)
+  #expect(planet.depth > far.depth)
+  #expect(planet.sizeFractionOfTallestScreen == 0.30...0.60)
+  #expect(abs(planet.opacity - 0.7) < 1e-6)
+  #expect(planet.opacity < 1)
+  #expect(planet.ceiling == 2)
+  #expect(abs(planet.meanInterval - 90) < 1e-6)
+  #expect(planet.meanInterval > far.meanInterval)
+}
+
+@Test("Le centre d’une planète traverse l’écran le plus haut en au plus planetMaxCrossing secondes")
+func planetMaxCrossingCapsHowLongAPlanetCenterTakes() {
+  #expect(abs(StarshipTuning.standard.planetMaxCrossing - 90) < 1e-6)
+
+  // 4 500 pt en 45 s : 100 pt/s. Les 80 pt/s nominaux (480 / 6) sont trop lents,
+  // et 100 reste sous les 120 pt/s d’un astéroïde lointain (480 / 4).
+  let height = 4_500.0
+  var tuning = StarshipTuning.standard
+  tuning.planetMaxCrossing = 45
+  tuning.planetScenery.sizeFractionOfTallestScreen = 0.30...0.30
+  var rng = SystemRandomNumberGenerator()
+  var scenery = StarshipScenery()
+  let launched = scenery.launch(
+    screens: [TerminalScreen(index: 0, x: 0, y: 0, width: 800, height: height)],
+    now: 0,
+    tuning: tuning,
+    rng: &rng
+  )
+  let planet = launched.first { $0.layer == .planet }
+  #expect(planet != nil)
+  guard let planet else { return }
+  let planetSpeed = (planet.startY - planet.endY) / planet.duration
+  #expect(abs(planetSpeed - 100) < 1e-6)
+  #expect(abs(height / planetSpeed - 45) < 1e-6)
+}
+
+@Test("Le décor standard défile vite, peu d’astéroïdes, les proches plus grands")
+func starshipTuningStandardSceneryScrollsFastWithFewAsteroidsAndLargerNearOnes() {
+  let tuning = StarshipTuning.standard
+  let far = tuning.scenery(for: .farAsteroid)
+  let near = tuning.scenery(for: .nearAsteroid)
+
+  #expect(abs(tuning.sceneryReferenceSpeed - 480) < 1e-6)
+  #expect(abs(far.depth - 4) < 1e-6)
+  #expect(abs(near.depth - 2) < 1e-6)
+  #expect(abs(far.size - 56) < 1e-6)
+  #expect(abs(near.size - 96) < 1e-6)
+  #expect(near.size > far.size)
+  #expect(abs(far.opacity - 0.28) < 1e-6)
+  #expect(abs(near.opacity - 0.5) < 1e-6)
+  #expect(far.opacity < near.opacity)
+  #expect(near.opacity < 1)
+  #expect(far.ceiling == 2)
+  #expect(near.ceiling == 2)
+  #expect(abs(far.meanInterval - 18) < 1e-6)
+  #expect(abs(near.meanInterval - 12) < 1e-6)
+}
+
+@Test("Les traits de vitesse standard sont nombreux, fins, peu opaques et plus rapides que les astéroïdes")
+func starshipTuningStandardSpeedStreaksAreFaint() {
+  let tuning = StarshipTuning.standard
+  let streak = tuning.scenery(for: .speedStreak)
+  let near = tuning.scenery(for: .nearAsteroid)
+
+  #expect(streak.depth < near.depth)
+  // 480 / 0,375 = 1 280 pt/s : le trait reste le plus rapide, sans devenir un flash.
+  #expect(abs(streak.depth - 0.375) < 1e-9)
+  #expect(abs(streak.size - 64) < 1e-6)
+  #expect(abs(tuning.speedStreakWidth - 2) < 1e-6)
+  #expect(tuning.speedStreakWidth >= 1)
+  #expect(tuning.speedStreakWidth <= 3)
+  #expect(abs(streak.opacity - 0.2) < 1e-6)
+  #expect(streak.opacity <= 0.3)
+  #expect(streak.opacity > 0)
+  #expect(streak.ceiling == 8)
+  #expect(streak.ceiling >= 6)
+  #expect(streak.meanInterval == 0.125)
+  #expect(streak.meanInterval < 1)
+  #expect(abs(tuning.speedStreakCorridorWidth - 200) < 1e-6)
+  #expect(tuning.speedStreakCorridorWidth > tuning.shipWidth)
+  #expect(tuning.speedStreakColor == StarshipRGB(hex: 0xFFFFFF))
 }
