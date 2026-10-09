@@ -300,6 +300,26 @@ func unreadableConfigurationSurvivesLoginItemReconciliation() throws {
 
 private struct LoginItemFailure: Error {}
 
+@Test("Autoriser le lancement par lien s’enregistre sans toucher au Login Item")
+func allowingLinkLaunchPersistsWithoutTouchingTheLoginItem() throws {
+  let file = TemporarySettingsFile()
+  defer { file.remove() }
+
+  let store = CmdBabyConfigurationStore(fileURL: file.fileURL)
+  try store.save(CmdBabyConfiguration(mode: .ocean, launchAtLogin: true))
+  let loginItem = FakeLoginItemRegistration()
+  loginItem.isRegistered = true
+  let settings = CmdBabySettings(store: store, loginItem: loginItem)
+
+  let saved = try settings.apply(.linkLaunchAllowed(true))
+
+  #expect(loginItem.isRegistered)
+  #expect(saved.linkLaunchAllowed == true)
+  #expect(saved.launchAtLogin == true)
+  #expect(saved.mode == .ocean)
+  #expect(settings.current().linkLaunchAllowed == true)
+}
+
 private struct TemporarySettingsFile {
   let directory: URL
   let fileURL: URL

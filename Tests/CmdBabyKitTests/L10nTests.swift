@@ -67,6 +67,48 @@ func startSessionOverrideCopy() {
   )
 }
 
+@Test("Lien : case, refus et erreurs, en français et en anglais")
+func sessionLinkCopy() {
+  #expect(
+    L10nTable.language("fr")("settings.general.linkLaunch.label")
+      == "Autoriser le lancement par lien (Alfred, Raycast, Terminal)"
+  )
+  #expect(
+    L10nTable.language("en")("settings.general.linkLaunch.label")
+      == "Allow launching from a link (Alfred, Raycast, Terminal)"
+  )
+  #expect(
+    L10nTable.language("fr")("alert.link.notAllowed")
+      == "Cochez « Autoriser le lancement par lien » dans Réglages › Général pour lancer une session depuis Alfred, Raycast ou le Terminal."
+  )
+  #expect(
+    L10nTable.language("en")("alert.link.notAllowed")
+      == "Turn on “Allow launching from a link” in Settings › General to start a session from Alfred, Raycast, or Terminal."
+  )
+  #expect(
+    SessionActivationAlert.forLinkNotAllowed(table: .language("fr")).actions
+      == [.openAppSettings(.general), .dismiss]
+  )
+  #expect(LifecycleLogEvent.sessionLinkIgnored.message == "session.link.ignored")
+  #expect(!LifecycleLogEvent.sessionLinkIgnored.message.contains("cmdbaby://"))
+  #expect(
+    L10nTable.language("fr")("alert.link.unknownPath")
+      == "Ce lien ne lance pas de session. Le seul chemin est cmdbaby://session/start."
+  )
+  #expect(
+    L10nTable.language("en")("alert.link.unknownPath")
+      == "This link does not start a session. The only path is cmdbaby://session/start."
+  )
+  #expect(
+    L10nTable.language("fr")("alert.link.unknownMode")
+      == "Mode inconnu. Les modes sont ocean, terminal et starship."
+  )
+  #expect(
+    L10nTable.language("en")("alert.link.unknownMode")
+      == "Unknown mode. The modes are ocean, terminal, and starship."
+  )
+}
+
 @Test("Lancer un mode : Start en anglais, Lancer en français")
 func launchModeButtonCopy() {
   #expect(L10nTable.language("en")("settings.mode.launch") == "Start")

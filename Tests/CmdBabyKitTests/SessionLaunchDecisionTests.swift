@@ -10,7 +10,8 @@ func restingPhaseLaunchesWhenTheCheckAllows(_ phase: KioskSessionPhase) {
   let decision = SessionLaunchDecision.evaluate(
     request: SessionLaunchRequest(origin: .menu),
     phase: phase,
-    check: .allowed
+    check: .allowed,
+    linkLaunchAllowed: true
   )
 
   #expect(decision == .launch)
@@ -29,17 +30,20 @@ func busyPhaseIsAlreadyInProgress(_ phase: KioskSessionPhase) {
   let allowed = SessionLaunchDecision.evaluate(
     request: SessionLaunchRequest(origin: .shortcuts),
     phase: phase,
-    check: .allowed
+    check: .allowed,
+    linkLaunchAllowed: true
   )
   let blockedBySecureInput = SessionLaunchDecision.evaluate(
     request: SessionLaunchRequest(origin: .shortcuts),
     phase: phase,
-    check: .blocked(.secureInputActive)
+    check: .blocked(.secureInputActive),
+    linkLaunchAllowed: true
   )
   let blockedByPassphrase = SessionLaunchDecision.evaluate(
     request: SessionLaunchRequest(origin: .link),
     phase: phase,
-    check: .blocked(.passphraseNotTypable(["é"]))
+    check: .blocked(.passphraseNotTypable(["é"])),
+    linkLaunchAllowed: true
   )
 
   #expect(allowed == .alreadyInProgress)
@@ -60,7 +64,8 @@ func restingPhaseRefusesEachCheckReason(
   let decision = SessionLaunchDecision.evaluate(
     request: SessionLaunchRequest(origin: .settings),
     phase: phase,
-    check: .blocked(error)
+    check: .blocked(error),
+    linkLaunchAllowed: true
   )
 
   #expect(decision == .refused(error))
@@ -126,4 +131,60 @@ func refusalReplyExplainsTheReasonInFrenchAndEnglish() {
     noScreens.message(in: .language("fr")) == "Aucun écran n’est disponible pour la couverture."
   )
   #expect(noScreens.message(in: .language("en")) == "No screen is available for the cover.")
+}
+
+@Test("Un lien non autorisé est refusé ; autorisé, il lance avec les surcharges")
+func unauthorizedLinkIsRefusedAndAnAuthorizedLinkLaunchesWithOverrides() throws {
+  let request = SessionLaunchRequest(origin: .link, mode: .starship, durationMinutes: 10)
+  let saved = CmdBabyConfiguration(
+    mode: .ocean,
+    launchAtLogin: true,
+    exits: AdultExitSettings(timeLimitMinutes: 45)
+  )
+
+  #expect(
+    SessionLaunchDecision.evaluate(
+      request: request,
+      phase: .configuration,
+      check: .allowed,
+      linkLaunchAllowed: false
+    ) == .linkNotAllowed
+  )
+  #expect(
+    SessionLaunchDecision.evaluate(
+      request: request,
+      phase: .active,
+      check: .allowed,
+      linkLaunchAllowed: false
+    ) == .alreadyInProgress
+  )
+  #expect(
+    SessionLaunchDecision.evaluate(
+      request: SessionLaunchRequest(origin: .shortcuts, mode: .starship, durationMinutes: 10),
+      phase: .configuration,
+      check: .allowed,
+      linkLaunchAllowed: false
+    ) == .launch
+  )
+
+  #expect(
+    SessionLaunchDecision.evaluate(
+      request: request,
+      phase: .configuration,
+      check: .allowed,
+      linkLaunchAllowed: true
+    ) == .launch
+  )
+  let effective = try #require(readyConfiguration(request.effectiveConfiguration(from: saved)))
+  #expect(effective.mode == .starship)
+  #expect(effective.exits.timeLimitMinutes == 10)
+  #expect(effective.launchAtLogin == true)
+  #expect(saved.linkLaunchAllowed == false)
+}
+
+private func readyConfiguration(
+  _ result: SessionLaunchConfiguration
+) -> CmdBabyConfiguration? {
+  if case .ready(let configuration) = result { return configuration }
+  return nil
 }

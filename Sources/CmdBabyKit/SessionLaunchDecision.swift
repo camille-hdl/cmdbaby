@@ -60,17 +60,28 @@ public enum SessionLaunchDecision: Equatable, Sendable {
   case alreadyInProgress
   case refused(KioskSessionError)
   case invalidParameter
+  /// Lien `cmdbaby://` alors que la case Réglages › Général est décochée.
+  case linkNotAllowed
 
+  /// `linkLaunchAllowed` ne concerne que l’origine `.link`. Une phase occupée l’emporte :
+  /// pendant une session, le lien ne devient pas une alerte.
   public static func evaluate(
     request: SessionLaunchRequest,
     phase: KioskSessionPhase,
-    check: SessionLaunchCheck
+    check: SessionLaunchCheck,
+    linkLaunchAllowed: Bool
   ) -> SessionLaunchDecision {
     switch phase {
     case .preparing, .activating, .active, .stopping:
       return .alreadyInProgress
     case .configuration, .failed:
       break
+    }
+    if request.origin == .link, !linkLaunchAllowed {
+      return .linkNotAllowed
+    }
+    if let minutes = request.durationMinutes, !AdultExitSettings.timeLimitRange.contains(minutes) {
+      return .invalidParameter
     }
     switch check {
     case .allowed:
@@ -91,6 +102,8 @@ public enum SessionLaunchDecision: Equatable, Sendable {
       SessionActivationAlert.forFailedActivation(error, table: table).informativeText
     case .invalidParameter:
       table("shortcuts.startSession.invalidParameter")
+    case .linkNotAllowed:
+      table("alert.link.notAllowed")
     }
   }
 }

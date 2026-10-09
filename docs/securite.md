@@ -12,6 +12,12 @@ CmdBaby protège le Mac contre les manipulations **accidentelles** d’un jeune 
 
 **Fail-open** : un plantage de l’app rend le bureau. C’est voulu : l’adulte ne doit jamais rester enfermé.
 
+### Lancement par lien
+
+`cmdbaby://session/start` est une entrée externe, pour Alfred, Raycast, le Terminal (`open`) et toute app qui ouvre une URL. Une page web peut aussi le proposer. La case Réglages › Général « Autoriser le lancement par lien (Alfred, Raycast, Terminal) » est décochée par défaut, y compris quand la clé est absente d’une configuration déjà enregistrée. Tant qu’elle est décochée, le lien est refusé et n’ouvre pas de session.
+
+L’action Raccourcis ne dépend pas de cette case. Un lancement externe, une fois le lien autorisé, passe par les mêmes contrôles (Saisie protégée, phrase tapable), le même confinement et les mêmes sorties adultes. Le lien ne peut pas arrêter une session. Pendant une session, un lien ne montre rien : il est ignoré, et le journal note `session.link.ignored` sans l’URL.
+
 ### Impossible à bloquer depuis une app
 
 Ces actions relèvent du matériel ou du système, hors de portée d’un tap clavier ou des options de présentation. CmdBaby ne cherche pas à les contourner :

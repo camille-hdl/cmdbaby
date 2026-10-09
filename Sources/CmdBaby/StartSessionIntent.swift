@@ -52,7 +52,7 @@ struct StartSessionIntent: AppIntent {
     switch decision {
     case .launch, .alreadyInProgress:
       return .result(dialog: IntentDialog(resolved: decision.message()))
-    case .refused, .invalidParameter:
+    case .refused, .invalidParameter, .linkNotAllowed:
       throw SessionLaunchCallerError(message: decision.message())
     }
   }

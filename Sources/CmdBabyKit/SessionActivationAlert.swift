@@ -26,6 +26,25 @@ public struct SessionActivationAlert: Equatable, Sendable {
     "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
   ]
 
+  public static func forLinkNotAllowed(table: L10nTable = .current) -> SessionActivationAlert {
+    SessionActivationAlert(
+      title: table("alert.title"),
+      informativeText: table("alert.link.notAllowed"),
+      actions: [.openAppSettings(.general), .dismiss]
+    )
+  }
+
+  public static func forInvalidLink(
+    _ failure: SessionLinkFailure,
+    table: L10nTable = .current
+  ) -> SessionActivationAlert {
+    SessionActivationAlert(
+      title: table("alert.title"),
+      informativeText: failure.message(in: table),
+      actions: [.dismiss]
+    )
+  }
+
   public static func forFailedActivation(
     _ error: KioskSessionError,
     table: L10nTable = .current

@@ -117,3 +117,11 @@
 "shortcuts.startSession.duration" = "Duration";
 "shortcuts.startSession.duration.hint" = "Minutes, from 1 to 120";
 "shortcuts.startSession.summary" = "Start a %@ session for %lld minutes";
+"settings.general.linkLaunch.label" = "Allow launching from a link (Alfred, Raycast, Terminal)";
+"settings.general.linkLaunch.help" = "A web page or another app can offer this link. Until the checkbox is on, CmdBaby refuses it.";
+"alert.link.notAllowed" = "Turn on “Allow launching from a link” in Settings › General to start a session from Alfred, Raycast, or Terminal.";
+"alert.link.unknownScheme" = "This is not a CmdBaby link.";
+"alert.link.unknownPath" = "This link does not start a session. The only path is cmdbaby://session/start.";
+"alert.link.unknownMode" = "Unknown mode. The modes are ocean, terminal, and starship.";
+"alert.link.durationNotInteger" = "The duration must be a whole number of minutes.";
+"alert.link.duplicateParameter" = "This link repeats a parameter. Give mode and minutes only once.";

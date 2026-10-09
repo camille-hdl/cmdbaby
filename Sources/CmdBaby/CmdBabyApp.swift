@@ -131,6 +131,40 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
     }
   }
 
+  func application(_ application: NSApplication, open urls: [URL]) {
+    Task {
+      for url in urls {
+        await handleSessionLink(url)
+      }
+    }
+  }
+
+  /// Adaptateur du lien. La décision et l’analyse sont dans le kit.
+  private func handleSessionLink(_ url: URL) async {
+    if model.suppressesLinkFeedback {
+      LifecycleLogRecorder.shared.emit(.sessionLinkIgnored)
+      return
+    }
+    switch SessionLinkParser.parse(url) {
+    case .failure(let failure):
+      present(SessionActivationAlert.forInvalidLink(failure))
+    case .success(let request):
+      switch await model.startKiosk(request) {
+      case .alreadyInProgress:
+        LifecycleLogRecorder.shared.emit(.sessionLinkIgnored)
+      case .linkNotAllowed:
+        present(SessionActivationAlert.forLinkNotAllowed())
+      case .invalidParameter:
+        present(SessionActivationAlert.forInvalidLink(.durationOutOfBounds))
+      case .refused:
+        // `startKiosk` a déjà affiché l’alerte d’échec. Pas une seconde.
+        break
+      case .launch:
+        break
+      }
+    }
+  }
+
   func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
     false
   }
@@ -182,7 +216,10 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
         binaryPath: LifecycleLog.displayPath(Bundle.main.bundleURL.path)
       )
     )
-    let spec = SessionActivationAlert.forFailedActivation(error)
+    present(SessionActivationAlert.forFailedActivation(error))
+  }
+
+  private func present(_ spec: SessionActivationAlert) {
     let alert = NSAlert()
     alert.alertStyle = .warning
     alert.messageText = spec.title

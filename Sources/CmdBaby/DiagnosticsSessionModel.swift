@@ -56,13 +56,35 @@ final class DiagnosticsSessionModel: ObservableObject {
     self.presentActivationFailure = presentActivationFailure
   }
 
+  /// Pendant une session, un lien ne montre rien.
+  var suppressesLinkFeedback: Bool {
+    phaseBlocksAnotherLaunch(launchPhase())
+  }
+
   func startKiosk(_ request: SessionLaunchRequest) async -> SessionLaunchDecision {
     let phase = launchPhase()
     let saved = CmdBabyConfigurationStore().load()
+    // Le contrôle clavier est plus bas. Ici, seuls le repos, l’autorisation du lien
+    // et la durée peuvent déjà décider.
+    switch SessionLaunchDecision.evaluate(
+      request: request,
+      phase: phase,
+      check: .allowed,
+      linkLaunchAllowed: saved.linkLaunchAllowed
+    ) {
+    case .alreadyInProgress:
+      return .alreadyInProgress
+    case .linkNotAllowed:
+      return .linkNotAllowed
+    case .invalidParameter:
+      return .invalidParameter
+    case .launch, .refused:
+      break
+    }
+
     let configuration: CmdBabyConfiguration
     switch request.effectiveConfiguration(from: saved) {
     case .invalidParameter:
-      if phaseBlocksAnotherLaunch(phase) { return .alreadyInProgress }
       return .invalidParameter
     case .ready(let effective):
       configuration = effective
@@ -78,9 +100,16 @@ final class DiagnosticsSessionModel: ObservableObject {
       typability: typability,
       secureInputActive: IsSecureEventInputEnabled()
     )
-    switch SessionLaunchDecision.evaluate(request: request, phase: phase, check: check) {
+    switch SessionLaunchDecision.evaluate(
+      request: request,
+      phase: phase,
+      check: check,
+      linkLaunchAllowed: saved.linkLaunchAllowed
+    ) {
     case .alreadyInProgress:
       return .alreadyInProgress
+    case .linkNotAllowed:
+      return .linkNotAllowed
     case .refused(let error):
       reportActivationFailure(error)
       return .refused(error)

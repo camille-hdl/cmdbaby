@@ -55,6 +55,37 @@ To block shortcuts, CmdBaby needs the Accessibility permission. macOS asks for i
 
 Each exit can be turned on or off in Settings. The default phrase `parent` is written here and on the website, so change it in Settings, Exits.
 
+## Launch from Shortcuts or a link
+
+Mode and duration are optional and apply only to that session. Saved settings stay as they are. `mode` is `ocean`, `terminal`, or `starship`. `minutes` is from 1 to 120.
+
+Turn on **Allow launching from a link** in Settings, General before a link will work. The checkbox starts off, so a web page cannot start a session until you allow it. The Shortcuts action does not use that checkbox. During a session, a link does nothing visible.
+
+Shortcuts, in Spotlight or as the action **Start a Session**:
+
+```text
+Start a Starship session with CmdBaby
+```
+
+Alfred, a Run Script action:
+
+```sh
+open "cmdbaby://session/start?mode=starship&minutes=10"
+```
+
+Raycast, a script command or the same URL:
+
+```sh
+open "cmdbaby://session/start?mode=starship&minutes=10"
+```
+
+Terminal:
+
+```sh
+open "cmdbaby://session/start"
+open "cmdbaby://session/start?mode=starship&minutes=10"
+```
+
 ## Questions and bug reports
 
 Write to [support@cmdbaby.app](mailto:support@cmdbaby.app). The repository does not take issues or pull requests: requests and fixes go through email.
