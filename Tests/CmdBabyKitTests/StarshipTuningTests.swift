@@ -55,6 +55,24 @@ func starshipTuningStandardSkyboxDrift() {
   #expect(tuning.skyboxDriftDuration >= 60)
 }
 
+@Test("L’aller unique du ciel dure toute la limite de session et dépasse les 3 min")
+func skyboxDriftLastsTheWholeSession() {
+  // 10 min : 600 s. Après 180 s le ciel est encore en route, sans repartir de zéro.
+  #expect(abs(StarshipTuning.skyboxDriftDuration(timeLimitMinutes: 10) - 600) < 1e-6)
+  #expect(StarshipTuning.skyboxDriftDuration(timeLimitMinutes: 10) > 180)
+  // 20 min, et les bornes réglables : 1 min et 120 min.
+  #expect(abs(StarshipTuning.skyboxDriftDuration(timeLimitMinutes: 20) - 1_200) < 1e-6)
+  #expect(abs(StarshipTuning.skyboxDriftDuration(timeLimitMinutes: 1) - 60) < 1e-6)
+  #expect(abs(StarshipTuning.skyboxDriftDuration(timeLimitMinutes: 120) - 7_200) < 1e-6)
+  // La session par défaut reste un aller de 3 min.
+  #expect(
+    abs(
+      StarshipTuning.skyboxDriftDuration(timeLimitMinutes: AdultExitSettings.defaultTimeLimitMinutes)
+        - 180
+    ) < 1e-6
+  )
+}
+
 @Test("Sur un écran 1440 × 900, le ciel standard descend à 3,3 pt/s pendant 3 min, plus lent que les planètes")
 func standardSkyboxDriftDescendsSlowerThanPlanets() {
   let tuning = StarshipTuning.standard

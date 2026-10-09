@@ -667,7 +667,12 @@ final class StarshipPlayMode: PlayMode {
   private var checkedCatalogImages = false
   #endif
 
-  init(tuning: StarshipTuning = .standard) {
+  init(
+    tuning: StarshipTuning = .standard,
+    timeLimitMinutes: Int = AdultExitSettings.defaultTimeLimitMinutes
+  ) {
+    var tuning = tuning
+    tuning.skyboxDriftDuration = StarshipTuning.skyboxDriftDuration(timeLimitMinutes: timeLimitMinutes)
     director = StarshipDirector(tuning: tuning)
   }
 

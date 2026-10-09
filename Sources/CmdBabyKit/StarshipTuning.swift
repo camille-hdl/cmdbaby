@@ -45,11 +45,21 @@ public struct StarshipTuning: Equatable, Sendable {
   /// 0,40 : la moitié de 0,80, puisque le ciel ne reste que 30 s.
   /// La fenêtre garde 60 % de la hauteur (zoom ~1,7×), plus 40 % au-dessus pour un seul aller.
   public var skyboxDriftMargin: Double = 0.40
-  /// Durée de l’aller unique, en secondes. 180 s : la session par défaut.
-  /// Sur un écran 1440 × 900, 0,40 / 0,60 × 900 pt = 600 pt, soit 10/3 pt/s,
-  /// sous les 80 pt/s d’une planète. Pas de retour : le ciel ne remonte pas.
-  /// `y` augmente : le ciel visible descend.
-  public var skyboxDriftDuration: Double = 180
+  /// Durée de l’aller unique pour la session par défaut (3 min), en secondes.
+  /// Une autre limite d’adulte passe par `skyboxDriftDuration(timeLimitMinutes:)`.
+  /// Sur un écran 1440 × 900, 0,40 / 0,60 × 900 pt = 600 pt. En 180 s, 10/3 pt/s,
+  /// sous les 80 pt/s d’une planète. Une session plus longue descend encore plus lentement.
+  /// Pas de retour : le ciel ne remonte pas. `y` augmente : le ciel visible descend.
+  public var skyboxDriftDuration: Double = StarshipTuning.skyboxDriftDuration(
+    timeLimitMinutes: AdultExitSettings.defaultTimeLimitMinutes
+  )
+
+  /// Durée de l’aller unique, en secondes : toute la limite de session.
+  /// 10 min donne 600 s, donc après 180 s le ciel bouge encore. L’amplitude reste
+  /// `skyboxDriftMargin`. Un seul aller : le ciel ne repart pas de zéro et ne remonte pas.
+  public static func skyboxDriftDuration(timeLimitMinutes: Int) -> Double {
+    Double(timeLimitMinutes) * 60
+  }
 
   // Décor. Une profondeur plus grande est plus loin : la vitesse en découle.
   /// Vitesse d’une couche de profondeur 1, en points par seconde.
