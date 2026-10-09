@@ -28,7 +28,7 @@ func planetsAreSlowerAndLargerThanAsteroids() {
   #expect(speed(of: planet) < speed(of: far))
   #expect(speed(of: planet) < speed(of: near))
   #expect(planet.opacity < 1)
-  #expect(StarshipCatalog.planets.contains(planet.sprite))
+  #expect(planet.sprite.map { StarshipCatalog.planets.contains($0) } == true)
   #expect(planet.startY > 600)
   #expect(planet.endY < 0)
   // 80, 120 et 240 pt/s. L’entrée-sortie d’une planète de 180 à 360 pt dure 9,75 à 12 s.
@@ -111,8 +111,8 @@ func nearAsteroidsAreFasterAndLargerThanFarOnes() {
   #expect(speed(of: near) > speed(of: far))
   #expect(far.opacity < near.opacity)
   #expect(near.opacity < 1)
-  #expect(sprites.contains(far.sprite))
-  #expect(sprites.contains(near.sprite))
+  #expect(far.sprite.map { sprites.contains($0) } == true)
+  #expect(near.sprite.map { sprites.contains($0) } == true)
   #expect(Set(launched.map(\.layer)) == [.planet, .farAsteroid, .nearAsteroid])
 }
 
@@ -537,7 +537,7 @@ func speedStreakCrossesFasterThanAsteroids() {
   guard let streak, let near, let far, let planet else { return }
 
   // 64 pt : départ 632, arrivée −32. 80 / 0,0625 = 1 280 pt/s. 664 / 1 280 = 0,51875 s.
-  #expect(streak.sprite.isEmpty)
+  #expect(streak.sprite == nil)
   #expect(abs(streak.size - 64) < 1e-6)
   #expect(abs(streak.width - 2) < 1e-6)
   #expect(abs(streak.opacity - 0.2) < 1e-6)
@@ -671,7 +671,7 @@ func speedStreakDoesNotLaunchWhenTheCorridorCoversTheScreen() {
   #expect(launched.isEmpty)
 }
 
-@Test("Quatorze éléments en vol au plus : la somme des plafonds, un calque de décor par écran")
+@Test("Quatorze éléments en vol au plus : la somme des plafonds, un calque par élément sur chaque écran")
 func flyingSceneryStaysWithinTheSumOfCeilings() {
   let standard = StarshipTuning.standard
   // 2 planètes + 2 astéroïdes lointains + 2 proches + 8 traits.
@@ -682,7 +682,7 @@ func flyingSceneryStaysWithinTheSumOfCeilings() {
   #expect(standard.speedStreakScenery.ceiling == 8)
 
   // Intervalles raccourcis pour saturer les quatre plafonds ensemble.
-  // Les plafonds restent ceux du réglage standard : le painter pose un calque par élément.
+  // Les plafonds restent ceux du réglage standard : le painter pose un calque par élément sur chaque écran.
   var tuning = standard
   tuning.planetScenery.meanInterval = 0.05
   tuning.farAsteroidScenery.meanInterval = 0.05

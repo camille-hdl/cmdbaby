@@ -41,6 +41,8 @@ final class StarshipPainter {
 
   private struct TargetView {
     let root: CALayer
+    /// Lettre déjà dessinée. `nil` si la cible n’en a pas. L’explosion la réutilise, sans la chercher.
+    let glyph: CATextLayer?
   }
 
   /// Dérive déjà posée, avec l’instant de média commun à tous les écrans.
@@ -291,8 +293,13 @@ final class StarshipPainter {
     let center = CGPoint(x: size.width / 2, y: size.height / 2)
     spriteLayer.position = center
     root.addSublayer(spriteLayer)
+    let glyph: CATextLayer?
     if let label {
-      root.addSublayer(glyphLayer(label, at: center))
+      let text = glyphLayer(label, at: center)
+      root.addSublayer(text)
+      glyph = text
+    } else {
+      glyph = nil
     }
     CATransaction.begin()
     CATransaction.setDisableActions(true)
@@ -302,7 +309,7 @@ final class StarshipPainter {
     if kind == .meteor {
       spriteLayer.add(Self.meteorSpin(), forKey: "spin")
     }
-    targetsByID[id] = TargetView(root: root)
+    targetsByID[id] = TargetView(root: root, glyph: glyph)
   }
 
   func moveTarget(id: Int, to point: CGPoint) {
@@ -316,7 +323,7 @@ final class StarshipPainter {
   func explodeTarget(id: Int, kind: StarshipTargetKind, now: TimeInterval) {
     guard let flying = targetsByID.removeValue(forKey: id) else { return }
     let point = flying.root.position
-    let glyph = flying.root.sublayers?.first { $0 is CATextLayer }
+    let glyph = flying.glyph
     let onScreen: CGPoint
     if let glyph {
       let scenePoint = StarshipExplosion.glyphScenePosition(
@@ -441,15 +448,15 @@ final class StarshipPainter {
     flight placed: StarshipSceneryPlacement.Flight
   ) -> CALayer {
     let layer = CALayer()
-    if element.layer == .speedStreak {
-      layer.bounds = CGRect(x: 0, y: 0, width: element.width, height: element.size)
-      layer.backgroundColor = Self.cgColor(tuning.speedStreakColor)
-    } else {
-      let image = StarshipSprite.cgImage(named: element.sprite)
+    if let sprite = element.sprite {
+      let image = StarshipSprite.cgImage(named: sprite)
       let size = Self.spriteSize(width: element.size, image: image)
       layer.bounds = CGRect(origin: .zero, size: size)
       layer.contents = image
       layer.contentsGravity = .resizeAspect
+    } else {
+      layer.bounds = CGRect(x: 0, y: 0, width: element.width, height: element.size)
+      layer.backgroundColor = Self.cgColor(tuning.speedStreakColor)
     }
     layer.contentsScale = contentsScale
     layer.opacity = Float(element.opacity)

@@ -132,6 +132,32 @@ func starshipTuningStandardPlanetsAreDistant() {
   #expect(planet.meanInterval > far.meanInterval)
 }
 
+@Test("Le centre d’une planète traverse l’écran le plus haut en au plus planetMaxCrossing secondes")
+func planetMaxCrossingCapsHowLongAPlanetCenterTakes() {
+  #expect(abs(StarshipTuning.standard.planetMaxCrossing - 90) < 1e-6)
+
+  // 4 500 pt en 45 s : 100 pt/s. Les 80 pt/s nominaux (480 / 6) sont trop lents,
+  // et 100 reste sous les 120 pt/s d’un astéroïde lointain (480 / 4).
+  let height = 4_500.0
+  var tuning = StarshipTuning.standard
+  tuning.planetMaxCrossing = 45
+  tuning.planetScenery.sizeFractionOfTallestScreen = 0.30...0.30
+  var rng = SystemRandomNumberGenerator()
+  var scenery = StarshipScenery()
+  let launched = scenery.launch(
+    screens: [TerminalScreen(index: 0, x: 0, y: 0, width: 800, height: height)],
+    now: 0,
+    tuning: tuning,
+    rng: &rng
+  )
+  let planet = launched.first { $0.layer == .planet }
+  #expect(planet != nil)
+  guard let planet else { return }
+  let planetSpeed = (planet.startY - planet.endY) / planet.duration
+  #expect(abs(planetSpeed - 100) < 1e-6)
+  #expect(abs(height / planetSpeed - 45) < 1e-6)
+}
+
 @Test("Le décor standard défile vite, peu d’astéroïdes, les proches plus grands")
 func starshipTuningStandardSceneryScrollsFastWithFewAsteroidsAndLargerNearOnes() {
   let tuning = StarshipTuning.standard

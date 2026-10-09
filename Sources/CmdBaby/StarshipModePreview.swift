@@ -13,6 +13,10 @@ struct StarshipModePreview: View {
             skybox(in: size)
             sprite("planet-09", x: 0.16, y: 0.20, widthFraction: 0.52, in: size)
               .opacity(StarshipTuning.standard.scenery(for: .planet).opacity)
+            sprite("meteorGrey_big1", x: 0.58, y: 0.62, widthFraction: 0.056, in: size)
+              .opacity(StarshipTuning.standard.farAsteroidScenery.opacity)
+            sprite("meteorBrown_big3", x: 0.88, y: 0.52, widthFraction: 0.096, in: size)
+              .opacity(StarshipTuning.standard.nearAsteroidScenery.opacity)
             sprite("playerShip1_blue", x: ship.x, y: ship.y, widthFraction: 0.14, in: size)
             sprite(
               "laserBlue01",

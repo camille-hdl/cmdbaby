@@ -78,6 +78,9 @@ public struct StarshipTuning: Equatable, Sendable {
     ceiling: 2,
     meanInterval: 12
   )
+  /// Secondes au plus pour que le centre d’une planète traverse la hauteur de l’écran le plus haut.
+  /// 90 s : le bout lent. Si ce délai rattrapait un astéroïde, la vitesse nominale reste.
+  public var planetMaxCrossing: Double = 90
   /// Profondeur 6 : 480 / 6 = 80 pt/s. Le centre passe en 7,5 s sur 600 pt, en 18 s sur 1 440 pt,
   /// sous les 120 pt/s des astéroïdes lointains. L’entrée-sortie, diamètre compris, dure davantage.
   /// La taille est tirée entre 30 et 60 % de l’écran le plus haut. Au plus deux en vol, intervalle moyen de 90 s.

@@ -12,7 +12,7 @@ public enum StarshipSceneryLayer: Hashable, Sendable, CaseIterable {
 
 /// Réglages d’une couche. La vitesse nominale vaut `sceneryReferenceSpeed / depth`.
 /// Une planète peut aller plus vite pour que son centre traverse la hauteur de l’écran
-/// le plus haut en 90 s, sans atteindre la vitesse d’un astéroïde.
+/// le plus haut en `planetMaxCrossing` secondes, sans atteindre la vitesse d’un astéroïde.
 public struct StarshipSceneryLayerTuning: Equatable, Sendable {
   public var depth: Double
   public var size: Double
@@ -48,7 +48,8 @@ public struct StarshipSceneryLayerTuning: Equatable, Sendable {
 public struct StarshipSceneryElement: Equatable, Sendable {
   public let id: Int
   public let layer: StarshipSceneryLayer
-  public let sprite: String
+  /// Nom d’image. `nil` pour un trait : pas de sprite, le painter pose une couleur unie.
+  public let sprite: String?
   public let x: Double
   public let startY: Double
   public let endY: Double
@@ -128,30 +129,39 @@ public struct StarshipScenery: Equatable, Sendable {
   ) -> StarshipSceneryElement? {
     let layerTuning = tuning.scenery(for: layer)
     guard layerTuning.ceiling > 0, layerTuning.depth > 0 else { return nil }
-    var speed = crossingSpeed(layer, tuning: tuning, tallestHeight: union.tallestHeight)
+    let plan = LayerPlan.plan(for: layer)
+    var speed = crossingSpeed(
+      plan.travel, tuning: tuning, tallestHeight: union.tallestHeight, depth: layerTuning.depth
+    )
     guard speed > 0, layerTuning.meanInterval > 0 else { return nil }
     let due = nextAppearance[layer] ?? -.infinity
     let flying = elements.filter { $0.layer == layer }.count
     guard now >= due, flying < layerTuning.ceiling else { return nil }
-    if layer == .speedStreak, shipAbscissa == nil { return nil }
+    if plan.abscissa == .outsideCorridor, shipAbscissa == nil { return nil }
 
     let size = drawnSize(layerTuning, union: union, rng: &rng)
     guard size > 0 else { return nil }
-    if layer == .speedStreak {
+    if plan.travel == .clearWithinOneSecond {
       speed = speedStreakSpeed(nominal: speed, tallestHeight: union.tallestHeight, length: size)
     }
-    let width = layer == .speedStreak ? tuning.speedStreakWidth : size
+    let width = switch plan.picture {
+    case .color: tuning.speedStreakWidth
+    case .sprites: size
+    }
     guard width > 0 else { return nil }
     guard let x = abscissa(
-      layer,
+      plan.abscissa,
       union: union,
       shipAbscissa: shipAbscissa,
       corridorWidth: tuning.speedStreakCorridorWidth,
       streakWidth: width,
       rng: &rng
     ) else { return nil }
-    let sprite = drawnSprite(layer, rng: &rng)
-    guard let sprite else { return nil }
+    guard let drawn = drawnPicture(plan.picture, rng: &rng) else { return nil }
+    let sprite: String? = switch drawn {
+    case .color: nil
+    case .sprite(let name): name
+    }
     let startY = union.maxY + size / 2
     let endY = union.minY - size / 2
     let id = nextID
@@ -176,14 +186,14 @@ public struct StarshipScenery: Equatable, Sendable {
   /// Abscisse dans l’union. Un trait reste hors du couloir, épaisseur comprise.
   /// `nil` si le couloir couvre toute la largeur : rien ne part.
   private func abscissa<R: RandomNumberGenerator>(
-    _ layer: StarshipSceneryLayer,
+    _ rule: LayerPlan.Abscissa,
     union: Union,
     shipAbscissa: Double?,
     corridorWidth: Double,
     streakWidth: Double,
     rng: inout R
   ) -> Double? {
-    guard layer == .speedStreak, let shipAbscissa else {
+    guard rule == .outsideCorridor, let shipAbscissa else {
       return Double.random(in: union.minX...union.maxX, using: &rng)
     }
     let half = corridorWidth / 2 + streakWidth / 2
@@ -201,19 +211,23 @@ public struct StarshipScenery: Equatable, Sendable {
   }
 
   /// Un trait n’a pas d’image. Les autres couches tirent un sprite, sans répéter la planète précédente.
-  private mutating func drawnSprite<R: RandomNumberGenerator>(
-    _ layer: StarshipSceneryLayer,
+  /// `nil` si la liste de sprites est vide : l’élément ne part pas.
+  private mutating func drawnPicture<R: RandomNumberGenerator>(
+    _ picture: LayerPlan.Picture,
     rng: inout R
-  ) -> String? {
-    if layer == .speedStreak { return "" }
-    let sprites = sprites(for: layer)
-    guard !sprites.isEmpty else { return nil }
-    let pool = spriteChoices(sprites, layer: layer)
-    let sprite = pool[Int.random(in: 0..<pool.count, using: &rng)]
-    if layer == .planet {
-      lastPlanetSprite = sprite
+  ) -> DrawnPicture? {
+    switch picture {
+    case .color:
+      return .color
+    case .sprites(let names, let avoidRepeat):
+      guard !names.isEmpty else { return nil }
+      let pool = avoidRepeat ? choicesSkippingPrevious(names) : names
+      let sprite = pool[Int.random(in: 0..<pool.count, using: &rng)]
+      if avoidRepeat {
+        lastPlanetSprite = sprite
+      }
+      return .sprite(sprite)
     }
-    return sprite
   }
 
   /// Vitesse du trait : la nominale, relevée s’il le faut pour que l’écran le plus haut,
@@ -230,16 +244,19 @@ public struct StarshipScenery: Equatable, Sendable {
   }
 
   /// Vitesse en points par seconde. Nominale : `sceneryReferenceSpeed / depth`.
-  /// Le centre d’une planète traverse la hauteur de l’écran le plus haut en 90 s au plus,
-  /// le bout lent de la bande, et reste strictement plus lent que les astéroïdes.
-  /// Si tenir 90 s rattrapait un astéroïde, la vitesse nominale reste : plus lent, en cas de doute.
+  /// Le centre d’une planète traverse la hauteur de l’écran le plus haut
+  /// en `planetMaxCrossing` secondes au plus, le bout lent de la bande,
+  /// et reste strictement plus lent que les astéroïdes.
+  /// Si tenir ce délai rattrapait un astéroïde, la vitesse nominale reste : plus lent, en cas de doute.
   private func crossingSpeed(
-    _ layer: StarshipSceneryLayer,
+    _ travel: LayerPlan.Travel,
     tuning: StarshipTuning,
-    tallestHeight: Double
+    tallestHeight: Double,
+    depth: Double
   ) -> Double {
-    let nominal = tuning.sceneryReferenceSpeed / tuning.scenery(for: layer).depth
-    guard layer == .planet,
+    let nominal = tuning.sceneryReferenceSpeed / depth
+    guard travel == .planetCap,
+      tuning.planetMaxCrossing > 0,
       tuning.farAsteroidScenery.depth > 0,
       tuning.nearAsteroidScenery.depth > 0
     else { return nominal }
@@ -247,28 +264,17 @@ public struct StarshipScenery: Equatable, Sendable {
       tuning.sceneryReferenceSpeed / tuning.farAsteroidScenery.depth,
       tuning.sceneryReferenceSpeed / tuning.nearAsteroidScenery.depth
     )
-    let neededToCrossInNinetySeconds = tallestHeight / 90
-    let raised = max(nominal, neededToCrossInNinetySeconds)
+    let speedToMeetTheCap = tallestHeight / tuning.planetMaxCrossing
+    let raised = max(nominal, speedToMeetTheCap)
     guard raised < slowestAsteroid else { return nominal }
     return raised
   }
 
   /// La planète qui vient de partir sort du tirage. Une liste d’une seule entrée reste tirable.
-  private func spriteChoices(_ sprites: [String], layer: StarshipSceneryLayer) -> [String] {
-    guard layer == .planet, let lastPlanetSprite else { return sprites }
+  private func choicesSkippingPrevious(_ sprites: [String]) -> [String] {
+    guard let lastPlanetSprite else { return sprites }
     let others = sprites.filter { $0 != lastPlanetSprite }
     return others.isEmpty ? sprites : others
-  }
-
-  private func sprites(for layer: StarshipSceneryLayer) -> [String] {
-    switch layer {
-    case .planet:
-      StarshipCatalog.planets
-    case .farAsteroid, .nearAsteroid:
-      StarshipCatalog.sprites(for: .meteor)
-    case .speedStreak:
-      []
-    }
   }
 
   /// Taille fixe, ou fraction tirée de la hauteur de l’écran le plus haut.
@@ -281,6 +287,60 @@ public struct StarshipScenery: Equatable, Sendable {
     guard fraction.lowerBound > 0 else { return 0 }
     return union.tallestHeight * Double.random(in: fraction, using: &rng)
   }
+}
+
+/// Image, abscisse et vitesse d’une couche. Ajouter une couche, c’est un cas de ce `switch`.
+private struct LayerPlan {
+  enum Picture {
+    /// Trait : pas de sprite, épaisseur `speedStreakWidth`.
+    case color
+    /// Noms tirés au sort. `avoidRepeat` écarte le sprite précédent (planètes).
+    case sprites([String], avoidRepeat: Bool)
+  }
+
+  enum Travel: Equatable {
+    case nominal
+    case planetCap
+    case clearWithinOneSecond
+  }
+
+  enum Abscissa: Equatable {
+    case anywhere
+    case outsideCorridor
+  }
+
+  var picture: Picture
+  var travel: Travel
+  var abscissa: Abscissa
+
+  static func plan(for layer: StarshipSceneryLayer) -> LayerPlan {
+    switch layer {
+    case .planet:
+      LayerPlan(
+        picture: .sprites(StarshipCatalog.planets, avoidRepeat: true),
+        travel: .planetCap,
+        abscissa: .anywhere
+      )
+    case .farAsteroid, .nearAsteroid:
+      LayerPlan(
+        picture: .sprites(StarshipCatalog.sprites(for: .meteor), avoidRepeat: false),
+        travel: .nominal,
+        abscissa: .anywhere
+      )
+    case .speedStreak:
+      LayerPlan(
+        picture: .color,
+        travel: .clearWithinOneSecond,
+        abscissa: .outsideCorridor
+      )
+    }
+  }
+}
+
+/// Résultat d’un tirage d’image. `.color` : le trait, `sprite` reste `nil`.
+private enum DrawnPicture {
+  case color
+  case sprite(String)
 }
 
 private struct Union {
