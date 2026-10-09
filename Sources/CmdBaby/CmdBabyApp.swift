@@ -25,6 +25,9 @@ enum CmdBabyMain {
 
 @MainActor
 final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
+  /// Délégué de l’app qui tourne, pour l’action Raccourcis. Posé dès `init`.
+  static weak var running: CmdBabyAppDelegate?
+
   private let model: DiagnosticsSessionModel
   private let updates: UpdateController
   private let languageAtLaunch: AppLanguagePreference
@@ -46,6 +49,7 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
     model = DiagnosticsSessionModel()
     updates = UpdateController(session: model)
     super.init()
+    Self.running = self
   }
 
   /// « Lancer » sur une carte : ferme les Réglages, puis le même départ que le menu.

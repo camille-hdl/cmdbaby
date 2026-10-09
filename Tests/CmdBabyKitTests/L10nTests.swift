@@ -25,6 +25,20 @@ func keyboardLayoutExitCopy() {
   )
 }
 
+@Test("Raccourcis : Lancer une session en français, Start a Session en anglais")
+func startSessionShortcutCopy() {
+  #expect(L10nTable.language("fr")("shortcuts.startSession.title") == "Lancer une session")
+  #expect(L10nTable.language("en")("shortcuts.startSession.title") == "Start a Session")
+  #expect(
+    L10nTable.language("fr")("shortcuts.startSession.description")
+      == "Lance une session avec les réglages enregistrés."
+  )
+  #expect(
+    L10nTable.language("en")("shortcuts.startSession.description")
+      == "Starts a session with your saved settings."
+  )
+}
+
 @Test("Lancer un mode : Start en anglais, Lancer en français")
 func launchModeButtonCopy() {
   #expect(L10nTable.language("en")("settings.mode.launch") == "Start")

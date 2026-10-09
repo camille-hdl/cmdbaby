@@ -108,3 +108,5 @@
 "site.support.url" = "https://cmdbaby.app/fr/support/";
 "settings.about.privacy" = "Confidentialité";
 "settings.about.support" = "Support";
+"shortcuts.startSession.title" = "Lancer une session";
+"shortcuts.startSession.description" = "Lance une session avec les réglages enregistrés.";

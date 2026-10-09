@@ -33,10 +33,11 @@ app_path="$output_dir/$app_name"
 contents_path="$app_path/Contents"
 info_path="$contents_path/Info.plist"
 
-swift build --configuration "$configuration" --product CmdBaby
-binary_dir=$(swift build --configuration "$configuration" --show-bin-path)
-
 source "$script_dir/lib/assemble-app.zsh"
+prepare_app_intents_swift_flags "$project_dir"
+swift build --configuration "$configuration" --product CmdBaby "${app_intents_swift_flags[@]}"
+binary_dir=$(swift build --configuration "$configuration" --show-bin-path --product CmdBaby)
+
 assemble_app "$binary_dir" "$project_dir" "$app_path"
 compile_app_icon "$project_dir" "$app_path" optional
 
@@ -45,6 +46,8 @@ if [[ "$sandbox_mode" == 1 || "$sandbox_mode" == true || "$sandbox_mode" == TRUE
     /usr/bin/plutil -replace CFBundleDisplayName -string "CmdBaby (sandbox)" "$info_path"
     /usr/bin/plutil -replace CFBundleName -string "CmdBabySandbox" "$info_path"
 fi
+
+install_app_intents_metadata "$binary_dir" "$project_dir" "$app_path"
 
 # Hardened runtime, sauf en signature ad hoc : sans Team ID, la validation des bibliothèques
 # refuserait de charger Sparkle.framework. Un build ad hoc n’est jamais distribué.

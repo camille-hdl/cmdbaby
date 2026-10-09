@@ -76,8 +76,13 @@ jobs:
           done
           for lang in en fr; do
             test -f "$app/Contents/Resources/CmdBaby_CmdBabyKit.bundle/$lang.lproj/Localizable.strings"
+            test -f "$app/Contents/Resources/$lang.lproj/Localizable.strings"
+            test -f "$app/Contents/Resources/$lang.lproj/AppShortcuts.strings"
           done
+          test -s "$app/Contents/Resources/Metadata.appintents/extract.actionsdata"
           codesign --verify --strict --verbose=2 "$app"
+          entitlement_keys=$(codesign -d --entitlements - --xml "$app" 2>/dev/null | grep -c '<key>' || true)
+          test "$entitlement_keys" = "0"
 
   lint-workflows:
     runs-on: ubuntu-latest

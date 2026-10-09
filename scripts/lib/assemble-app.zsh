@@ -77,3 +77,159 @@ compile_app_icon() {
         return 1
     fi
 }
+
+# Remplit le tableau global app_intents_swift_flags.
+# Noms courts de protocoles : ConstExtract les compare à getName(), pas au nom qualifié.
+# À passer à `swift build` avant install_app_intents_metadata.
+prepare_app_intents_swift_flags() {
+    local project_dir="$1"
+    typeset -g -a app_intents_swift_flags
+    app_intents_swift_flags=(
+        -Xswiftc
+        -emit-const-values
+        -Xfrontend
+        -const-gather-protocols-file
+        -Xfrontend
+        "$project_dir/Resources/app-intents-protocols.json"
+    )
+}
+
+# install_app_intents_metadata <dossier des produits swift build> <racine du projet> <chemin du .app>
+# Produit Contents/Resources/Metadata.appintents sans projet Xcode.
+#
+# Commande retenue (une architecture, les const values sont identiques) :
+#   xcrun appintentsmetadataprocessor \
+#     --toolchain-dir "$TOOLCHAIN" \
+#     --module-name CmdBaby \
+#     --sdk-root "$SDK" \
+#     --xcode-version "$XCODE_BUILD" \
+#     --platform-family macOS \
+#     --deployment-target 13.0 \
+#     --bundle-identifier "$BUNDLE_ID" \
+#     --output "$OUT" \
+#     --target-triple "${ARCH}-apple-macos13.0" \
+#     --binary-file "$BINARY" \
+#     --source-file-list "$SOURCES" \
+#     --swift-const-vals-list "$CONSTS" \
+#     --compile-time-extraction \
+#     --deployment-aware-processing \
+#     --force
+# L’outil écrit $OUT/Metadata.appintents. --force évite le court-circuit
+# « pas de dépendance AppIntents » quand aucun fichier de dépendances n’est fourni.
+install_app_intents_metadata() {
+    local binary_dir="$1" project_dir="$2" app_path="$3"
+    local work
+
+    if ! xcrun --find appintentsmetadataprocessor >/dev/null 2>&1; then
+        print -u2 "appintentsmetadataprocessor introuvable : installer Xcode (métadonnées Raccourcis requises)."
+        return 1
+    fi
+
+    work=$(mktemp -d "${TMPDIR:-/tmp}/cmdbaby-appintents.XXXXXX")
+    # Pas de trap ici : release.sh en a déjà un, et un trap de fonction le remplacerait.
+    if ! _install_app_intents_metadata "$binary_dir" "$project_dir" "$app_path" "$work"; then
+        rm -rf "$work"
+        return 1
+    fi
+    rm -rf "$work"
+}
+
+_install_app_intents_metadata() {
+    local binary_dir="$1" project_dir="$2" app_path="$3" work="$4"
+    local info="$app_path/Contents/Info.plist"
+    local arch bundle_id developer_dir toolchain sdk xcode_version
+    local processor_binary sources_list const_list out produced const_file
+
+    arch=$(_app_intents_arch "$binary_dir/CmdBaby")
+    bundle_id=$(/usr/bin/plutil -extract CFBundleIdentifier raw -o - "$info")
+    developer_dir=$(xcode-select -p)
+    toolchain="$developer_dir/Toolchains/XcodeDefault.xctoolchain"
+    sdk=$(xcrun --sdk macosx --show-sdk-path)
+    xcode_version=$(xcodebuild -version | awk '/Build version/ { print $3 }')
+    [[ -n "$xcode_version" ]] || { print -u2 "Version de build Xcode introuvable."; return 1 }
+
+    processor_binary="$work/CmdBaby"
+    if [[ $(lipo -archs "$binary_dir/CmdBaby" | wc -w | tr -d ' ') -gt 1 ]]; then
+        lipo "$binary_dir/CmdBaby" -thin "$arch" -output "$processor_binary" || return 1
+    else
+        cp "$binary_dir/CmdBaby" "$processor_binary"
+    fi
+
+    sources_list="$work/sources.txt"
+    find "$project_dir/Sources/CmdBaby" -name '*.swift' -type f | sort > "$sources_list"
+    [[ -s "$sources_list" ]] || { print -u2 "Aucune source Swift pour CmdBaby."; return 1 }
+
+    const_list="$work/const-values.txt"
+    : > "$const_list"
+    while IFS= read -r const_file; do
+        print -r -- "$const_file" >> "$const_list"
+    done < <(find "$project_dir/.build" -name '*.swiftconstvalues' -path "*${arch}-apple-macos*" | sort)
+    if [[ ! -s "$const_list" ]]; then
+        while IFS= read -r const_file; do
+            print -r -- "$const_file" >> "$const_list"
+        done < <(find "$project_dir/.build" -name '*.swiftconstvalues' | sort)
+    fi
+    if [[ ! -s "$const_list" ]]; then
+        print -u2 "Aucun .swiftconstvalues. Relancer swift build avec -Xswiftc -emit-const-values et -const-gather-protocols-file Resources/app-intents-protocols.json."
+        return 1
+    fi
+
+    out="$work/out"
+    mkdir -p "$out"
+    print -r -- "xcrun appintentsmetadataprocessor --module-name CmdBaby --platform-family macOS --deployment-target 13.0 --bundle-identifier $bundle_id --target-triple ${arch}-apple-macos13.0 --compile-time-extraction --deployment-aware-processing --force"
+    xcrun appintentsmetadataprocessor \
+        --toolchain-dir "$toolchain" \
+        --module-name CmdBaby \
+        --sdk-root "$sdk" \
+        --xcode-version "$xcode_version" \
+        --platform-family macOS \
+        --deployment-target 13.0 \
+        --bundle-identifier "$bundle_id" \
+        --output "$out" \
+        --target-triple "${arch}-apple-macos13.0" \
+        --binary-file "$processor_binary" \
+        --source-file-list "$sources_list" \
+        --swift-const-vals-list "$const_list" \
+        --compile-time-extraction \
+        --deployment-aware-processing \
+        --force \
+        || return 1
+
+    produced="$out/Metadata.appintents"
+    if [[ ! -d "$produced" && -f "$out/extract.actionsdata" ]]; then
+        produced="$out"
+    fi
+    if [[ ! -s "$produced/extract.actionsdata" ]]; then
+        print -u2 "appintentsmetadataprocessor n’a pas écrit Metadata.appintents/extract.actionsdata."
+        return 1
+    fi
+    if ! grep -a -q "StartSessionIntent" "$produced/extract.actionsdata"; then
+        print -u2 "Les métadonnées App Intents ne mentionnent pas StartSessionIntent."
+        return 1
+    fi
+
+    rm -rf "$app_path/Contents/Resources/Metadata.appintents"
+    cp -R "$produced" "$app_path/Contents/Resources/Metadata.appintents"
+
+    # Raccourcis lit le catalogue du bundle principal, pas CmdBaby_CmdBaby.bundle.
+    local lang src_lproj
+    for lang in en fr; do
+        src_lproj="$project_dir/Sources/CmdBaby/Resources/$lang.lproj"
+        [[ -d "$src_lproj" ]] || { print -u2 "Catalogue Raccourcis manquant : $src_lproj"; return 1 }
+        rm -rf "$app_path/Contents/Resources/$lang.lproj"
+        cp -R "$src_lproj" "$app_path/Contents/Resources/$lang.lproj"
+    done
+}
+
+# Architecture préférée pour l’extraction : les const values ne dépendent pas du binaire.
+_app_intents_arch() {
+    local binary="$1" archs
+    archs=$(lipo -archs "$binary" 2>/dev/null || true)
+    if [[ "$archs" == *arm64* ]]; then
+        print -r -- arm64
+    elif [[ "$archs" == *x86_64* ]]; then
+        print -r -- x86_64
+    else
+        print -r -- arm64
+    fi
+}

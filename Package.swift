@@ -53,6 +53,7 @@ let package = Package(
       ],
       linkerSettings: [
         .linkedFramework("ApplicationServices"),
+        .linkedFramework("AppIntents"),
         .linkedFramework("AppKit"),
         .linkedFramework("Carbon"),
         .linkedFramework("CoreGraphics"),

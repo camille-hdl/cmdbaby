@@ -1,0 +1,4 @@
+/* Même texte que shortcuts.startSession.title. La clé est le littéral extrait par App Intents. */
+"Start a Session" = "Start a Session";
+/* Même texte que shortcuts.startSession.description. */
+"Starts a session with your saved settings." = "Starts a session with your saved settings.";
