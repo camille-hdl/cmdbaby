@@ -17,8 +17,9 @@ final class StarshipPainter {
   private let shipAim = CALayer()
   private let shipSprite = CALayer()
   private var ephemerals: [(layer: CALayer, endsAt: TimeInterval, sceneryID: Int?)] = []
-  /// Éléments de décor déjà posés sur cet écran. Un second appel ne les empile pas.
-  private var sceneryIDs: Set<Int> = []
+  /// Décor déjà posé sur cet écran. Un second appel ne l’empile pas.
+  /// Si l’origine ou la taille change, les calques sont retirés et rejoués avec le même `beginTime`.
+  private var sceneryPlacement = StarshipSceneryPlacement()
   private var warpToken = 0
   /// Compteur de tours, pour que chaque appui ait sa propre animation.
   private var spinCounter = 0
@@ -351,14 +352,18 @@ final class StarshipPainter {
   /// Un trait est un calque de couleur unie, sans image. `mediaBeginTime` est l’instant de média
   /// commun à tous les écrans, y compris quand l’élément est rejoué sur un écran branché ensuite.
   /// Pas de glyphe, pas de cible, pas de flash. Un élément déjà posé n’est pas reposé.
+  /// Si l’origine ou la taille de l’écran a changé, les calques de décor de cet écran
+  /// sont retirés, puis rejoués avec le même `beginTime`.
   func addScenery(
     _ element: StarshipSceneryElement,
     on screen: TerminalScreen,
     mediaBeginTime: CFTimeInterval
   ) {
     guard element.duration > 0, let scene = skyboxFront.superlayer else { return }
-    guard sceneryIDs.insert(element.id).inserted else { return }
-    let layer = sceneryLayer(element, on: screen, mediaBeginTime: mediaBeginTime)
+    let update = sceneryPlacement.install(element, on: screen, mediaBeginTime: mediaBeginTime)
+    removeSceneryLayers(ids: update.droppedIDs)
+    guard let placed = update.flight else { return }
+    let layer = sceneryLayer(element, flight: placed)
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     if let shipIndex = scene.sublayers?.firstIndex(where: { $0 === shipRoot }) {
@@ -385,7 +390,7 @@ final class StarshipPainter {
       guard now >= item.endsAt else { return false }
       item.layer.removeFromSuperlayer()
       if let sceneryID = item.sceneryID {
-        sceneryIDs.remove(sceneryID)
+        sceneryPlacement.forget(sceneryID)
       }
       return true
     }
@@ -408,7 +413,7 @@ final class StarshipPainter {
       item.layer.removeFromSuperlayer()
     }
     ephemerals.removeAll(keepingCapacity: false)
-    sceneryIDs.removeAll(keepingCapacity: false)
+    sceneryPlacement.reset()
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     skyboxBack.contents = nil
@@ -422,10 +427,18 @@ final class StarshipPainter {
     skyboxBack.removeFromSuperlayer()
   }
 
+  private func removeSceneryLayers(ids: Set<Int>) {
+    guard !ids.isEmpty else { return }
+    ephemerals.removeAll { item in
+      guard let sceneryID = item.sceneryID, ids.contains(sceneryID) else { return false }
+      item.layer.removeFromSuperlayer()
+      return true
+    }
+  }
+
   private func sceneryLayer(
     _ element: StarshipSceneryElement,
-    on screen: TerminalScreen,
-    mediaBeginTime: CFTimeInterval
+    flight placed: StarshipSceneryPlacement.Flight
   ) -> CALayer {
     let layer = CALayer()
     if element.layer == .speedStreak {
@@ -442,14 +455,12 @@ final class StarshipPainter {
     layer.opacity = Float(element.opacity)
     layer.zPosition = Self.sceneryZPosition(element.layer)
 
-    let start = element.localPoint(at: element.start, on: screen)
-    let arrival = element.localPoint(at: element.start + element.duration, on: screen)
-    let from = CGPoint(x: start.x, y: start.y)
-    let to = CGPoint(x: arrival.x, y: arrival.y)
+    let from = CGPoint(x: placed.from.x, y: placed.from.y)
+    let to = CGPoint(x: placed.to.x, y: placed.to.y)
     let flight = CABasicAnimation(keyPath: "position")
     flight.fromValue = from
     flight.toValue = to
-    flight.beginTime = mediaBeginTime
+    flight.beginTime = placed.mediaBeginTime
     flight.duration = element.duration
     flight.timingFunction = CAMediaTimingFunction(name: .linear)
     flight.fillMode = .backwards

@@ -458,8 +458,10 @@ final class StarshipDirector {
 
   /// Distribue le décor, traits compris. Chaque écran reçoit le même `beginTime` de média,
   /// y compris un écran branché pendant qu’un élément est déjà en vol.
-  /// Aucun calque déjà posé n’est déplacé : l’animation fait le trajet, et les coordonnées
-  /// d’un élément en vol ne sont pas recalculées.
+  /// Un calque déjà posé reste en place : l’animation fait le trajet.
+  /// Si l’origine ou la taille de cet écran change, ses calques de décor sont retirés
+  /// et rejoués ici, avec le même `beginTime`. Les autres écrans ne bougent pas.
+  /// Les coordonnées dans l’union ne sont pas recalculées.
   private func launchScenery(now: TimeInterval) {
     let framed = framedScreens()
     let fresh = scenery.launch(
@@ -478,7 +480,8 @@ final class StarshipDirector {
     presentFlyingScenery(now: now)
   }
 
-  /// Pose les éléments en vol sur les écrans qui ne les ont pas encore.
+  /// Pose les éléments en vol sur les écrans qui ne les ont pas encore,
+  /// et sur un écran dont l’origine ou la taille vient de changer.
   /// Le `beginTime` est celui du départ, donc l’animation reprend en phase.
   /// La dérive du ciel, elle, est reprise par `publishSkybox`.
   private func presentFlyingScenery(now: TimeInterval) {
