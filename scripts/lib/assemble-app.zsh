@@ -78,19 +78,37 @@ compile_app_icon() {
     fi
 }
 
+# true si swiftc documente l’option (driver ou frontend). On ne la passe jamais
+# à `swift build` directement : un argument qui commence par « - » n’est pas
+# une option de SwiftPM, seulement une valeur de -Xswiftc.
+_swiftc_documents() {
+    local flag="$1" out
+    out=$(swiftc -help 2>&1 || true)
+    out+=$'\n'"$(swiftc -help-hidden 2>&1 || true)"
+    out+=$'\n'"$(swiftc -frontend -help 2>&1 || true)"
+    out+=$'\n'"$(swiftc -frontend -help-hidden 2>&1 || true)"
+    [[ "$out" == *"$flag"* ]]
+}
+
 # Remplit le tableau global app_intents_swift_flags.
-# Noms courts de protocoles : ConstExtract les compare à getName(), pas au nom qualifié.
-# À passer à `swift build` avant install_app_intents_metadata.
+# Vide si ce compilateur ne connaît pas -const-gather-protocols-file :
+# `swift build` dans l’assemblage reste alors le même que `swift build` / `swift test`.
+# Noms courts de protocoles : ConstExtract les compare à getName().
 prepare_app_intents_swift_flags() {
     local project_dir="$1"
     typeset -g -a app_intents_swift_flags
+    app_intents_swift_flags=()
+    if ! _swiftc_documents "-const-gather-protocols-file"; then
+        print -r -- "Ce swiftc ignore -const-gather-protocols-file : extraction App Intents depuis les sources."
+        return 0
+    fi
+    # Chaque -Xswiftc ne transmet qu’un argument, y compris ceux qui commencent par « - ».
     app_intents_swift_flags=(
-        -Xswiftc
-        -emit-const-values
-        -Xfrontend
-        -const-gather-protocols-file
-        -Xfrontend
-        "$project_dir/Resources/app-intents-protocols.json"
+        -Xswiftc -emit-const-values
+        -Xswiftc -Xfrontend
+        -Xswiftc -const-gather-protocols-file
+        -Xswiftc -Xfrontend
+        -Xswiftc "$project_dir/Resources/app-intents-protocols.json"
     )
 }
 
@@ -169,31 +187,32 @@ _install_app_intents_metadata() {
             print -r -- "$const_file" >> "$const_list"
         done < <(find "$project_dir/.build" -name '*.swiftconstvalues' | sort)
     fi
-    if [[ ! -s "$const_list" ]]; then
-        print -u2 "Aucun .swiftconstvalues. Relancer swift build avec -Xswiftc -emit-const-values et -const-gather-protocols-file Resources/app-intents-protocols.json."
-        return 1
-    fi
-
     out="$work/out"
     mkdir -p "$out"
-    print -r -- "xcrun appintentsmetadataprocessor --module-name CmdBaby --platform-family macOS --deployment-target 13.0 --bundle-identifier $bundle_id --target-triple ${arch}-apple-macos13.0 --compile-time-extraction --deployment-aware-processing --force"
-    xcrun appintentsmetadataprocessor \
-        --toolchain-dir "$toolchain" \
-        --module-name CmdBaby \
-        --sdk-root "$sdk" \
-        --xcode-version "$xcode_version" \
-        --platform-family macOS \
-        --deployment-target 13.0 \
-        --bundle-identifier "$bundle_id" \
-        --output "$out" \
-        --target-triple "${arch}-apple-macos13.0" \
-        --binary-file "$processor_binary" \
-        --source-file-list "$sources_list" \
-        --swift-const-vals-list "$const_list" \
-        --compile-time-extraction \
-        --deployment-aware-processing \
-        --force \
-        || return 1
+    local -a processor_flags
+    processor_flags=(
+        --toolchain-dir "$toolchain"
+        --module-name CmdBaby
+        --sdk-root "$sdk"
+        --xcode-version "$xcode_version"
+        --platform-family macOS
+        --deployment-target 13.0
+        --bundle-identifier "$bundle_id"
+        --output "$out"
+        --target-triple "${arch}-apple-macos13.0"
+        --binary-file "$processor_binary"
+        --source-file-list "$sources_list"
+        --deployment-aware-processing
+        --force
+    )
+    if [[ -s "$const_list" ]]; then
+        processor_flags+=(--swift-const-vals-list "$const_list" --compile-time-extraction)
+        print -r -- "xcrun appintentsmetadataprocessor --module-name CmdBaby --target-triple ${arch}-apple-macos13.0 --compile-time-extraction --swift-const-vals-list <${arch} .swiftconstvalues> --force"
+    else
+        print -r -- "xcrun appintentsmetadataprocessor --module-name CmdBaby --target-triple ${arch}-apple-macos13.0 --source-file-list <Sources/CmdBaby> --force"
+        print -r -- "Pas de .swiftconstvalues : extraction depuis les sources."
+    fi
+    xcrun appintentsmetadataprocessor "${processor_flags[@]}" || return 1
 
     produced="$out/Metadata.appintents"
     if [[ ! -d "$produced" && -f "$out/extract.actionsdata" ]]; then
