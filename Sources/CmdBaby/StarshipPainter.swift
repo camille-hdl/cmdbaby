@@ -629,8 +629,9 @@ final class StarshipPainter {
     let length = max(hypot(offsetX, offsetY), 1)
     let scale = CATransform3DMakeScale(1, length / Double(Self.boltSize.height), 1)
     let rotation = CATransform3DMakeRotation(angle - .pi / 2, 0, 0, 1)
-    // scale d’abord (axe du sprite), puis rotation : le trait suit la visée.
-    beam.transform = CATransform3DConcat(rotation, scale)
+    // Concat applique le premier argument d’abord. L’échelle sur l’axe du sprite,
+    // puis la rotation : le trait part de l’ancre et aboutit sur l’ennemi.
+    beam.transform = CATransform3DConcat(scale, rotation)
 
     let flash = CAKeyframeAnimation(keyPath: "opacity")
     flash.values = [1, 1, 0]

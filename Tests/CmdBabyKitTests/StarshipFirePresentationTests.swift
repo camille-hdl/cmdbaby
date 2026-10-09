@@ -109,6 +109,29 @@ func beamStretchesTheSpriteInsteadOfAScreenTallLayer() throws {
   #expect(abs(scaleY - 10) < 0.01)
 }
 
+@Test("Le rayon part du vaisseau et aboutit sur l’ennemi, vers le haut, le bas et les côtés")
+@MainActor
+func beamReachesTheEnemyInEveryDirection() throws {
+  let shots = [
+    (start: CGPoint(x: 200, y: 160), end: CGPoint(x: 200, y: 720)),
+    (start: CGPoint(x: 200, y: 640), end: CGPoint(x: 200, y: 80)),
+    (start: CGPoint(x: 180, y: 240), end: CGPoint(x: 860, y: 240)),
+    (start: CGPoint(x: 700, y: 500), end: CGPoint(x: 140, y: 120)),
+  ]
+  for shot in shots {
+    let painter = hostedPainter()
+    painter.fireBeam(from: shot.start, to: shot.end, delay: 0, duration: 0.15, now: 0)
+    let beam = try #require(findLayer(withAnimation: "beam", under: painter.skyboxBack.superlayer))
+    let host = try #require(beam.superlayer)
+    let near = beam.convert(CGPoint(x: beam.bounds.midX, y: beam.bounds.minY), to: host)
+    let far = beam.convert(CGPoint(x: beam.bounds.midX, y: beam.bounds.maxY), to: host)
+    #expect(abs(near.x - shot.start.x) < 0.5)
+    #expect(abs(near.y - shot.start.y) < 0.5)
+    #expect(abs(far.x - shot.end.x) < 0.5)
+    #expect(abs(far.y - shot.end.y) < 0.5)
+  }
+}
+
 @Test("La visée tourne le vaisseau sans retour")
 @MainActor
 func aimTurnsTheShipWithoutReversing() throws {
