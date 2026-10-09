@@ -235,8 +235,9 @@ final class StarshipPainter {
     let turn = CABasicAnimation(keyPath: "transform.rotation.z")
     turn.fromValue = course.from
     turn.toValue = course.to
-    turn.autoreverses = course.reverses
-    turn.repeatCount = Float(course.repeatCount)
+    // Un seul aller. Le retour ramènerait le nez. 0 : une fois, le rejouer referait le tour.
+    turn.autoreverses = false
+    turn.repeatCount = 0
     turn.duration = duration
     turn.timingFunction = CAMediaTimingFunction(name: .easeOut)
     CATransaction.begin()
@@ -669,15 +670,13 @@ final class StarshipPainter {
     bolt.contentsScale = contentsScale
     bolt.setValue(angle - .pi / 2, forKeyPath: "transform.rotation.z")
 
-    let course = StarshipBolt.flight(
-      from: StarshipPoint(x: start.x, y: start.y),
-      to: StarshipPoint(x: end.x, y: end.y)
-    )
+    // Aller du nez jusqu’à la cible. Pas de retour : le projectile ne revient pas au nez.
+    // 0 : une seule fois. Le rejouer le ramènerait au départ.
     let flight = CABasicAnimation(keyPath: "position")
-    flight.fromValue = CGPoint(x: course.from.x, y: course.from.y)
-    flight.toValue = CGPoint(x: course.to.x, y: course.to.y)
-    flight.autoreverses = course.reverses
-    flight.repeatCount = Float(course.repeatCount)
+    flight.fromValue = start
+    flight.toValue = end
+    flight.autoreverses = false
+    flight.repeatCount = 0
     flight.beginTime = departsAt
     flight.duration = duration
     flight.fillMode = .backwards
@@ -929,8 +928,9 @@ final class StarshipPainter {
       animation.fromValue = from
       animation.toValue = to
       animation.duration = playback.duration
-      animation.autoreverses = playback.reverses
-      animation.repeatCount = Float(playback.repeatCount)
+      // Pas de retour : il ferait monter le ciel. Pas de répétition : elle ramènerait y d’un coup.
+      animation.autoreverses = false
+      animation.repeatCount = 0
       animation.repeatDuration = playback.repeatDuration
       animation.timingFunction = CAMediaTimingFunction(name: .linear)
       animation.beginTime = drift.mediaBeginTime

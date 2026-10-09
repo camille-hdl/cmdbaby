@@ -2,8 +2,8 @@ import Testing
 
 @testable import CmdBabyKit
 
-@Test("La dérive du ciel descend une fois, sans retour ni saut vers le haut")
-func skyboxDriftDescendsOnceWithoutReversingOrJumping() throws {
+@Test("La dérive du ciel descend une fois, sans saut vers le haut")
+func skyboxDriftDescendsOnceWithoutJumping() throws {
   let screens = [TerminalScreen(index: 0, x: 0, y: 0, width: 1440, height: 900)]
   let from = try #require(
     StarshipSkyboxFraming.contentsRect(
@@ -27,9 +27,7 @@ func skyboxDriftDescendsOnceWithoutReversingOrJumping() throws {
   #expect(abs(drift.to.width - 0.48) < 1e-5)
   #expect(abs(drift.to.height - 0.60) < 1e-5)
   #expect(drift.to.y > drift.from.y)
-  #expect(drift.reverses == false)
-  // 0 joue une fois. Répéter, même sans retour, ramène y au départ : le ciel saute vers le haut.
-  #expect(drift.repeatCount == 0)
+  // 0 : pas de répétition. Répéter ramènerait y au départ : le ciel saute vers le haut.
   #expect(drift.repeatDuration == 0)
   #expect(abs(drift.duration - 180) < 1e-6)
 }

@@ -93,10 +93,6 @@ public enum StarshipAim: Sendable {
   public struct Turn: Equatable, Sendable {
     public var from: Double
     public var to: Double
-    /// Un seul aller. Le retour ramènerait le nez.
-    public var reverses: Bool
-    /// 0 : une fois. Le rejouer referait le tour.
-    public var repeatCount: Double
   }
 
   /// Tourne de la rotation actuelle vers `angle` (0 = vers la droite).
@@ -104,9 +100,7 @@ public enum StarshipAim: Sendable {
   public static func turn(from currentRotation: Double, toward angle: Double) -> Turn {
     Turn(
       from: currentRotation,
-      to: nearestEquivalent(of: angle - .pi / 2, to: currentRotation),
-      reverses: false,
-      repeatCount: 0
+      to: nearestEquivalent(of: angle - .pi / 2, to: currentRotation)
     )
   }
 

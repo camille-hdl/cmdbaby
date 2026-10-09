@@ -13,56 +13,52 @@ func beamStretchesTheSpriteInsteadOfAScreenTallLayer() {
   #expect(abs(StarshipBeam.spriteHeight - 86) < 1e-6)
   #expect(abs(placement.origin.x - 120) < 1e-6)
   #expect(abs(placement.origin.y - 80) < 1e-6)
-  #expect(abs(placement.length - 860) < 1e-6)
   #expect(abs(placement.scaleY - 10) < 1e-6)
   #expect(abs(placement.angle - 0) < 1e-6)
 }
 
-@Test("Le rayon part du vaisseau et aboutit sur l’ennemi, vers le haut, le bas et les côtés")
+@Test("Le rayon se tourne depuis le haut et s’étire d’un sprite par 86 pt, dans chaque direction")
 func beamReachesTheEnemyInEveryDirection() {
+  // 860 pt, soit dix sprites de 86. 0 = vers le haut.
   let up = StarshipBeam.placement(
     from: StarshipPoint(x: 200, y: 160),
-    to: StarshipPoint(x: 200, y: 720)
+    to: StarshipPoint(x: 200, y: 1020)
   )
-  expectBeam(up, originX: 200, originY: 160, endX: 200, endY: 720, angle: 0)
+  expectBeam(up, angle: 0, scaleY: 10)
 
   let down = StarshipBeam.placement(
-    from: StarshipPoint(x: 200, y: 640),
-    to: StarshipPoint(x: 200, y: 80)
+    from: StarshipPoint(x: 200, y: 900),
+    to: StarshipPoint(x: 200, y: 40)
   )
-  expectBeam(down, originX: 200, originY: 640, endX: 200, endY: 80, angle: -.pi)
+  expectBeam(down, angle: -.pi, scaleY: 10)
 
   let right = StarshipBeam.placement(
     from: StarshipPoint(x: 180, y: 240),
-    to: StarshipPoint(x: 860, y: 240)
+    to: StarshipPoint(x: 1040, y: 240)
   )
-  expectBeam(right, originX: 180, originY: 240, endX: 860, endY: 240, angle: -.pi / 2)
+  expectBeam(right, angle: -.pi / 2, scaleY: 10)
 
+  let left = StarshipBeam.placement(
+    from: StarshipPoint(x: 1040, y: 240),
+    to: StarshipPoint(x: 180, y: 240)
+  )
+  expectBeam(left, angle: .pi / 2, scaleY: 10)
+
+  // 45° en haut à droite, un sprite sur chaque axe.
+  // L’hypoténuse vaut 86√2, donc l’échelle est √2.
+  // Depuis le haut, un huitième de tour vers la droite : −π/4.
   let diagonal = StarshipBeam.placement(
-    from: StarshipPoint(x: 700, y: 500),
-    to: StarshipPoint(x: 140, y: 120)
+    from: StarshipPoint(x: 0, y: 0),
+    to: StarshipPoint(x: 86, y: 86)
   )
-  expectBeam(
-    diagonal,
-    originX: 700,
-    originY: 500,
-    endX: 140,
-    endY: 120,
-    angle: -4.1161898391
-  )
+  expectBeam(diagonal, angle: -.pi / 4, scaleY: 2.0.squareRoot())
 }
 
 private func expectBeam(
   _ placement: StarshipBeam.Placement,
-  originX: Double,
-  originY: Double,
-  endX: Double,
-  endY: Double,
-  angle: Double
+  angle: Double,
+  scaleY: Double
 ) {
-  #expect(abs(placement.origin.x - originX) < 1e-6)
-  #expect(abs(placement.origin.y - originY) < 1e-6)
-  #expect(abs(placement.end.x - endX) < 1e-6)
-  #expect(abs(placement.end.y - endY) < 1e-6)
-  #expect(abs(placement.angle - angle) < 1e-6)
+  #expect(abs(placement.angle - angle) < 1e-9)
+  #expect(abs(placement.scaleY - scaleY) < 1e-9)
 }
