@@ -633,7 +633,7 @@ final class StarshipPainter {
       origin: .zero,
       size: CGSize(width: StarshipBeam.spriteWidth, height: StarshipBeam.spriteHeight)
     )
-    beam.position = CGPoint(x: placement.origin.x, y: placement.origin.y)
+    beam.position = start
     beam.zPosition = 15
     beam.opacity = 0
     let scale = CATransform3DMakeScale(1, placement.scaleY, 1)
@@ -931,7 +931,7 @@ final class StarshipPainter {
       // Pas de retour : il ferait monter le ciel. Pas de répétition : elle ramènerait y d’un coup.
       animation.autoreverses = false
       animation.repeatCount = 0
-      animation.repeatDuration = playback.repeatDuration
+      animation.repeatDuration = 0
       animation.timingFunction = CAMediaTimingFunction(name: .linear)
       animation.beginTime = drift.mediaBeginTime
       animation.fillMode = .both

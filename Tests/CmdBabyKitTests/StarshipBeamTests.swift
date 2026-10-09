@@ -11,8 +11,6 @@ func beamStretchesTheSpriteInsteadOfAScreenTallLayer() {
 
   #expect(abs(StarshipBeam.spriteWidth - 14) < 1e-6)
   #expect(abs(StarshipBeam.spriteHeight - 86) < 1e-6)
-  #expect(abs(placement.origin.x - 120) < 1e-6)
-  #expect(abs(placement.origin.y - 80) < 1e-6)
   #expect(abs(placement.scaleY - 10) < 1e-6)
   #expect(abs(placement.angle - 0) < 1e-6)
 }

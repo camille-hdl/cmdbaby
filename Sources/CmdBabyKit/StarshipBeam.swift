@@ -7,13 +7,12 @@ public enum StarshipBeam: Sendable {
   public static let spriteHeight: Double = 86
 
   public struct Placement: Equatable, Sendable {
-    public var origin: StarshipPoint
     /// Rotation du sprite. 0 = vers le haut.
     public var angle: Double
     public var scaleY: Double
   }
 
-  /// Origine au départ. Angle et échelle jusqu’à `end`.
+  /// Angle et échelle de `start` jusqu’à `end`.
   /// Le sprite pointe vers le haut : l’angle est celui du tir, moins π/2.
   /// L’échelle est la distance en sprites de 86 pt. En dessous d’un point, elle reste celle d’un point.
   public static func placement(from start: StarshipPoint, to end: StarshipPoint) -> Placement {
@@ -21,7 +20,6 @@ public enum StarshipBeam: Sendable {
     let dy = end.y - start.y
     let length = max(hypot(dx, dy), 1)
     return Placement(
-      origin: start,
       angle: atan2(dy, dx) - .pi / 2,
       scaleY: length / spriteHeight
     )

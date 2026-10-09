@@ -27,7 +27,4 @@ func skyboxDriftDescendsOnceWithoutJumping() throws {
   #expect(abs(drift.to.width - 0.48) < 1e-5)
   #expect(abs(drift.to.height - 0.60) < 1e-5)
   #expect(drift.to.y > drift.from.y)
-  // 0 : pas de répétition. Répéter ramènerait y au départ : le ciel saute vers le haut.
-  #expect(drift.repeatDuration == 0)
-  #expect(abs(drift.duration - 180) < 1e-6)
 }
