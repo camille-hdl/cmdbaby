@@ -311,10 +311,18 @@ final class StarshipPainter {
 
   /// Retire la cible et joue l’explosion là où elle se trouvait.
   /// Le glyphe déjà dessiné grossit : on ne le redessine pas au moment de l’impact.
+  /// Sa position est dans le repère de la cible. On la convertit dans la scène, sans
+  /// animation implicite : sinon la lettre part du bord et file jusqu’à l’ennemi.
   func explodeTarget(id: Int, kind: StarshipTargetKind, now: TimeInterval) {
     guard let flying = targetsByID.removeValue(forKey: id) else { return }
     let point = flying.root.position
     let glyph = flying.root.sublayers?.first { $0 is CATextLayer }
+    let onScreen: CGPoint
+    if let glyph, let scene = skyboxBack.superlayer {
+      onScreen = flying.root.convert(glyph.position, to: scene)
+    } else {
+      onScreen = point
+    }
     glyph?.removeFromSuperlayer()
     flying.root.removeFromSuperlayer()
     addEphemeral(burst(at: point), lifetime: tuning.explosionDuration, now: now)
@@ -323,9 +331,12 @@ final class StarshipPainter {
       addEphemeral(debris, lifetime: Self.debrisLifetime, now: now)
     }
     if let glyph {
-      glyph.position = point
+      CATransaction.begin()
+      CATransaction.setDisableActions(true)
+      glyph.position = onScreen
       glyph.zPosition = 31
       glyph.opacity = 0
+      CATransaction.commit()
       glyph.add(Self.glyphPop(), forKey: "pop")
       addEphemeral(glyph, lifetime: Self.glyphPopDuration, now: now)
     }

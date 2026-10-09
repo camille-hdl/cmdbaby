@@ -52,6 +52,47 @@ func explosionPopsTheGlyphAlreadyOnScreen() throws {
   #expect(abs((scalar(scale.toValue) ?? -1) - 1.6) < 1e-6)
 }
 
+@Test("L’explosion laisse la lettre sur l’ennemi, sans la faire partir du bord")
+@MainActor
+func explosionKeepsTheLetterOnTheEnemy() throws {
+  let window = NSWindow(
+    contentRect: NSRect(x: 0, y: 0, width: 1280, height: 800),
+    styleMask: [.borderless],
+    backing: .buffered,
+    defer: false
+  )
+  let view = NSView(frame: NSRect(x: 0, y: 0, width: 1280, height: 800))
+  view.wantsLayer = true
+  window.contentView = view
+  let painter = StarshipPainter(tuning: .standard, scale: 2)
+  let host = try #require(view.layer)
+  host.addSublayer(painter.skyboxBack)
+  host.addSublayer(painter.skyboxFront)
+  host.addSublayer(painter.shipRoot)
+
+  let enemy = CGPoint(x: 640, y: 420)
+  painter.addTarget(
+    id: 1,
+    kind: .enemy,
+    sprite: "enemyBlue1",
+    label: "A",
+    at: enemy,
+    heading: -.pi / 2
+  )
+  let glyph = try #require(textLayers(under: host).first)
+  CATransaction.flush()
+
+  painter.explodeTarget(id: 1, kind: .enemy, now: ProcessInfo.processInfo.systemUptime)
+  CATransaction.flush()
+
+  #expect(abs(glyph.position.x - enemy.x) < 0.5)
+  #expect(abs(glyph.position.y - enemy.y) < 0.5)
+  let departure = cgPoint((glyph.animation(forKey: "position") as? CABasicAnimation)?.fromValue)
+  #expect(departure == nil)
+  #expect(glyph.animation(forKey: "pop") != nil)
+  _ = window
+}
+
 @Test("Le rayon vers une cible étire le sprite, sans calque de la hauteur du tir")
 @MainActor
 func beamStretchesTheSpriteInsteadOfAScreenTallLayer() throws {
