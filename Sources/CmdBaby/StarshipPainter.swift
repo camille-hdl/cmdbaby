@@ -27,7 +27,7 @@ final class StarshipPainter {
   /// Fin du fondu en cours. `nil` quand le ciel du dessous est le ciel courant.
   private var skyboxFadeEndsAt: TimeInterval?
   /// Dérive déjà posée. On ne la repose pas : la remplacer ferait sauter le ciel.
-  private var installedDrift: SkyboxDrift?
+  private var installedDrift: InstalledSkyboxDrift?
   /// Rotation z déjà posée sur `shipAim`. 0 : nez vers le haut.
   private var currentAimRotation = 0.0
   private let gaugeFill = CALayer()
@@ -42,19 +42,15 @@ final class StarshipPainter {
     let root: CALayer
   }
 
-  /// Aller de la dérive. `mediaBeginTime` est l’instant de média commun à tous les écrans.
-  private struct SkyboxDrift: Equatable {
-    var from: StarshipUnitRect
-    var to: StarshipUnitRect
-    var duration: TimeInterval
+  /// Dérive déjà posée, avec l’instant de média commun à tous les écrans.
+  private struct InstalledSkyboxDrift: Equatable {
+    var playback: StarshipSkyboxDrift
     var mediaBeginTime: CFTimeInterval
   }
 
   private static let warpKey = "warp"
   private static let skyboxFadeKey = "skyboxFade"
   private static let skyboxDriftKey = "skyboxDrift"
-  /// Sprite 9 × 54 px agrandi 1,6 fois.
-  private static let boltSize = CGSize(width: 14, height: 86)
   private static let burstSide: CGFloat = 120
   private static let debrisSide: CGFloat = 24
   private static let debrisLifetime = 0.5
@@ -235,18 +231,20 @@ final class StarshipPainter {
 
   /// Tourne `shipAim` vers `angle` par le chemin le plus court.
   func aimShip(at angle: Double, duration: Double) {
-    let rotation = StarshipAim.nearestEquivalent(of: angle - .pi / 2, to: currentAimRotation)
+    let course = StarshipAim.turn(from: currentAimRotation, toward: angle)
     let turn = CABasicAnimation(keyPath: "transform.rotation.z")
-    turn.fromValue = currentAimRotation
-    turn.toValue = rotation
+    turn.fromValue = course.from
+    turn.toValue = course.to
+    turn.autoreverses = course.reverses
+    turn.repeatCount = Float(course.repeatCount)
     turn.duration = duration
     turn.timingFunction = CAMediaTimingFunction(name: .easeOut)
     CATransaction.begin()
     CATransaction.setDisableActions(true)
-    shipAim.setValue(rotation, forKeyPath: "transform.rotation.z")
+    shipAim.setValue(course.to, forKeyPath: "transform.rotation.z")
     CATransaction.commit()
     shipAim.add(turn, forKey: "aim")
-    currentAimRotation = rotation
+    currentAimRotation = course.to
   }
 
   /// Rayon bleu de `start` à `end`. Invisible pendant `delay` (le vaisseau pivote), puis un flash qui s’éteint.
@@ -311,15 +309,21 @@ final class StarshipPainter {
 
   /// Retire la cible et joue l’explosion là où elle se trouvait.
   /// Le glyphe déjà dessiné grossit : on ne le redessine pas au moment de l’impact.
-  /// Sa position est dans le repère de la cible. On la convertit dans la scène, sans
+  /// Sa position est dans le repère de la cible. `glyphScenePosition` la place dans la scène, sans
   /// animation implicite : sinon la lettre part du bord et file jusqu’à l’ennemi.
   func explodeTarget(id: Int, kind: StarshipTargetKind, now: TimeInterval) {
     guard let flying = targetsByID.removeValue(forKey: id) else { return }
     let point = flying.root.position
     let glyph = flying.root.sublayers?.first { $0 is CATextLayer }
     let onScreen: CGPoint
-    if let glyph, let scene = skyboxBack.superlayer {
-      onScreen = flying.root.convert(glyph.position, to: scene)
+    if let glyph {
+      let scenePoint = StarshipExplosion.glyphScenePosition(
+        targetAt: StarshipPoint(x: point.x, y: point.y),
+        glyphAtLocal: StarshipPoint(x: glyph.position.x, y: glyph.position.y),
+        targetWidth: flying.root.bounds.width,
+        targetHeight: flying.root.bounds.height
+      )
+      onScreen = CGPoint(x: scenePoint.x, y: scenePoint.y)
     } else {
       onScreen = point
     }
@@ -589,9 +593,10 @@ final class StarshipPainter {
   }
 
   private static func glyphPop() -> CAAnimationGroup {
+    let pop = StarshipExplosion.glyphPop
     let scale = CABasicAnimation(keyPath: "transform.scale")
-    scale.fromValue = 1
-    scale.toValue = 1.6
+    scale.fromValue = pop.scaleFrom
+    scale.toValue = pop.scaleTo
     let fade = CABasicAnimation(keyPath: "opacity")
     fade.fromValue = 1
     fade.toValue = 0
@@ -612,9 +617,10 @@ final class StarshipPainter {
   }
 
   private func beamLayer(from start: CGPoint, to end: CGPoint, delay: Double, duration: Double) -> CALayer {
-    let offsetX = Double(end.x - start.x)
-    let offsetY = Double(end.y - start.y)
-    let angle = atan2(offsetY, offsetX)
+    let placement = StarshipBeam.placement(
+      from: StarshipPoint(x: start.x, y: start.y),
+      to: StarshipPoint(x: end.x, y: end.y)
+    )
     let beam = CALayer()
     beam.contents = StarshipSprite.cgImage(named: StarshipCatalog.beamSprite)
     beam.contentsGravity = .resize
@@ -622,13 +628,15 @@ final class StarshipPainter {
     beam.anchorPoint = CGPoint(x: 0.5, y: 0)
     // Le sprite reste 14 × 86. L’étirer dans les bornes du calque, à l’échelle de l’écran,
     // recopiait l’image au moment du tir. Le scale Y le fait sur le GPU.
-    beam.bounds = CGRect(origin: .zero, size: Self.boltSize)
-    beam.position = start
+    beam.bounds = CGRect(
+      origin: .zero,
+      size: CGSize(width: StarshipBeam.spriteWidth, height: StarshipBeam.spriteHeight)
+    )
+    beam.position = CGPoint(x: placement.origin.x, y: placement.origin.y)
     beam.zPosition = 15
     beam.opacity = 0
-    let length = max(hypot(offsetX, offsetY), 1)
-    let scale = CATransform3DMakeScale(1, length / Double(Self.boltSize.height), 1)
-    let rotation = CATransform3DMakeRotation(angle - .pi / 2, 0, 0, 1)
+    let scale = CATransform3DMakeScale(1, placement.scaleY, 1)
+    let rotation = CATransform3DMakeRotation(placement.angle, 0, 0, 1)
     // Concat applique le premier argument d’abord. L’échelle sur l’axe du sprite,
     // puis la rotation : le trait part de l’ancre et aboutit sur l’ennemi.
     beam.transform = CATransform3DConcat(scale, rotation)
@@ -652,15 +660,24 @@ final class StarshipPainter {
   ) -> CALayer {
     let bolt = CALayer()
     bolt.contents = StarshipSprite.cgImage(named: StarshipCatalog.beamSprite)
-    bolt.bounds = CGRect(origin: .zero, size: Self.boltSize)
+    bolt.bounds = CGRect(
+      origin: .zero,
+      size: CGSize(width: StarshipBeam.spriteWidth, height: StarshipBeam.spriteHeight)
+    )
     bolt.zPosition = 15
     bolt.contentsGravity = .resize
     bolt.contentsScale = contentsScale
     bolt.setValue(angle - .pi / 2, forKeyPath: "transform.rotation.z")
 
+    let course = StarshipBolt.flight(
+      from: StarshipPoint(x: start.x, y: start.y),
+      to: StarshipPoint(x: end.x, y: end.y)
+    )
     let flight = CABasicAnimation(keyPath: "position")
-    flight.fromValue = start
-    flight.toValue = end
+    flight.fromValue = CGPoint(x: course.from.x, y: course.from.y)
+    flight.toValue = CGPoint(x: course.to.x, y: course.to.y)
+    flight.autoreverses = course.reverses
+    flight.repeatCount = Float(course.repeatCount)
     flight.beginTime = departsAt
     flight.duration = duration
     flight.fillMode = .backwards
@@ -862,10 +879,8 @@ final class StarshipPainter {
       skyboxBack.contents = image
     }
     CATransaction.commit()
-    let drift = SkyboxDrift(
-      from: driftFrom,
-      to: driftTo,
-      duration: driftDuration,
+    let drift = InstalledSkyboxDrift(
+      playback: StarshipSkyboxDrift.once(from: driftFrom, to: driftTo, duration: driftDuration),
       mediaBeginTime: mediaBeginTime
     )
     guard drift != installedDrift else { return }
@@ -897,14 +912,15 @@ final class StarshipPainter {
 
   /// Pose la même animation sur les deux calques. Le modèle reste l’arrivée :
   /// l’animation, partie à `mediaBeginTime`, montre la dérive en cours.
-  private func installSkyboxDrift(_ drift: SkyboxDrift) {
-    let from = Self.cgRect(drift.from)
-    let to = Self.cgRect(drift.to)
+  private func installSkyboxDrift(_ drift: InstalledSkyboxDrift) {
+    let playback = drift.playback
+    let from = Self.cgRect(playback.from)
+    let to = Self.cgRect(playback.to)
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     for layer in [skyboxBack, skyboxFront] {
       layer.removeAnimation(forKey: Self.skyboxDriftKey)
-      guard drift.duration > 0, from != to else {
+      guard playback.duration > 0, from != to else {
         layer.contentsRect = from
         continue
       }
@@ -912,8 +928,10 @@ final class StarshipPainter {
       let animation = CABasicAnimation(keyPath: "contentsRect")
       animation.fromValue = from
       animation.toValue = to
-      animation.duration = drift.duration
-      animation.autoreverses = false
+      animation.duration = playback.duration
+      animation.autoreverses = playback.reverses
+      animation.repeatCount = Float(playback.repeatCount)
+      animation.repeatDuration = playback.repeatDuration
       animation.timingFunction = CAMediaTimingFunction(name: .linear)
       animation.beginTime = drift.mediaBeginTime
       animation.fillMode = .both

@@ -63,7 +63,7 @@ let package = Package(
     ),
     .testTarget(
       name: "CmdBabyKitTests",
-      dependencies: ["CmdBabyKit", "CmdBabyAppKitBridge", "CmdBaby"]
+      dependencies: ["CmdBabyKit", "CmdBabyAppKitBridge"]
     ),
   ],
   swiftLanguageModes: [.v6]

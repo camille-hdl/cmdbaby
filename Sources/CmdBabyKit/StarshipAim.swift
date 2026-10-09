@@ -90,6 +90,26 @@ public enum StarshipAim: Sendable {
     return target + 2 * Double.pi * turns.rounded()
   }
 
+  public struct Turn: Equatable, Sendable {
+    public var from: Double
+    public var to: Double
+    /// Un seul aller. Le retour ramènerait le nez.
+    public var reverses: Bool
+    /// 0 : une fois. Le rejouer referait le tour.
+    public var repeatCount: Double
+  }
+
+  /// Tourne de la rotation actuelle vers `angle` (0 = vers la droite).
+  /// Le sprite pointe vers le haut : la rotation visée est `angle` moins π/2.
+  public static func turn(from currentRotation: Double, toward angle: Double) -> Turn {
+    Turn(
+      from: currentRotation,
+      to: nearestEquivalent(of: angle - .pi / 2, to: currentRotation),
+      reverses: false,
+      repeatCount: 0
+    )
+  }
+
   /// `abs(value) < 1e-12` compte pour zéro : pas de division par un delta nul.
   private static func component(_ value: Double) -> Double {
     abs(value) < 1e-12 ? 0 : value
