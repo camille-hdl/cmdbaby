@@ -104,7 +104,7 @@ public final class LifecycleLogRecorder: @unchecked Sendable {
 public enum LifecycleLogEvent: Equatable, Sendable {
   case statusItemCreate
   case activationPolicy(before: String, after: String)
-  case sessionStart
+  case sessionStart(origin: SessionLaunchRequest.Origin)
   case sessionPhase(from: KioskSessionPhase, to: KioskSessionPhase)
   case sessionStop(kind: LifecycleLog.SessionStopKind)
   case teardownBegin(shouldQuit: Bool, coverCount: Int, caller: LifecycleLog.TeardownCaller)
@@ -144,7 +144,7 @@ public enum LifecycleLogEvent: Equatable, Sendable {
     case .statusItemCreate, .activationPolicy, .terminateRequest, .applicationShouldTerminate,
       .statusItemAlive, .statusIconMissing, .resourceBundleMissing:
       .lifecycle
-    case .sessionStart, .sessionPhase, .sessionStop, .coversKey, .sessionActivationFail,
+    case .sessionStart(_), .sessionPhase, .sessionStop, .coversKey, .sessionActivationFail,
       .coversFollowScreens, .displaySleepAssertion, .guardTapLost, .guardSecureInput, .guardRefocus:
       .session
     case .tapCreate, .tapEnable, .tapDisable, .tapFail, .tapReenable:
@@ -162,8 +162,8 @@ public enum LifecycleLogEvent: Equatable, Sendable {
       return "statusItem.create"
     case .activationPolicy(let before, let after):
       return "activationPolicy before=\(before) after=\(after)"
-    case .sessionStart:
-      return "session.start"
+    case .sessionStart(let origin):
+      return "session.start origin=\(origin.rawValue)"
     case .sessionPhase(let from, let to):
       return "session.phase from=\(from.logName) to=\(to.logName)"
     case .sessionStop(let kind):

@@ -13,7 +13,7 @@ final class DiagnosticsSessionModel: ObservableObject {
   private let environment: AppKitKioskEnvironment
   private let kioskController: KioskSessionController
   private weak var terminationDelegate: CmdBabyAppDelegate?
-  private var kioskTask: Task<Void, Never>?
+  private var kioskTask: Task<SessionLaunchDecision, Never>?
   private var presentActivationFailure: ((KioskSessionError) -> Void)?
   private var endRequest: KioskEndRequest?
 
@@ -56,37 +56,26 @@ final class DiagnosticsSessionModel: ObservableObject {
     self.presentActivationFailure = presentActivationFailure
   }
 
-  func startKiosk() {
-    guard kioskTask == nil else { return }
-    switch kioskController.state.phase {
-    case .configuration, .failed:
-      break
-    case .preparing, .activating, .active, .stopping:
-      return
-    }
-    switch kioskState.phase {
-    case .configuration, .failed:
-      break
-    case .preparing, .activating, .active, .stopping:
-      return
-    }
-
+  func startKiosk(_ request: SessionLaunchRequest) async -> SessionLaunchDecision {
     KeyboardLayoutLetter.shared.refreshFromCurrentLayout()
     let configuration = CmdBabyConfigurationStore().load()
     let typability = PassphraseTypability.check(
       configuration.exits.passphrase,
       layoutLetters: KeyboardLayoutLetter.shared.snapshot()
     )
-    if case .blocked(let error) = SessionLaunchCheck.evaluate(
+    let check = SessionLaunchCheck.evaluate(
       exits: configuration.exits,
       typability: typability,
       secureInputActive: IsSecureEventInputEnabled()
-    ) {
-      // L’alerte est modale : au tour suivant, le menu ou les Réglages sont déjà refermés.
-      Task { @MainActor [weak self] in
-        self?.presentActivationFailure?(error)
-      }
-      return
+    )
+    switch SessionLaunchDecision.evaluate(request: request, phase: launchPhase(), check: check) {
+    case .alreadyInProgress:
+      return .alreadyInProgress
+    case .refused(let error):
+      reportActivationFailure(error)
+      return .refused(error)
+    case .launch:
+      break
     }
 
     kioskController.injectedFailure = nil
@@ -94,13 +83,13 @@ final class DiagnosticsSessionModel: ObservableObject {
     endRequest = nil
     environment.prepareSession(configuration)
 
-    kioskTask = Task { [weak self] in
-      guard let self else { return }
-      let state = await self.kioskController.activate()
+    let task = Task { [weak self] () -> SessionLaunchDecision in
+      guard let self else { return .alreadyInProgress }
+      let state = await self.kioskController.activate(origin: request.origin)
       if state.phase == .stopping {
-        let request = self.endRequest ?? .adultExit(state.lastExitKind ?? .passphrase)
-        self.completeExit(request)
-        return
+        let end = self.endRequest ?? .adultExit(state.lastExitKind ?? .passphrase)
+        self.completeExit(end)
+        return .launch
       }
       self.kioskState = state
       self.kioskTask = nil
@@ -112,8 +101,34 @@ final class DiagnosticsSessionModel: ObservableObject {
         break
       }
       if state.phase == .failed, let error = state.lastError {
-        self.presentActivationFailure?(error)
+        self.reportActivationFailure(error)
+        return .refused(error)
       }
+      return .launch
+    }
+    kioskTask = task
+    return await task.value
+  }
+
+  /// Phase vue par la décision. Une activation déjà lancée compte comme occupée,
+  /// même avant que le contrôleur ait quitté `.configuration`.
+  private func launchPhase() -> KioskSessionPhase {
+    if kioskTask != nil { return .activating }
+    for phase in [kioskController.state.phase, kioskState.phase] {
+      switch phase {
+      case .preparing, .activating, .active, .stopping:
+        return phase
+      case .configuration, .failed:
+        continue
+      }
+    }
+    return kioskController.state.phase
+  }
+
+  /// L’alerte est modale : au tour suivant, le menu ou les Réglages sont déjà refermés.
+  private func reportActivationFailure(_ error: KioskSessionError) {
+    Task { @MainActor [weak self] in
+      self?.presentActivationFailure?(error)
     }
   }
 

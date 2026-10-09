@@ -1,4 +1,5 @@
 import AppIntents
+import CmdBabyKit
 
 /// Action Raccourcis « Lancer une session », sans paramètre.
 ///
@@ -12,14 +13,33 @@ struct StartSessionIntent: AppIntent {
   /// Lance le processus s’il ne tourne pas, puis exécute l’action dans l’app.
   static let openAppWhenRun = true
 
-  func perform() async throws -> some IntentResult {
-    try await MainActor.run {
-      guard let delegate = CmdBabyAppDelegate.running else {
-        throw StartSessionAppUnavailable()
-      }
-      delegate.startSession(nil)
+  func perform() async throws -> some IntentResult & ProvidesDialog {
+    guard let delegate = await MainActor.run(body: { CmdBabyAppDelegate.running }) else {
+      throw StartSessionAppUnavailable()
     }
-    return .result()
+    let decision = await delegate.launchSession(SessionLaunchRequest(origin: .shortcuts))
+    switch decision {
+    case .launch, .alreadyInProgress:
+      return .result(dialog: IntentDialog(resolved: decision.message()))
+    case .refused:
+      throw SessionLaunchCallerError(message: decision.message())
+    }
+  }
+}
+
+/// Erreur déjà traduite par `L10nTable`. La chaîne est le texte, pas une clé du catalogue.
+private struct SessionLaunchCallerError: Error, CustomLocalizedStringResourceConvertible {
+  var localizedStringResource: LocalizedStringResource
+
+  init(message: String) {
+    localizedStringResource = LocalizedStringResource(stringLiteral: message)
+  }
+}
+
+extension IntentDialog {
+  /// `stringLiteral` sert de clé ; une phrase déjà résolue s’affiche telle quelle.
+  fileprivate init(resolved message: String) {
+    self.init(stringLiteral: message)
   }
 }
 

@@ -55,7 +55,7 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
   /// « Lancer » sur une carte : ferme les Réglages, puis le même départ que le menu.
   private func launchFromSettings() {
     settingsWindowController.hide()
-    model.startKiosk()
+    Task { _ = await model.startKiosk(SessionLaunchRequest(origin: .settings)) }
   }
 
   func applicationDidFinishLaunching(_ notification: Notification) {
@@ -153,7 +153,12 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
 
   /// Lancer session : kiosque lazy (scène, filtre, couvertures) avec le mode config.
   @objc func startSession(_ sender: Any?) {
-    model.startKiosk()
+    Task { _ = await model.startKiosk(SessionLaunchRequest(origin: .menu)) }
+  }
+
+  /// Point d’entrée des adaptateurs (Raccourcis, plus tard le lien). Le menu ignore le résultat.
+  func launchSession(_ request: SessionLaunchRequest) async -> SessionLaunchDecision {
+    await model.startKiosk(request)
   }
 
   /// Menu « Réglages… » : toujours Mode de jeu, en attendant la fin du menu.

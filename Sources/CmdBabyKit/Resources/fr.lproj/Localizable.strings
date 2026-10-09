@@ -110,3 +110,5 @@
 "settings.about.support" = "Support";
 "shortcuts.startSession.title" = "Lancer une session";
 "shortcuts.startSession.description" = "Lance une session avec les réglages enregistrés.";
+"shortcuts.startSession.launched" = "Session lancée";
+"shortcuts.startSession.alreadyInProgress" = "Une session est déjà en cours";
