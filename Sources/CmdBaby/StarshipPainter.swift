@@ -336,8 +336,11 @@ final class StarshipPainter {
     } else {
       onScreen = point
     }
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
     glyph?.removeFromSuperlayer()
     flying.root.removeFromSuperlayer()
+    CATransaction.commit()
     addEphemeral(burst(at: point), lifetime: tuning.explosionDuration, now: now)
     for _ in 0..<5 {
       guard let debris = debris(kind: kind, from: point) else { continue }
@@ -383,8 +386,13 @@ final class StarshipPainter {
   }
 
   /// Ajoute `layer` à la scène et le retire automatiquement après `lifetime` secondes.
+  /// Sans animation implicite : sinon la scène entière reçoit un fondu `transition`,
+  /// recomposé sur tout l’écran, à chaque tir.
   func addEphemeral(_ layer: CALayer, lifetime: TimeInterval, now: TimeInterval) {
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
     skyboxBack.superlayer?.addSublayer(layer)
+    CATransaction.commit()
     ephemerals.append((layer: layer, endsAt: now + lifetime, sceneryID: nil))
   }
 
