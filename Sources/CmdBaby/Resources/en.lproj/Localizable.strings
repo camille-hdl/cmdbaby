@@ -2,3 +2,18 @@
 "Start a Session" = "Start a Session";
 /* Même texte que shortcuts.startSession.description. */
 "Starts a session with your saved settings." = "Starts a session with your saved settings.";
+/* Même texte que shortcuts.startSession.mode. */
+"Mode" = "Mode";
+/* Même texte que shortcuts.startSession.duration. */
+"Duration" = "Duration";
+/* Même texte que shortcuts.startSession.duration.hint. */
+"Minutes, from 1 to 120" = "Minutes, from 1 to 120";
+/* Noms du catalogue : playMode.*.name. */
+"Ocean" = "Ocean";
+"Terminal" = "Terminal";
+"Starship" = "Starship";
+/* Résumé quand le mode et la durée sont fournis. shortcuts.startSession.summary. */
+"Start a ${mode} session for ${minutes} minutes" = "Start a ${mode} session for ${minutes} minutes";
+"Start a ${mode} session" = "Start a ${mode} session";
+"Start a session for ${minutes} minutes" = "Start a session for ${minutes} minutes";
+"Start a session" = "Start a session";

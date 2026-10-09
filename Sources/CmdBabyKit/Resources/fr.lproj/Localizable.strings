@@ -112,3 +112,8 @@
 "shortcuts.startSession.description" = "Lance une session avec les réglages enregistrés.";
 "shortcuts.startSession.launched" = "Session lancée";
 "shortcuts.startSession.alreadyInProgress" = "Une session est déjà en cours";
+"shortcuts.startSession.invalidParameter" = "La durée doit être comprise entre 1 et 120 minutes.";
+"shortcuts.startSession.mode" = "Mode";
+"shortcuts.startSession.duration" = "Durée";
+"shortcuts.startSession.duration.hint" = "Minutes, de 1 à 120";
+"shortcuts.startSession.summary" = "Lancer une session %@ de %lld minutes";

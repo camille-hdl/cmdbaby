@@ -94,6 +94,8 @@ _swiftc_documents() {
 # Vide si ce compilateur ne connaît pas -const-gather-protocols-file :
 # `swift build` dans l’assemblage reste alors le même que `swift build` / `swift test`.
 # Noms courts de protocoles : ConstExtract les compare à getName().
+# AppEnum est requis dès qu’un paramètre a ce type : sinon l’extracteur ne
+# connaît pas Optional<StartSessionMode>.
 prepare_app_intents_swift_flags() {
     local project_dir="$1"
     typeset -g -a app_intents_swift_flags

@@ -57,8 +57,18 @@ final class DiagnosticsSessionModel: ObservableObject {
   }
 
   func startKiosk(_ request: SessionLaunchRequest) async -> SessionLaunchDecision {
+    let phase = launchPhase()
+    let saved = CmdBabyConfigurationStore().load()
+    let configuration: CmdBabyConfiguration
+    switch request.effectiveConfiguration(from: saved) {
+    case .invalidParameter:
+      if phaseBlocksAnotherLaunch(phase) { return .alreadyInProgress }
+      return .invalidParameter
+    case .ready(let effective):
+      configuration = effective
+    }
+
     KeyboardLayoutLetter.shared.refreshFromCurrentLayout()
-    let configuration = CmdBabyConfigurationStore().load()
     let typability = PassphraseTypability.check(
       configuration.exits.passphrase,
       layoutLetters: KeyboardLayoutLetter.shared.snapshot()
@@ -68,12 +78,14 @@ final class DiagnosticsSessionModel: ObservableObject {
       typability: typability,
       secureInputActive: IsSecureEventInputEnabled()
     )
-    switch SessionLaunchDecision.evaluate(request: request, phase: launchPhase(), check: check) {
+    switch SessionLaunchDecision.evaluate(request: request, phase: phase, check: check) {
     case .alreadyInProgress:
       return .alreadyInProgress
     case .refused(let error):
       reportActivationFailure(error)
       return .refused(error)
+    case .invalidParameter:
+      return .invalidParameter
     case .launch:
       break
     }
@@ -115,14 +127,18 @@ final class DiagnosticsSessionModel: ObservableObject {
   private func launchPhase() -> KioskSessionPhase {
     if kioskTask != nil { return .activating }
     for phase in [kioskController.state.phase, kioskState.phase] {
-      switch phase {
-      case .preparing, .activating, .active, .stopping:
-        return phase
-      case .configuration, .failed:
-        continue
-      }
+      if phaseBlocksAnotherLaunch(phase) { return phase }
     }
     return kioskController.state.phase
+  }
+
+  private func phaseBlocksAnotherLaunch(_ phase: KioskSessionPhase) -> Bool {
+    switch phase {
+    case .preparing, .activating, .active, .stopping:
+      true
+    case .configuration, .failed:
+      false
+    }
   }
 
   /// L’alerte est modale : au tour suivant, le menu ou les Réglages sont déjà refermés.

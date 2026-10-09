@@ -39,6 +39,34 @@ func startSessionShortcutCopy() {
   )
 }
 
+@Test("Raccourcis : durée invalide, libellés et résumé Vaisseau de 10 minutes")
+func startSessionOverrideCopy() {
+  #expect(
+    L10nTable.language("fr")("shortcuts.startSession.invalidParameter")
+      == "La durée doit être comprise entre 1 et 120 minutes."
+  )
+  #expect(
+    L10nTable.language("en")("shortcuts.startSession.invalidParameter")
+      == "The duration must be between 1 and 120 minutes."
+  )
+  #expect(L10nTable.language("fr")("shortcuts.startSession.mode") == "Mode")
+  #expect(L10nTable.language("en")("shortcuts.startSession.mode") == "Mode")
+  #expect(L10nTable.language("fr")("shortcuts.startSession.duration") == "Durée")
+  #expect(L10nTable.language("en")("shortcuts.startSession.duration") == "Duration")
+  #expect(L10nTable.language("fr")("shortcuts.startSession.duration.hint") == "Minutes, de 1 à 120")
+  #expect(
+    L10nTable.language("en")("shortcuts.startSession.duration.hint") == "Minutes, from 1 to 120"
+  )
+  #expect(
+    L10nTable.language("fr")("shortcuts.startSession.summary", "Vaisseau", 10)
+      == "Lancer une session Vaisseau de 10 minutes"
+  )
+  #expect(
+    L10nTable.language("en")("shortcuts.startSession.summary", "Starship", 10)
+      == "Start a Starship session for 10 minutes"
+  )
+}
+
 @Test("Lancer un mode : Start en anglais, Lancer en français")
 func launchModeButtonCopy() {
   #expect(L10nTable.language("en")("settings.mode.launch") == "Start")

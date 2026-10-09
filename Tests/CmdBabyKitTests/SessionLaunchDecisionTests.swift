@@ -78,6 +78,14 @@ func launchReplySpeaksFrenchAndEnglish() {
     SessionLaunchDecision.alreadyInProgress.message(in: .language("en"))
       == "A session is already in progress"
   )
+  #expect(
+    SessionLaunchDecision.invalidParameter.message(in: .language("fr"))
+      == "La durée doit être comprise entre 1 et 120 minutes."
+  )
+  #expect(
+    SessionLaunchDecision.invalidParameter.message(in: .language("en"))
+      == "The duration must be between 1 and 120 minutes."
+  )
 }
 
 @Test("Un refus explique le motif, en français et en anglais")

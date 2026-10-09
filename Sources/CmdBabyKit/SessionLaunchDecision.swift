@@ -1,8 +1,7 @@
 import Foundation
 
 /// Demande de lancement. L’origine est journalisée.
-/// `mode` et `durationMinutes` réservent la place des surcharges de la session
-/// suivante : cette décision ne les applique pas.
+/// `mode` et `durationMinutes` ne valent que pour cette session : ils ne sont pas enregistrés.
 public struct SessionLaunchRequest: Equatable, Sendable {
   public enum Origin: String, Equatable, Sendable {
     case menu
@@ -24,6 +23,34 @@ public struct SessionLaunchRequest: Equatable, Sendable {
     self.mode = mode
     self.durationMinutes = durationMinutes
   }
+
+  /// Copie de la configuration enregistrée, avec les surcharges de cette session.
+  /// Une durée hors de `AdultExitSettings.timeLimitRange` ne donne aucune configuration.
+  public func effectiveConfiguration(from saved: CmdBabyConfiguration) -> SessionLaunchConfiguration {
+    if let minutes = durationMinutes, !AdultExitSettings.timeLimitRange.contains(minutes) {
+      return .invalidParameter
+    }
+    var configuration = saved
+    if let mode {
+      configuration.mode = mode
+    }
+    if let durationMinutes {
+      configuration.exits.timeLimitMinutes = durationMinutes
+    }
+    return .ready(configuration)
+  }
+}
+
+/// Configuration de cette session, ou refus avant tout lancement.
+public enum SessionLaunchConfiguration: Equatable, Sendable {
+  case ready(CmdBabyConfiguration)
+  case invalidParameter
+}
+
+/// Modes proposés par l’action Raccourcis, dans l’ordre du catalogue.
+/// Un mode ajouté à `KioskPlayModeID` sans cette liste fait échouer le test.
+public enum SessionLaunchMode: Sendable {
+  public static let playModes: [KioskPlayModeID] = [.ocean, .terminal, .starship]
 }
 
 /// Décision pure : lancer, déjà en cours, ou refusé avec le motif du contrôle.
@@ -32,6 +59,7 @@ public enum SessionLaunchDecision: Equatable, Sendable {
   case launch
   case alreadyInProgress
   case refused(KioskSessionError)
+  case invalidParameter
 
   public static func evaluate(
     request: SessionLaunchRequest,
@@ -61,6 +89,8 @@ public enum SessionLaunchDecision: Equatable, Sendable {
       table("shortcuts.startSession.alreadyInProgress")
     case .refused(let error):
       SessionActivationAlert.forFailedActivation(error, table: table).informativeText
+    case .invalidParameter:
+      table("shortcuts.startSession.invalidParameter")
     }
   }
 }
