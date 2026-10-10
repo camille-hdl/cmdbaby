@@ -95,12 +95,6 @@ func overriddenLaunchLeavesTheSavedFileUntouched() throws {
   #expect(try Data(contentsOf: file.fileURL) == before)
 }
 
-@Test("Les modes du raccourci sont ceux du catalogue, dans le même ordre")
-func shortcutModesMatchThePlayModeCatalog() {
-  #expect(SessionLaunchMode.playModes == KioskPlayModeCatalog.available)
-  #expect(SessionLaunchMode.playModes == Array(KioskPlayModeID.allCases))
-}
-
 private func readyConfiguration(
   _ result: SessionLaunchConfiguration
 ) -> CmdBabyConfiguration? {

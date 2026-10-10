@@ -52,12 +52,6 @@ public enum SessionLaunchConfiguration: Equatable, Sendable {
   case invalidParameter
 }
 
-/// Modes proposés par l’action Raccourcis, dans l’ordre du catalogue.
-/// Un mode ajouté à `KioskPlayModeID` sans cette liste fait échouer le test.
-public enum SessionLaunchMode: Sendable {
-  public static let playModes: [KioskPlayModeID] = [.ocean, .terminal, .starship]
-}
-
 /// Décision pure : lancer, déjà en cours, ou refusé avec le motif du contrôle.
 /// Les échecs d’activation (`KioskSessionError` en phase `.failed`) réutilisent `.refused`.
 public enum SessionLaunchDecision: Equatable, Sendable {
