@@ -9,6 +9,7 @@ func configurationDefaultsToOceanWithoutLaunchAtLogin() {
   #expect(configuration.schemaVersion == 1)
   #expect(configuration.mode == .ocean)
   #expect(configuration.launchAtLogin == false)
+  #expect(configuration.linkLaunchAllowed == false)
 }
 
 @Test("Une configuration vide donne un minuteur de 3 minutes")
@@ -153,6 +154,21 @@ func retiredGalaxyConfigurationOpensStarship() throws {
     from: Data(#"{"schemaVersion":1,"mode":"galaxy","launchAtLogin":true}"#.utf8)
   )
   #expect(decoded.mode == .starship)
+}
+
+@Test("Sans clé, le lancement par lien reste interdit, et une case cochée fait l’aller-retour")
+func missingLinkLaunchKeyStaysOffAndRoundTripsWhenSet() throws {
+  let absent = try JSONDecoder().decode(
+    CmdBabyConfiguration.self,
+    from: Data(#"{"schemaVersion":1,"mode":"ocean"}"#.utf8)
+  )
+  #expect(absent.linkLaunchAllowed == false)
+
+  let original = CmdBabyConfiguration(mode: .terminal, linkLaunchAllowed: true)
+  let data = try JSONEncoder().encode(original)
+  let decoded = try JSONDecoder().decode(CmdBabyConfiguration.self, from: data)
+  #expect(decoded.linkLaunchAllowed == true)
+  #expect(decoded == original)
 }
 
 @Test("Un mode JSON inconnu replie sur Océan et conserve les autres champs")

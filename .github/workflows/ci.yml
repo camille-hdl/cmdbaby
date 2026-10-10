@@ -63,8 +63,14 @@ jobs:
             exit 1
           fi
 
+      - name: Const values de l’assemblage
+        run: zsh scripts/test-app-intents-const-values.zsh
+
+      - name: Identité de signature par défaut
+        run: zsh scripts/test-development-signing-identity.zsh
+
       - name: Package .app (ad hoc)
-        run: CMDBABY_APP_OUTPUT_DIR="$RUNNER_TEMP" ./scripts/build-app.sh
+        run: CMDBABY_CODE_SIGN_IDENTITY=- CMDBABY_APP_OUTPUT_DIR="$RUNNER_TEMP" ./scripts/build-app.sh
 
       - name: Check .app
         run: |
@@ -76,8 +82,26 @@ jobs:
           done
           for lang in en fr; do
             test -f "$app/Contents/Resources/CmdBaby_CmdBabyKit.bundle/$lang.lproj/Localizable.strings"
+            test -f "$app/Contents/Resources/$lang.lproj/Localizable.strings"
+            test -f "$app/Contents/Resources/$lang.lproj/AppShortcuts.strings"
           done
+          test -s "$app/Contents/Resources/Metadata.appintents/extract.actionsdata"
           codesign --verify --strict --verbose=2 "$app"
+          entitlement_keys=$(codesign -d --entitlements - --xml "$app" 2>/dev/null | grep -c '<key>' || true)
+          test "$entitlement_keys" = "0"
+
+      - name: Assemblage universel
+        shell: zsh {0}
+        run: |
+          set -euo pipefail
+          source scripts/lib/assemble-app.zsh
+          prepare_app_intents_swift_flags "$PWD"
+          swift build -c release --arch arm64 --arch x86_64 --product CmdBaby "${app_intents_swift_flags[@]}"
+          binary_dir=$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path --product CmdBaby)
+          app="$RUNNER_TEMP/CmdBaby-universal.app"
+          assemble_app "$binary_dir" "$PWD" "$app"
+          install_app_intents_metadata "$binary_dir" "$PWD" "$app"
+          test -s "$app/Contents/Resources/Metadata.appintents/extract.actionsdata"
 
   lint-workflows:
     runs-on: ubuntu-latest

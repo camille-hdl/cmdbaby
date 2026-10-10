@@ -51,6 +51,10 @@ final class SettingsModel: ObservableObject {
         settingsLogger.error(
           "Impossible d’enregistrer le démarrage automatique : \(error.localizedDescription, privacy: .public)"
         )
+      case .linkLaunchAllowed:
+        settingsLogger.error(
+          "Impossible d’enregistrer le lancement par lien : \(error.localizedDescription, privacy: .public)"
+        )
       case .timeLimitMinutes:
         settingsLogger.error(
           "Impossible d’enregistrer le minuteur : \(error.localizedDescription, privacy: .public)"
@@ -970,6 +974,14 @@ struct SettingsView: View {
         settingsSwitch(launchLabel, isOn: launchAtLogin)
           .focused($launchAtLoginFocused)
       }
+      SettingsGroupDivider()
+      let linkLabel = L10n.current("settings.general.linkLaunch.label")
+      SettingsRow(
+        label: linkLabel,
+        help: L10n.current("settings.general.linkLaunch.help")
+      ) {
+        settingsSwitch(linkLabel, isOn: linkLaunchAllowed)
+      }
       if updates.isAvailable {
         SettingsGroupDivider()
         let updatesLabel = L10n.current("settings.general.automaticUpdates.label")
@@ -1231,6 +1243,13 @@ struct SettingsView: View {
     Binding(
       get: { model.configuration.launchAtLogin },
       set: { model.apply(.launchAtLogin($0)) }
+    )
+  }
+
+  private var linkLaunchAllowed: Binding<Bool> {
+    Binding(
+      get: { model.configuration.linkLaunchAllowed },
+      set: { model.apply(.linkLaunchAllowed($0)) }
     )
   }
 

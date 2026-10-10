@@ -63,7 +63,8 @@ func loggedPathsHideTheHomeFolder() {
 @Test("Aucun événement du journal ne porte de donnée clavier")
 func lifecycleEventsCarryNoKeyboardData() {
   let samples: [LifecycleLogEvent] = [
-    .statusItemCreate, .activationPolicy(before: "a", after: "b"), .sessionStart,
+    .statusItemCreate, .activationPolicy(before: "a", after: "b"), .sessionStart(origin: .shortcuts),
+    .sessionLinkIgnored,
     .sessionPhase(from: .configuration, to: .active), .sessionStop(kind: .adultExit),
     .teardownBegin(shouldQuit: false, coverCount: 1, caller: .swift),
     .teardownDone(shouldQuit: false, coverCount: 1, caller: .swift),
@@ -79,7 +80,8 @@ func lifecycleEventsCarryNoKeyboardData() {
   ]
   for event in samples {
     switch event {
-    case .statusItemCreate, .activationPolicy, .sessionStart, .sessionPhase, .sessionStop,
+    case .statusItemCreate, .activationPolicy, .sessionStart(_), .sessionLinkIgnored, .sessionPhase,
+      .sessionStop,
       .teardownBegin, .teardownDone, .tapCreate, .tapEnable, .tapDisable, .tapFail, .tapReenable,
       .settingsShowRequest, .settingsOrderFront, .coversKey, .terminateRequest,
       .applicationShouldTerminate, .statusItemAlive, .sessionActivationFail, .coversFollowScreens,

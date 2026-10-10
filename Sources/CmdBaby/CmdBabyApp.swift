@@ -25,6 +25,9 @@ enum CmdBabyMain {
 
 @MainActor
 final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
+  /// Délégué de l’app qui tourne, pour l’action Raccourcis. Posé dès `init`.
+  static weak var running: CmdBabyAppDelegate?
+
   private let model: DiagnosticsSessionModel
   private let updates: UpdateController
   private let languageAtLaunch: AppLanguagePreference
@@ -46,12 +49,13 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
     model = DiagnosticsSessionModel()
     updates = UpdateController(session: model)
     super.init()
+    Self.running = self
   }
 
   /// « Lancer » sur une carte : ferme les Réglages, puis le même départ que le menu.
   private func launchFromSettings() {
     settingsWindowController.hide()
-    model.startKiosk()
+    Task { _ = await model.startKiosk(SessionLaunchRequest(origin: .settings)) }
   }
 
   func applicationDidFinishLaunching(_ notification: Notification) {
@@ -127,6 +131,45 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
     }
   }
 
+  func application(_ application: NSApplication, open urls: [URL]) {
+    Task {
+      for url in urls {
+        await handleSessionLink(url)
+      }
+    }
+  }
+
+  /// Adaptateur du lien. La décision et l’analyse sont dans le kit.
+  private func handleSessionLink(_ url: URL) async {
+    let saved = CmdBabyConfigurationStore().load()
+    switch SessionLaunchDecision.reply(
+      to: url,
+      phase: model.launchPhase(),
+      linkLaunchAllowed: saved.linkLaunchAllowed
+    ) {
+    case .ignored:
+      LifecycleLogRecorder.shared.emit(.sessionLinkIgnored)
+    case .notAllowed:
+      present(SessionActivationAlert.forLinkNotAllowed())
+    case .invalid(let failure):
+      present(SessionActivationAlert.forInvalidLink(failure))
+    case .proceed(let request):
+      switch await model.startKiosk(request) {
+      case .alreadyInProgress:
+        LifecycleLogRecorder.shared.emit(.sessionLinkIgnored)
+      case .linkNotAllowed:
+        present(SessionActivationAlert.forLinkNotAllowed())
+      case .invalidParameter:
+        present(SessionActivationAlert.forInvalidLink(.durationOutOfBounds))
+      case .refused:
+        // `startKiosk` a déjà affiché l’alerte d’échec. Pas une seconde.
+        break
+      case .launch:
+        break
+      }
+    }
+  }
+
   func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
     false
   }
@@ -149,7 +192,12 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
 
   /// Lancer session : kiosque lazy (scène, filtre, couvertures) avec le mode config.
   @objc func startSession(_ sender: Any?) {
-    model.startKiosk()
+    Task { _ = await model.startKiosk(SessionLaunchRequest(origin: .menu)) }
+  }
+
+  /// Point d’entrée des adaptateurs (Raccourcis, plus tard le lien). Le menu ignore le résultat.
+  func launchSession(_ request: SessionLaunchRequest) async -> SessionLaunchDecision {
+    await model.startKiosk(request)
   }
 
   /// Menu « Réglages… » : toujours Mode de jeu, en attendant la fin du menu.
@@ -173,7 +221,10 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
         binaryPath: LifecycleLog.displayPath(Bundle.main.bundleURL.path)
       )
     )
-    let spec = SessionActivationAlert.forFailedActivation(error)
+    present(SessionActivationAlert.forFailedActivation(error))
+  }
+
+  private func present(_ spec: SessionActivationAlert) {
     let alert = NSAlert()
     alert.alertStyle = .warning
     alert.messageText = spec.title

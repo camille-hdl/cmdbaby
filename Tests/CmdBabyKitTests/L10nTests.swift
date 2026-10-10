@@ -25,6 +25,108 @@ func keyboardLayoutExitCopy() {
   )
 }
 
+@Test("Raccourcis : le catalogue de l’app porte les libellés affichés")
+func startSessionShortcutCatalog() throws {
+  let french = try appStringCatalog(language: "fr", name: "Localizable")
+  let english = try appStringCatalog(language: "en", name: "Localizable")
+  #expect(Set(french.keys) == Set(english.keys))
+
+  #expect(french["Start a Session"] == "Lancer une session")
+  #expect(english["Start a Session"] == "Start a Session")
+  #expect(french["Starts a session with your saved settings."] == "Lance une session avec les réglages enregistrés.")
+  #expect(english["Starts a session with your saved settings."] == "Starts a session with your saved settings.")
+  #expect(french["Mode"] == "Mode")
+  #expect(english["Mode"] == "Mode")
+  #expect(french["Duration"] == "Durée")
+  #expect(english["Duration"] == "Duration")
+  #expect(french["Minutes, from 1 to 120"] == "Minutes, de 1 à 120")
+  #expect(english["Minutes, from 1 to 120"] == "Minutes, from 1 to 120")
+  #expect(french["Ocean"] == "Océan")
+  #expect(english["Ocean"] == "Ocean")
+  #expect(french["Terminal"] == "Terminal")
+  #expect(english["Terminal"] == "Terminal")
+  #expect(french["Starship"] == "Vaisseau")
+  #expect(english["Starship"] == "Starship")
+  #expect(french["Start a ${mode} session for ${minutes} minutes"] == "Lancer une session ${mode} de ${minutes} minutes")
+  #expect(english["Start a ${mode} session for ${minutes} minutes"] == "Start a ${mode} session for ${minutes} minutes")
+  #expect(french["Start a ${mode} session"] == "Lancer une session ${mode}")
+  #expect(english["Start a ${mode} session"] == "Start a ${mode} session")
+  #expect(french["Start a session for ${minutes} minutes"] == "Lancer une session de ${minutes} minutes")
+  #expect(english["Start a session for ${minutes} minutes"] == "Start a session for ${minutes} minutes")
+  #expect(french["Start a session"] == "Lancer une session")
+  #expect(english["Start a session"] == "Start a session")
+
+  let frenchPhrases = try appStringCatalog(language: "fr", name: "AppShortcuts")
+  let englishPhrases = try appStringCatalog(language: "en", name: "AppShortcuts")
+  #expect(Set(frenchPhrases.keys) == Set(englishPhrases.keys))
+  #expect(frenchPhrases["Start a Session with ${applicationName}"] == "Lancer une session avec ${applicationName}")
+  #expect(englishPhrases["Start a Session with ${applicationName}"] == "Start a Session with ${applicationName}")
+  #expect(frenchPhrases["Start a ${mode} session with ${applicationName}"] == "Lancer une session ${mode} avec ${applicationName}")
+  #expect(englishPhrases["Start a ${mode} session with ${applicationName}"] == "Start a ${mode} session with ${applicationName}")
+}
+
+@Test("Raccourcis : une durée invalide est dite à l’appelant")
+func startSessionInvalidDurationCopy() {
+  #expect(
+    L10nTable.language("fr")("shortcuts.startSession.invalidParameter")
+      == "La durée doit être comprise entre 1 et 120 minutes."
+  )
+  #expect(
+    L10nTable.language("en")("shortcuts.startSession.invalidParameter")
+      == "The duration must be between 1 and 120 minutes."
+  )
+}
+
+@Test("Lien : case, refus et erreurs, en français et en anglais")
+func sessionLinkCopy() {
+  #expect(
+    L10nTable.language("fr")("settings.general.linkLaunch.label")
+      == "Autoriser le lancement par lien (Alfred, Raycast, Terminal)"
+  )
+  #expect(
+    L10nTable.language("en")("settings.general.linkLaunch.label")
+      == "Allow launching from a link (Alfred, Raycast, Terminal)"
+  )
+  #expect(
+    L10nTable.language("fr")("alert.link.notAllowed")
+      == "Cochez « Autoriser le lancement par lien » dans Réglages › Général pour lancer une session depuis Alfred, Raycast ou le Terminal."
+  )
+  #expect(
+    L10nTable.language("en")("alert.link.notAllowed")
+      == "Turn on “Allow launching from a link” in Settings › General to start a session from Alfred, Raycast, or Terminal."
+  )
+  #expect(
+    SessionActivationAlert.forLinkNotAllowed(table: .language("fr")).actions
+      == [.openAppSettings(.general), .dismiss]
+  )
+  #expect(LifecycleLogEvent.sessionLinkIgnored.message == "session.link.ignored")
+  #expect(!LifecycleLogEvent.sessionLinkIgnored.message.contains("cmdbaby://"))
+  #expect(
+    L10nTable.language("fr")("alert.link.unknownPath")
+      == "Ce lien ne lance pas de session. Le seul chemin est cmdbaby://session/start."
+  )
+  #expect(
+    L10nTable.language("en")("alert.link.unknownPath")
+      == "This link does not start a session. The only path is cmdbaby://session/start."
+  )
+  #expect(
+    L10nTable.language("fr")("alert.link.unknownMode")
+      == "Mode inconnu. Les modes sont ocean, terminal et starship."
+  )
+  #expect(
+    L10nTable.language("en")("alert.link.unknownMode")
+      == "Unknown mode. The modes are ocean, terminal, and starship."
+  )
+  #expect(
+    L10nTable.language("fr")("alert.link.unknownParameter")
+      == "Ce lien contient un paramètre inconnu. Les seuls paramètres sont mode et minutes."
+  )
+  #expect(
+    L10nTable.language("en")("alert.link.unknownParameter")
+      == "This link contains an unknown parameter. The only parameters are mode and minutes."
+  )
+}
+
 @Test("Lancer un mode : Start en anglais, Lancer en français")
 func launchModeButtonCopy() {
   #expect(L10nTable.language("en")("settings.mode.launch") == "Start")
@@ -359,6 +461,16 @@ func englishAndFrenchStringTablesMatch() throws {
 func formatSpecifiersMatchTheDocumentedForms() {
   #expect(formatSpecifiers(in: "%@ %lld %d %1$@") == ["%@", "%lld", "%d", "%1$@"])
   #expect(formatSpecifiers(in: "100%%") == [])
+}
+
+/// Catalogue copié dans le bundle de l’app. Raccourcis lit ces fichiers, pas le kit.
+private func appStringCatalog(language code: String, name: String) throws -> [String: String] {
+  let url = URL(fileURLWithPath: #filePath)
+    .deletingLastPathComponent()
+    .deletingLastPathComponent()
+    .deletingLastPathComponent()
+    .appendingPathComponent("Sources/CmdBaby/Resources/\(code).lproj/\(name).strings")
+  return try #require(NSDictionary(contentsOf: url) as? [String: String])
 }
 
 private func stringTable(language code: String) throws -> [String: String] {

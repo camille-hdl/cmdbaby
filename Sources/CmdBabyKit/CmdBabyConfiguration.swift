@@ -8,17 +8,21 @@ public struct CmdBabyConfiguration: Codable, Equatable, Sendable {
   public var schemaVersion: Int
   public var mode: KioskPlayModeID
   public var launchAtLogin: Bool
+  /// Case Réglages › Général. Absente du JSON → refus du lien.
+  public var linkLaunchAllowed: Bool
   public var exits: AdultExitSettings
 
   public init(
     schemaVersion: Int = currentSchemaVersion,
     mode: KioskPlayModeID = KioskPlayModeCatalog.default,
     launchAtLogin: Bool = false,
+    linkLaunchAllowed: Bool = false,
     exits: AdultExitSettings = AdultExitSettings()
   ) {
     self.schemaVersion = schemaVersion
     self.mode = mode
     self.launchAtLogin = launchAtLogin
+    self.linkLaunchAllowed = linkLaunchAllowed
     self.exits = exits
   }
 
@@ -26,6 +30,7 @@ public struct CmdBabyConfiguration: Codable, Equatable, Sendable {
     case schemaVersion
     case mode
     case launchAtLogin
+    case linkLaunchAllowed
     case exits
   }
 
@@ -39,6 +44,8 @@ public struct CmdBabyConfiguration: Codable, Equatable, Sendable {
       mode: rawMode.map(KioskPlayModeCatalog.sessionMode(fromRawID:)) ?? defaults.mode,
       launchAtLogin: try container.decodeIfPresent(Bool.self, forKey: .launchAtLogin)
         ?? defaults.launchAtLogin,
+      linkLaunchAllowed: try container.decodeIfPresent(Bool.self, forKey: .linkLaunchAllowed)
+        ?? defaults.linkLaunchAllowed,
       exits: Self.decodeExits(from: container) ?? defaults.exits
     )
   }
