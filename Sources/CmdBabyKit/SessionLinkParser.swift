@@ -8,6 +8,7 @@ public enum SessionLinkFailure: Error, Equatable, Sendable {
   case durationNotInteger
   case durationOutOfBounds
   case duplicateParameter
+  case unknownParameter
 
   public func message(in table: L10nTable = .current) -> String {
     switch self {
@@ -23,6 +24,8 @@ public enum SessionLinkFailure: Error, Equatable, Sendable {
       table("shortcuts.startSession.invalidParameter")
     case .duplicateParameter:
       table("alert.link.duplicateParameter")
+    case .unknownParameter:
+      table("alert.link.unknownParameter")
     }
   }
 }
@@ -40,6 +43,10 @@ public enum SessionLinkParser {
     }
 
     let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+    let knownParameters: Set<String> = ["mode", "minutes"]
+    if items.contains(where: { !knownParameters.contains($0.name) }) {
+      return .failure(.unknownParameter)
+    }
     if hasDuplicate(named: "mode", in: items) || hasDuplicate(named: "minutes", in: items) {
       return .failure(.duplicateParameter)
     }

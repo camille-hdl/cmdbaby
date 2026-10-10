@@ -126,3 +126,4 @@
 "alert.link.unknownMode" = "Mode inconnu. Les modes sont ocean, terminal et starship.";
 "alert.link.durationNotInteger" = "La durée doit être un nombre entier de minutes.";
 "alert.link.duplicateParameter" = "Ce lien répète un paramètre. Indiquez mode et minutes une seule fois.";
+"alert.link.unknownParameter" = "Ce lien contient un paramètre inconnu. Les seuls paramètres sont mode et minutes.";

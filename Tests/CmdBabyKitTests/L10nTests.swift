@@ -107,6 +107,14 @@ func sessionLinkCopy() {
     L10nTable.language("en")("alert.link.unknownMode")
       == "Unknown mode. The modes are ocean, terminal, and starship."
   )
+  #expect(
+    L10nTable.language("fr")("alert.link.unknownParameter")
+      == "Ce lien contient un paramètre inconnu. Les seuls paramètres sont mode et minutes."
+  )
+  #expect(
+    L10nTable.language("en")("alert.link.unknownParameter")
+      == "This link contains an unknown parameter. The only parameters are mode and minutes."
+  )
 }
 
 @Test("Lancer un mode : Start en anglais, Lancer en français")
