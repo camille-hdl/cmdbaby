@@ -31,6 +31,15 @@ func sessionStartLinkAcceptsEitherParameterAlone() throws {
   #expect(padded.durationMinutes == 1)
 }
 
+@Test("Une durée entière hors borne est lue ; le refus n’est pas une erreur de format")
+func sessionStartLinkReadsAnOutOfRangeDuration() throws {
+  let zero = try #require(parsed("cmdbaby://session/start?minutes=0"))
+  let high = try #require(parsed("cmdbaby://session/start?minutes=121"))
+
+  #expect(zero.durationMinutes == 0)
+  #expect(high.durationMinutes == 121)
+}
+
 @Test("Un schéma, un chemin, un mode ou une durée illisible est refusé", arguments: [
   ("https://session/start", SessionLinkFailure.unknownScheme),
   ("cmdbaby://session/stop", SessionLinkFailure.unknownPath),
@@ -38,8 +47,6 @@ func sessionStartLinkAcceptsEitherParameterAlone() throws {
   ("cmdbaby://session/start?mode=galaxy", SessionLinkFailure.unknownMode),
   ("cmdbaby://session/start?minutes=dix", SessionLinkFailure.durationNotInteger),
   ("cmdbaby://session/start?minutes=1.5", SessionLinkFailure.durationNotInteger),
-  ("cmdbaby://session/start?minutes=0", SessionLinkFailure.durationOutOfBounds),
-  ("cmdbaby://session/start?minutes=121", SessionLinkFailure.durationOutOfBounds),
   ("cmdbaby://session/start?mode=starship&mode=ocean", SessionLinkFailure.duplicateParameter),
   ("cmdbaby://session/start?minutes=10&minutes=2", SessionLinkFailure.duplicateParameter),
   ("cmdbaby://session/start?minute=10", SessionLinkFailure.unknownParameter),

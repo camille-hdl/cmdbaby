@@ -64,9 +64,6 @@ public enum SessionLinkParser {
       guard let minutes = Int(rawMinutes) else {
         return .failure(.durationNotInteger)
       }
-      guard AdultExitSettings.timeLimitRange.contains(minutes) else {
-        return .failure(.durationOutOfBounds)
-      }
       durationMinutes = minutes
     }
 

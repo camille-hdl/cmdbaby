@@ -59,60 +59,38 @@ final class DiagnosticsSessionModel: ObservableObject {
   func startKiosk(_ request: SessionLaunchRequest) async -> SessionLaunchDecision {
     let phase = launchPhase()
     let saved = CmdBabyConfigurationStore().load()
-    // Le contrôle clavier est plus bas. Ici, seuls le repos, l’autorisation du lien
-    // et la durée peuvent déjà décider.
-    switch SessionLaunchDecision.evaluate(
+    var configuration: CmdBabyConfiguration?
+    let decision = SessionLaunchDecision.evaluate(
       request: request,
       phase: phase,
-      check: .allowed,
+      check: {
+        guard case .ready(let effective) = request.effectiveConfiguration(from: saved) else {
+          return .allowed
+        }
+        configuration = effective
+        KeyboardLayoutLetter.shared.refreshFromCurrentLayout()
+        let typability = PassphraseTypability.check(
+          effective.exits.passphrase,
+          layoutLetters: KeyboardLayoutLetter.shared.snapshot()
+        )
+        return SessionLaunchCheck.evaluate(
+          exits: effective.exits,
+          typability: typability,
+          secureInputActive: IsSecureEventInputEnabled()
+        )
+      },
       linkLaunchAllowed: saved.linkLaunchAllowed
-    ) {
-    case .alreadyInProgress:
-      return .alreadyInProgress
-    case .linkNotAllowed:
-      return .linkNotAllowed
-    case .invalidParameter:
-      return .invalidParameter
-    case .launch, .refused:
-      break
-    }
-
-    let configuration: CmdBabyConfiguration
-    switch request.effectiveConfiguration(from: saved) {
-    case .invalidParameter:
-      return .invalidParameter
-    case .ready(let effective):
-      configuration = effective
-    }
-
-    KeyboardLayoutLetter.shared.refreshFromCurrentLayout()
-    let typability = PassphraseTypability.check(
-      configuration.exits.passphrase,
-      layoutLetters: KeyboardLayoutLetter.shared.snapshot()
     )
-    let check = SessionLaunchCheck.evaluate(
-      exits: configuration.exits,
-      typability: typability,
-      secureInputActive: IsSecureEventInputEnabled()
-    )
-    switch SessionLaunchDecision.evaluate(
-      request: request,
-      phase: phase,
-      check: check,
-      linkLaunchAllowed: saved.linkLaunchAllowed
-    ) {
-    case .alreadyInProgress:
-      return .alreadyInProgress
-    case .linkNotAllowed:
-      return .linkNotAllowed
+    switch decision {
+    case .alreadyInProgress, .linkNotAllowed, .invalidParameter:
+      return decision
     case .refused(let error):
       reportActivationFailure(error)
       return .refused(error)
-    case .invalidParameter:
-      return .invalidParameter
     case .launch:
       break
     }
+    guard let configuration else { return .invalidParameter }
 
     kioskController.injectedFailure = nil
     isTerminationBlocked = true

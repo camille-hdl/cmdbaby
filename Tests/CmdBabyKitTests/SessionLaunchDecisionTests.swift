@@ -3,6 +3,33 @@ import Testing
 
 @testable import CmdBabyKit
 
+@Test("Le contrôle clavier n’est consulté que si rien n’a déjà décidé")
+func launchCheckIsConsultedOnlyWhenEarlierGatesPass() {
+  #expect(consultedCheck(phase: .active, origin: .shortcuts, minutes: 10, linkLaunchAllowed: true) == false)
+  #expect(consultedCheck(phase: .configuration, origin: .link, minutes: 10, linkLaunchAllowed: false) == false)
+  #expect(consultedCheck(phase: .configuration, origin: .shortcuts, minutes: 0, linkLaunchAllowed: true) == false)
+  #expect(consultedCheck(phase: .configuration, origin: .shortcuts, minutes: 10, linkLaunchAllowed: true) == true)
+}
+
+private func consultedCheck(
+  phase: KioskSessionPhase,
+  origin: SessionLaunchRequest.Origin,
+  minutes: Int?,
+  linkLaunchAllowed: Bool
+) -> Bool {
+  var consulted = false
+  _ = SessionLaunchDecision.evaluate(
+    request: SessionLaunchRequest(origin: origin, durationMinutes: minutes),
+    phase: phase,
+    check: {
+      consulted = true
+      return .allowed
+    },
+    linkLaunchAllowed: linkLaunchAllowed
+  )
+  return consulted
+}
+
 @Test("Au repos, un contrôle autorisé décide de lancer", arguments: [
   KioskSessionPhase.configuration,
   KioskSessionPhase.failed,
@@ -11,7 +38,7 @@ func restingPhaseLaunchesWhenTheCheckAllows(_ phase: KioskSessionPhase) {
   let decision = SessionLaunchDecision.evaluate(
     request: SessionLaunchRequest(origin: .menu),
     phase: phase,
-    check: .allowed,
+    check: { .allowed },
     linkLaunchAllowed: true
   )
 
@@ -31,19 +58,19 @@ func busyPhaseIsAlreadyInProgress(_ phase: KioskSessionPhase) {
   let allowed = SessionLaunchDecision.evaluate(
     request: SessionLaunchRequest(origin: .shortcuts),
     phase: phase,
-    check: .allowed,
+    check: { .allowed },
     linkLaunchAllowed: true
   )
   let blockedBySecureInput = SessionLaunchDecision.evaluate(
     request: SessionLaunchRequest(origin: .shortcuts),
     phase: phase,
-    check: .blocked(.secureInputActive),
+    check: { .blocked(.secureInputActive) },
     linkLaunchAllowed: true
   )
   let blockedByPassphrase = SessionLaunchDecision.evaluate(
     request: SessionLaunchRequest(origin: .link),
     phase: phase,
-    check: .blocked(.passphraseNotTypable(["é"])),
+    check: { .blocked(.passphraseNotTypable(["é"])) },
     linkLaunchAllowed: true
   )
 
@@ -65,7 +92,7 @@ func restingPhaseRefusesEachCheckReason(
   let decision = SessionLaunchDecision.evaluate(
     request: SessionLaunchRequest(origin: .settings),
     phase: phase,
-    check: .blocked(error),
+    check: { .blocked(error) },
     linkLaunchAllowed: true
   )
 
@@ -180,7 +207,7 @@ func unauthorizedLinkIsRefusedAndAnAuthorizedLinkLaunchesWithOverrides() throws 
     SessionLaunchDecision.evaluate(
       request: request,
       phase: .configuration,
-      check: .allowed,
+      check: { .allowed },
       linkLaunchAllowed: false
     ) == .linkNotAllowed
   )
@@ -188,7 +215,7 @@ func unauthorizedLinkIsRefusedAndAnAuthorizedLinkLaunchesWithOverrides() throws 
     SessionLaunchDecision.evaluate(
       request: request,
       phase: .active,
-      check: .allowed,
+      check: { .allowed },
       linkLaunchAllowed: false
     ) == .alreadyInProgress
   )
@@ -196,7 +223,7 @@ func unauthorizedLinkIsRefusedAndAnAuthorizedLinkLaunchesWithOverrides() throws 
     SessionLaunchDecision.evaluate(
       request: SessionLaunchRequest(origin: .shortcuts, mode: .starship, durationMinutes: 10),
       phase: .configuration,
-      check: .allowed,
+      check: { .allowed },
       linkLaunchAllowed: false
     ) == .launch
   )
@@ -205,7 +232,7 @@ func unauthorizedLinkIsRefusedAndAnAuthorizedLinkLaunchesWithOverrides() throws 
     SessionLaunchDecision.evaluate(
       request: request,
       phase: .configuration,
-      check: .allowed,
+      check: { .allowed },
       linkLaunchAllowed: true
     ) == .launch
   )

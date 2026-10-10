@@ -24,12 +24,17 @@ public struct SessionLaunchRequest: Equatable, Sendable {
     self.durationMinutes = durationMinutes
   }
 
+  /// Durée absente : le réglage enregistré. Durée présente : dans `AdultExitSettings.timeLimitRange`.
+  /// Seul endroit qui compare une surcharge à la borne.
+  var acceptsDuration: Bool {
+    guard let durationMinutes else { return true }
+    return AdultExitSettings.timeLimitRange.contains(durationMinutes)
+  }
+
   /// Copie de la configuration enregistrée, avec les surcharges de cette session.
-  /// Une durée hors de `AdultExitSettings.timeLimitRange` ne donne aucune configuration.
+  /// Une durée refusée par `acceptsDuration` ne donne aucune configuration.
   public func effectiveConfiguration(from saved: CmdBabyConfiguration) -> SessionLaunchConfiguration {
-    if let minutes = durationMinutes, !AdultExitSettings.timeLimitRange.contains(minutes) {
-      return .invalidParameter
-    }
+    guard acceptsDuration else { return .invalidParameter }
     var configuration = saved
     if let mode {
       configuration.mode = mode
@@ -65,10 +70,11 @@ public enum SessionLaunchDecision: Equatable, Sendable {
 
   /// `linkLaunchAllowed` ne concerne que l’origine `.link`. Une phase occupée l’emporte :
   /// pendant une session, le lien ne devient pas une alerte.
+  /// `check` n’est appelé que si la phase, le consentement et la durée n’ont pas déjà décidé.
   public static func evaluate(
     request: SessionLaunchRequest,
     phase: KioskSessionPhase,
-    check: SessionLaunchCheck,
+    check: () -> SessionLaunchCheck,
     linkLaunchAllowed: Bool
   ) -> SessionLaunchDecision {
     switch phase {
@@ -80,10 +86,10 @@ public enum SessionLaunchDecision: Equatable, Sendable {
     if request.origin == .link, !linkLaunchAllowed {
       return .linkNotAllowed
     }
-    if let minutes = request.durationMinutes, !AdultExitSettings.timeLimitRange.contains(minutes) {
+    if !request.acceptsDuration {
       return .invalidParameter
     }
-    switch check {
+    switch check() {
     case .allowed:
       return .launch
     case .blocked(let error):
