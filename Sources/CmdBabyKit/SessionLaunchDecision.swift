@@ -91,13 +91,16 @@ public enum SessionLaunchDecision: Equatable, Sendable {
     }
   }
 
-  /// Texte montré à l’appelant (Raccourcis). Les refus reprennent l’alerte.
+  /// Texte montré à l’appelant (Raccourcis). Les refus reprennent l’alerte,
+  /// sauf les lettres absentes de la phrase : elles restent sur l’alerte locale.
   public func message(in table: L10nTable = .current) -> String {
     switch self {
     case .launch:
       table("shortcuts.startSession.launched")
     case .alreadyInProgress:
       table("shortcuts.startSession.alreadyInProgress")
+    case .refused(.passphraseNotTypable):
+      table("shortcuts.startSession.passphraseNotTypable")
     case .refused(let error):
       SessionActivationAlert.forFailedActivation(error, table: table).informativeText
     case .invalidParameter:

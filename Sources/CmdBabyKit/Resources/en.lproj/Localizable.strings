@@ -112,6 +112,7 @@
 "shortcuts.startSession.description" = "Starts a session with your saved settings.";
 "shortcuts.startSession.launched" = "Session started";
 "shortcuts.startSession.alreadyInProgress" = "A session is already in progress";
+"shortcuts.startSession.passphraseNotTypable" = "The exit phrase can't be typed with the active keyboard layout. Change the phrase or turn on Shift-Escape.";
 "shortcuts.startSession.invalidParameter" = "The duration must be between 1 and 120 minutes.";
 "shortcuts.startSession.mode" = "Mode";
 "shortcuts.startSession.duration" = "Duration";

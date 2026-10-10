@@ -108,12 +108,16 @@ func refusalReplyExplainsTheReasonInFrenchAndEnglish() {
   let passphrase = SessionLaunchDecision.refused(.passphraseNotTypable(["é", "ü"]))
   #expect(
     passphrase.message(in: .language("fr"))
-      == "La phrase de sortie ne peut pas être tapée avec la disposition clavier active (lettres absentes : é ü). Changez de phrase ou activez Maj-Échap."
+      == "La phrase de sortie ne peut pas être tapée avec la disposition clavier active. Changez de phrase ou activez Maj-Échap."
   )
   #expect(
     passphrase.message(in: .language("en"))
-      == "The exit phrase can't be typed with the active keyboard layout (missing letters: é ü). Change the phrase or turn on Shift-Escape."
+      == "The exit phrase can't be typed with the active keyboard layout. Change the phrase or turn on Shift-Escape."
   )
+  #expect(!passphrase.message(in: .language("fr")).contains("ü"))
+  #expect(!passphrase.message(in: .language("en")).contains("ü"))
+  #expect(!passphrase.message(in: .language("fr")).contains("lettres absentes"))
+  #expect(!passphrase.message(in: .language("en")).contains("missing letters"))
 
   let accessibility = SessionLaunchDecision.refused(.filterUnavailable("tap créé mais inactif"))
   #expect(

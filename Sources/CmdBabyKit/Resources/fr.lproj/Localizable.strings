@@ -112,6 +112,7 @@
 "shortcuts.startSession.description" = "Lance une session avec les réglages enregistrés.";
 "shortcuts.startSession.launched" = "Session lancée";
 "shortcuts.startSession.alreadyInProgress" = "Une session est déjà en cours";
+"shortcuts.startSession.passphraseNotTypable" = "La phrase de sortie ne peut pas être tapée avec la disposition clavier active. Changez de phrase ou activez Maj-Échap.";
 "shortcuts.startSession.invalidParameter" = "La durée doit être comprise entre 1 et 120 minutes.";
 "shortcuts.startSession.mode" = "Mode";
 "shortcuts.startSession.duration" = "Durée";
