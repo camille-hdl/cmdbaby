@@ -108,16 +108,10 @@
 "site.support.url" = "https://cmdbaby.app/fr/support/";
 "settings.about.privacy" = "Confidentialité";
 "settings.about.support" = "Support";
-"shortcuts.startSession.title" = "Lancer une session";
-"shortcuts.startSession.description" = "Lance une session avec les réglages enregistrés.";
 "shortcuts.startSession.launched" = "Session lancée";
 "shortcuts.startSession.alreadyInProgress" = "Une session est déjà en cours";
 "shortcuts.startSession.passphraseNotTypable" = "La phrase de sortie ne peut pas être tapée avec la disposition clavier active. Changez de phrase ou activez Maj-Échap.";
 "shortcuts.startSession.invalidParameter" = "La durée doit être comprise entre 1 et 120 minutes.";
-"shortcuts.startSession.mode" = "Mode";
-"shortcuts.startSession.duration" = "Durée";
-"shortcuts.startSession.duration.hint" = "Minutes, de 1 à 120";
-"shortcuts.startSession.summary" = "Lancer une session %@ de %lld minutes";
 "settings.general.linkLaunch.label" = "Autoriser le lancement par lien (Alfred, Raycast, Terminal)";
 "settings.general.linkLaunch.help" = "Une page web ou une autre app peut proposer ce lien. Tant que la case est décochée, CmdBaby le refuse.";
 "alert.link.notAllowed" = "Cochez « Autoriser le lancement par lien » dans Réglages › Général pour lancer une session depuis Alfred, Raycast ou le Terminal.";

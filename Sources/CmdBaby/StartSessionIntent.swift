@@ -5,8 +5,7 @@ import CmdBabyKit
 ///
 /// Mode et durée sont optionnels et ne valent que pour cette session.
 /// App Intents n’accepte que des littéraux extraits à la compilation, pas `L10nTable`.
-/// Le même texte est dans `L10nTable` (`shortcuts.startSession.*`) et dans le catalogue
-/// du bundle principal (`Contents/Resources/*.lproj`), que Raccourcis consulte.
+/// Raccourcis affiche le catalogue du bundle principal (`Contents/Resources/*.lproj`).
 struct StartSessionIntent: AppIntent {
   static let title: LocalizedStringResource = "Start a Session"
   static let description = IntentDescription("Starts a session with your saved settings.")

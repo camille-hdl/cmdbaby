@@ -25,22 +25,48 @@ func keyboardLayoutExitCopy() {
   )
 }
 
-@Test("Raccourcis : Lancer une session en français, Start a Session en anglais")
-func startSessionShortcutCopy() {
-  #expect(L10nTable.language("fr")("shortcuts.startSession.title") == "Lancer une session")
-  #expect(L10nTable.language("en")("shortcuts.startSession.title") == "Start a Session")
-  #expect(
-    L10nTable.language("fr")("shortcuts.startSession.description")
-      == "Lance une session avec les réglages enregistrés."
-  )
-  #expect(
-    L10nTable.language("en")("shortcuts.startSession.description")
-      == "Starts a session with your saved settings."
-  )
+@Test("Raccourcis : le catalogue de l’app porte les libellés affichés")
+func startSessionShortcutCatalog() throws {
+  let french = try appStringCatalog(language: "fr", name: "Localizable")
+  let english = try appStringCatalog(language: "en", name: "Localizable")
+  #expect(Set(french.keys) == Set(english.keys))
+
+  #expect(french["Start a Session"] == "Lancer une session")
+  #expect(english["Start a Session"] == "Start a Session")
+  #expect(french["Starts a session with your saved settings."] == "Lance une session avec les réglages enregistrés.")
+  #expect(english["Starts a session with your saved settings."] == "Starts a session with your saved settings.")
+  #expect(french["Mode"] == "Mode")
+  #expect(english["Mode"] == "Mode")
+  #expect(french["Duration"] == "Durée")
+  #expect(english["Duration"] == "Duration")
+  #expect(french["Minutes, from 1 to 120"] == "Minutes, de 1 à 120")
+  #expect(english["Minutes, from 1 to 120"] == "Minutes, from 1 to 120")
+  #expect(french["Ocean"] == "Océan")
+  #expect(english["Ocean"] == "Ocean")
+  #expect(french["Terminal"] == "Terminal")
+  #expect(english["Terminal"] == "Terminal")
+  #expect(french["Starship"] == "Vaisseau")
+  #expect(english["Starship"] == "Starship")
+  #expect(french["Start a ${mode} session for ${minutes} minutes"] == "Lancer une session ${mode} de ${minutes} minutes")
+  #expect(english["Start a ${mode} session for ${minutes} minutes"] == "Start a ${mode} session for ${minutes} minutes")
+  #expect(french["Start a ${mode} session"] == "Lancer une session ${mode}")
+  #expect(english["Start a ${mode} session"] == "Start a ${mode} session")
+  #expect(french["Start a session for ${minutes} minutes"] == "Lancer une session de ${minutes} minutes")
+  #expect(english["Start a session for ${minutes} minutes"] == "Start a session for ${minutes} minutes")
+  #expect(french["Start a session"] == "Lancer une session")
+  #expect(english["Start a session"] == "Start a session")
+
+  let frenchPhrases = try appStringCatalog(language: "fr", name: "AppShortcuts")
+  let englishPhrases = try appStringCatalog(language: "en", name: "AppShortcuts")
+  #expect(Set(frenchPhrases.keys) == Set(englishPhrases.keys))
+  #expect(frenchPhrases["Start a Session with ${applicationName}"] == "Lancer une session avec ${applicationName}")
+  #expect(englishPhrases["Start a Session with ${applicationName}"] == "Start a Session with ${applicationName}")
+  #expect(frenchPhrases["Start a ${mode} session with ${applicationName}"] == "Lancer une session ${mode} avec ${applicationName}")
+  #expect(englishPhrases["Start a ${mode} session with ${applicationName}"] == "Start a ${mode} session with ${applicationName}")
 }
 
-@Test("Raccourcis : durée invalide, libellés et résumé Vaisseau de 10 minutes")
-func startSessionOverrideCopy() {
+@Test("Raccourcis : une durée invalide est dite à l’appelant")
+func startSessionInvalidDurationCopy() {
   #expect(
     L10nTable.language("fr")("shortcuts.startSession.invalidParameter")
       == "La durée doit être comprise entre 1 et 120 minutes."
@@ -48,22 +74,6 @@ func startSessionOverrideCopy() {
   #expect(
     L10nTable.language("en")("shortcuts.startSession.invalidParameter")
       == "The duration must be between 1 and 120 minutes."
-  )
-  #expect(L10nTable.language("fr")("shortcuts.startSession.mode") == "Mode")
-  #expect(L10nTable.language("en")("shortcuts.startSession.mode") == "Mode")
-  #expect(L10nTable.language("fr")("shortcuts.startSession.duration") == "Durée")
-  #expect(L10nTable.language("en")("shortcuts.startSession.duration") == "Duration")
-  #expect(L10nTable.language("fr")("shortcuts.startSession.duration.hint") == "Minutes, de 1 à 120")
-  #expect(
-    L10nTable.language("en")("shortcuts.startSession.duration.hint") == "Minutes, from 1 to 120"
-  )
-  #expect(
-    L10nTable.language("fr")("shortcuts.startSession.summary", "Vaisseau", 10)
-      == "Lancer une session Vaisseau de 10 minutes"
-  )
-  #expect(
-    L10nTable.language("en")("shortcuts.startSession.summary", "Starship", 10)
-      == "Start a Starship session for 10 minutes"
   )
 }
 
@@ -451,6 +461,16 @@ func englishAndFrenchStringTablesMatch() throws {
 func formatSpecifiersMatchTheDocumentedForms() {
   #expect(formatSpecifiers(in: "%@ %lld %d %1$@") == ["%@", "%lld", "%d", "%1$@"])
   #expect(formatSpecifiers(in: "100%%") == [])
+}
+
+/// Catalogue copié dans le bundle de l’app. Raccourcis lit ces fichiers, pas le kit.
+private func appStringCatalog(language code: String, name: String) throws -> [String: String] {
+  let url = URL(fileURLWithPath: #filePath)
+    .deletingLastPathComponent()
+    .deletingLastPathComponent()
+    .deletingLastPathComponent()
+    .appendingPathComponent("Sources/CmdBaby/Resources/\(code).lproj/\(name).strings")
+  return try #require(NSDictionary(contentsOf: url) as? [String: String])
 }
 
 private func stringTable(language code: String) throws -> [String: String] {
