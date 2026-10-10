@@ -182,13 +182,9 @@ _install_app_intents_metadata() {
     const_list="$work/const-values.txt"
     : > "$const_list"
     while IFS= read -r const_file; do
+        [[ -n "$const_file" ]] || continue
         print -r -- "$const_file" >> "$const_list"
-    done < <(find "$project_dir/.build" -name '*.swiftconstvalues' -path "*${arch}-apple-macos*" | sort)
-    if [[ ! -s "$const_list" ]]; then
-        while IFS= read -r const_file; do
-            print -r -- "$const_file" >> "$const_list"
-        done < <(find "$project_dir/.build" -name '*.swiftconstvalues' | sort)
-    fi
+    done < <(_app_intents_const_values "$project_dir" "$binary_dir" "$arch")
     out="$work/out"
     mkdir -p "$out"
     local -a processor_flags
@@ -240,6 +236,18 @@ _install_app_intents_metadata() {
         rm -rf "$app_path/Contents/Resources/$lang.lproj"
         cp -R "$src_lproj" "$app_path/Contents/Resources/$lang.lproj"
     done
+}
+
+# Fichiers .swiftconstvalues de la configuration et de l’architecture compilées.
+# binary_dir est `swift build --show-bin-path` : debug, release, ou Products/Release.
+# Pas de repli vers une autre configuration : un reste de `swift test` ne doit pas servir.
+_app_intents_const_values() {
+    local project_dir="$1" binary_dir="$2" arch="$3"
+    local configuration="${${binary_dir:t}:l}"
+    find "$project_dir/.build" \
+        -name '*.swiftconstvalues' \
+        -path "*${arch}-apple-macos*/${configuration}/*" \
+        | sort
 }
 
 # Architecture préférée pour l’extraction : les const values ne dépendent pas du binaire.

@@ -63,6 +63,9 @@ jobs:
             exit 1
           fi
 
+      - name: Const values de l’assemblage
+        run: zsh scripts/test-app-intents-const-values.zsh
+
       - name: Package .app (ad hoc)
         run: CMDBABY_APP_OUTPUT_DIR="$RUNNER_TEMP" ./scripts/build-app.sh
 
