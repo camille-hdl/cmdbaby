@@ -56,11 +56,6 @@ final class DiagnosticsSessionModel: ObservableObject {
     self.presentActivationFailure = presentActivationFailure
   }
 
-  /// Pendant une session, un lien ne montre rien.
-  var suppressesLinkFeedback: Bool {
-    phaseBlocksAnotherLaunch(launchPhase())
-  }
-
   func startKiosk(_ request: SessionLaunchRequest) async -> SessionLaunchDecision {
     let phase = launchPhase()
     let saved = CmdBabyConfigurationStore().load()
@@ -153,7 +148,7 @@ final class DiagnosticsSessionModel: ObservableObject {
 
   /// Phase vue par la décision. Une activation déjà lancée compte comme occupée,
   /// même avant que le contrôleur ait quitté `.configuration`.
-  private func launchPhase() -> KioskSessionPhase {
+  func launchPhase() -> KioskSessionPhase {
     if kioskTask != nil { return .activating }
     for phase in [kioskController.state.phase, kioskState.phase] {
       if phaseBlocksAnotherLaunch(phase) { return phase }

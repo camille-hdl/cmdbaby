@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 
 @testable import CmdBabyKit
@@ -135,6 +136,35 @@ func refusalReplyExplainsTheReasonInFrenchAndEnglish() {
     noScreens.message(in: .language("fr")) == "Aucun écran n’est disponible pour la couverture."
   )
   #expect(noScreens.message(in: .language("en")) == "No screen is available for the cover.")
+}
+
+@Test("Un lien non autorisé, même mal formé, est refusé avant l’erreur de format")
+func unauthorizedMalformedLinkIsRefusedBeforeTheFormatError() {
+  let malformed = URL(string: "cmdbaby://session/stop")!
+
+  #expect(
+    SessionLaunchDecision.reply(to: malformed, phase: .configuration, linkLaunchAllowed: false)
+      == .notAllowed
+  )
+  #expect(
+    SessionLaunchDecision.reply(to: malformed, phase: .failed, linkLaunchAllowed: false)
+      == .notAllowed
+  )
+  #expect(
+    SessionLaunchDecision.reply(to: malformed, phase: .active, linkLaunchAllowed: false)
+      == .ignored
+  )
+  #expect(
+    SessionLaunchDecision.reply(
+      to: URL(string: "cmdbaby://session/start")!,
+      phase: .configuration,
+      linkLaunchAllowed: true
+    ) == .proceed(SessionLaunchRequest(origin: .link))
+  )
+  #expect(
+    SessionLaunchDecision.reply(to: malformed, phase: .configuration, linkLaunchAllowed: true)
+      == .invalid(.unknownPath)
+  )
 }
 
 @Test("Un lien non autorisé est refusé ; autorisé, il lance avec les surcharges")

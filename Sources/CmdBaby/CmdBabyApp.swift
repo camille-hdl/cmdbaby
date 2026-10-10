@@ -141,14 +141,19 @@ final class CmdBabyAppDelegate: NSObject, NSApplicationDelegate {
 
   /// Adaptateur du lien. La décision et l’analyse sont dans le kit.
   private func handleSessionLink(_ url: URL) async {
-    if model.suppressesLinkFeedback {
+    let saved = CmdBabyConfigurationStore().load()
+    switch SessionLaunchDecision.reply(
+      to: url,
+      phase: model.launchPhase(),
+      linkLaunchAllowed: saved.linkLaunchAllowed
+    ) {
+    case .ignored:
       LifecycleLogRecorder.shared.emit(.sessionLinkIgnored)
-      return
-    }
-    switch SessionLinkParser.parse(url) {
-    case .failure(let failure):
+    case .notAllowed:
+      present(SessionActivationAlert.forLinkNotAllowed())
+    case .invalid(let failure):
       present(SessionActivationAlert.forInvalidLink(failure))
-    case .success(let request):
+    case .proceed(let request):
       switch await model.startKiosk(request) {
       case .alreadyInProgress:
         LifecycleLogRecorder.shared.emit(.sessionLinkIgnored)

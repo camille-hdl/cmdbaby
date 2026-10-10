@@ -109,4 +109,36 @@ public enum SessionLaunchDecision: Equatable, Sendable {
       table("alert.link.notAllowed")
     }
   }
+
+  /// Réponse de l’adaptateur du lien, avant `startKiosk`.
+  /// Une phase occupée ignore. Au repos, le refus de consentement précède l’erreur de format.
+  public static func reply(
+    to url: URL,
+    phase: KioskSessionPhase,
+    linkLaunchAllowed: Bool
+  ) -> SessionLinkReply {
+    switch phase {
+    case .preparing, .activating, .active, .stopping:
+      return .ignored
+    case .configuration, .failed:
+      break
+    }
+    if !linkLaunchAllowed {
+      return .notAllowed
+    }
+    switch SessionLinkParser.parse(url) {
+    case .failure(let failure):
+      return .invalid(failure)
+    case .success(let request):
+      return .proceed(request)
+    }
+  }
+}
+
+/// Ce que l’adaptateur du lien montre, ou la requête à lancer.
+public enum SessionLinkReply: Equatable, Sendable {
+  case ignored
+  case notAllowed
+  case invalid(SessionLinkFailure)
+  case proceed(SessionLaunchRequest)
 }
