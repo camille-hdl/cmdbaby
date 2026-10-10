@@ -52,6 +52,15 @@ sign_sparkle() {
     done
 }
 
+# development_signing_identity < sortie de `security find-identity -v -p codesigning`
+# Première identité Apple Development, sinon « - » (ad hoc). Sans Team ID, linkd refuse
+# la connexion de l’app (« requiresValidatedBundle ») et Raccourcis ne peut pas exécuter ses actions.
+development_signing_identity() {
+    local identity
+    identity=$(sed -n 's/.*"\(Apple Development:.*\)".*/\1/p' | head -n 1)
+    print -r -- "${identity:--}"
+}
+
 # compile_app_icon <racine du projet> <chemin du .app> <required|optional>
 # Compile Resources/AppIcon.icon (Icon Composer) avec actool : Assets.car pour macOS 26
 # (Jour, Nuit, Transparent, Teinté) et AppIcon.icns statique (Jour) pour macOS 13 à 15.

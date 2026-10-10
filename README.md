@@ -121,14 +121,14 @@ Requirements: macOS 13 or later, Swift 6.1 or later (Xcode 26 to build the icon)
 swift test
 ```
 
-Build a signed app in `/Applications`. Use your Apple Development identity so the Accessibility permission survives rebuilds:
+Build a signed app in `/Applications`:
 
 ```sh
-CMDBABY_CODE_SIGN_IDENTITY="$(security find-identity -v -p codesigning | sed -n 's/.*"\(Apple Development:.*\)".*/\1/p' | head -1)" ./scripts/build-app.sh
+./scripts/build-app.sh
 open /Applications/CmdBaby.app
 ```
 
-Without an identity, the script signs ad hoc: macOS then sees a new app after every rebuild and asks for Accessibility again.
+The script signs with the first Apple Development identity in your keychain, or with the one in `CMDBABY_CODE_SIGN_IDENTITY`. Without one, it signs ad hoc (`CMDBABY_CODE_SIGN_IDENTITY=-` forces it). An ad hoc app has no Team ID: macOS sees a new app after every rebuild and asks for Accessibility again, and Shortcuts cannot run its actions.
 
 Once per clone, enable the pre-commit hook, which refuses keys, certificates and release files:
 
