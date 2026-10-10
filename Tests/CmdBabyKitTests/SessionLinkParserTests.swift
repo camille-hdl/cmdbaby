@@ -51,6 +51,8 @@ func sessionStartLinkReadsAnOutOfRangeDuration() throws {
   ("cmdbaby://session/start?minutes=10&minutes=2", SessionLinkFailure.duplicateParameter),
   ("cmdbaby://session/start?minute=10", SessionLinkFailure.unknownParameter),
   ("cmdbaby://session/start?mode=starship&minute=10", SessionLinkFailure.unknownParameter),
+  ("cmdbaby://session/start?mode", SessionLinkFailure.unknownMode),
+  ("cmdbaby://session/start?minutes", SessionLinkFailure.durationNotInteger),
 ])
 func sessionStartLinkRejectsEachMalformedCase(_ raw: String, _ failure: SessionLinkFailure) {
   #expect(SessionLinkParser.parse(URL(string: raw)!) == .failure(failure))

@@ -52,16 +52,16 @@ public enum SessionLinkParser {
     }
 
     var mode: KioskPlayModeID?
-    if let rawMode = items.first(where: { $0.name == "mode" })?.value {
-      guard let resolved = KioskPlayModeCatalog.resolve(rawMode) else {
+    if let modeItem = items.first(where: { $0.name == "mode" }) {
+      guard let rawMode = modeItem.value, let resolved = KioskPlayModeCatalog.resolve(rawMode) else {
         return .failure(.unknownMode)
       }
       mode = resolved
     }
 
     var durationMinutes: Int?
-    if let rawMinutes = items.first(where: { $0.name == "minutes" })?.value {
-      guard let minutes = Int(rawMinutes) else {
+    if let minutesItem = items.first(where: { $0.name == "minutes" }) {
+      guard let rawMinutes = minutesItem.value, let minutes = Int(rawMinutes) else {
         return .failure(.durationNotInteger)
       }
       durationMinutes = minutes
