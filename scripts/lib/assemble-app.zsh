@@ -91,8 +91,8 @@ _swiftc_documents() {
 }
 
 # Remplit le tableau global app_intents_swift_flags.
-# Vide si ce compilateur ne connaît pas -const-gather-protocols-file :
-# `swift build` dans l’assemblage reste alors le même que `swift build` / `swift test`.
+# Sans -const-gather-protocols-file, aucun .swiftconstvalues n’est émis et
+# l’installation des métadonnées s’arrête.
 # Noms courts de protocoles : ConstExtract les compare à getName().
 # AppEnum est requis dès qu’un paramètre a ce type : sinon l’extracteur ne
 # connaît pas Optional<StartSessionMode>.
@@ -101,7 +101,7 @@ prepare_app_intents_swift_flags() {
     typeset -g -a app_intents_swift_flags
     app_intents_swift_flags=()
     if ! _swiftc_documents "-const-gather-protocols-file"; then
-        print -r -- "Ce swiftc ignore -const-gather-protocols-file : extraction App Intents depuis les sources."
+        print -u2 "Ce swiftc ignore -const-gather-protocols-file : pas de .swiftconstvalues."
         return 0
     fi
     # Chaque -Xswiftc ne transmet qu’un argument, y compris ceux qui commencent par « - ».
@@ -180,11 +180,9 @@ _install_app_intents_metadata() {
     [[ -s "$sources_list" ]] || { print -u2 "Aucune source Swift pour CmdBaby."; return 1 }
 
     const_list="$work/const-values.txt"
-    : > "$const_list"
-    while IFS= read -r const_file; do
-        [[ -n "$const_file" ]] || continue
-        print -r -- "$const_file" >> "$const_list"
-    done < <(_app_intents_const_values "$project_dir" "$binary_dir" "$arch")
+    if ! _app_intents_const_values "$project_dir" "$binary_dir" "$arch" > "$const_list"; then
+        return 1
+    fi
     out="$work/out"
     mkdir -p "$out"
     local -a processor_flags
@@ -201,15 +199,11 @@ _install_app_intents_metadata() {
         --binary-file "$processor_binary"
         --source-file-list "$sources_list"
         --deployment-aware-processing
+        --swift-const-vals-list "$const_list"
+        --compile-time-extraction
         --force
     )
-    if [[ -s "$const_list" ]]; then
-        processor_flags+=(--swift-const-vals-list "$const_list" --compile-time-extraction)
-        print -r -- "xcrun appintentsmetadataprocessor --module-name CmdBaby --target-triple ${arch}-apple-macos13.0 --compile-time-extraction --swift-const-vals-list <${arch} .swiftconstvalues> --force"
-    else
-        print -r -- "xcrun appintentsmetadataprocessor --module-name CmdBaby --target-triple ${arch}-apple-macos13.0 --source-file-list <Sources/CmdBaby> --force"
-        print -r -- "Pas de .swiftconstvalues : extraction depuis les sources."
-    fi
+    print -r -- "xcrun appintentsmetadataprocessor --module-name CmdBaby --target-triple ${arch}-apple-macos13.0 --compile-time-extraction --swift-const-vals-list <${arch} .swiftconstvalues> --force"
     xcrun appintentsmetadataprocessor "${processor_flags[@]}" || return 1
 
     produced="$out/Metadata.appintents"
@@ -239,15 +233,29 @@ _install_app_intents_metadata() {
 }
 
 # Fichiers .swiftconstvalues de la configuration et de l’architecture compilées.
-# binary_dir est `swift build --show-bin-path` : debug, release, ou Products/Release.
-# Pas de repli vers une autre configuration : un reste de `swift test` ne doit pas servir.
+# binary_dir est `swift build --show-bin-path`.
+# Un binaire universel est dans `.build/apple/Products/<Config>` (casse conservée) ;
+# ses const values sont sous Intermediates.noindex, pas sous un triplet.
+# Une liste vide arrête l’assemblage : pas d’extraction depuis les sources.
 _app_intents_const_values() {
     local project_dir="$1" binary_dir="$2" arch="$3"
-    local configuration="${${binary_dir:t}:l}"
-    find "$project_dir/.build" \
-        -name '*.swiftconstvalues' \
-        -path "*${arch}-apple-macos*/${configuration}/*" \
-        | sort
+    local configuration="${binary_dir:t}"
+    local search_root path_filter files
+    if [[ "$binary_dir" == */apple/Products/* ]]; then
+        search_root="$project_dir/.build/apple/Intermediates.noindex"
+        path_filter="*/${configuration}/*/Objects-normal/${arch}/*"
+    else
+        search_root="$project_dir/.build"
+        path_filter="*${arch}-apple-macos*/${configuration}/*"
+    fi
+    if [[ -d "$search_root" ]]; then
+        files=$(find "$search_root" -name '*.swiftconstvalues' -path "$path_filter" | sort)
+    fi
+    if [[ -z "${files:-}" ]]; then
+        print -u2 "Aucun .swiftconstvalues pour l’architecture ${arch} et la configuration ${configuration}."
+        return 1
+    fi
+    print -r -- "$files"
 }
 
 # Architecture préférée pour l’extraction : les const values ne dépendent pas du binaire.
