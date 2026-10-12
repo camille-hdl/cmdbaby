@@ -55,6 +55,37 @@ To block shortcuts, CmdBaby needs the Accessibility permission. macOS asks for i
 
 Each exit can be turned on or off in Settings. The default phrase `parent` is written here and on the website, so change it in Settings, Exits.
 
+## Launch from Shortcuts or a link
+
+Mode and duration are optional and apply only to that session. Saved settings stay as they are. `mode` is `ocean`, `terminal`, or `starship`. `minutes` is from 1 to 120.
+
+Turn on **Allow launching from a link** in Settings, General before a link will work. The checkbox starts off, so a web page cannot start a session until you allow it. The Shortcuts action does not use that checkbox. During a session, a link does nothing visible.
+
+Shortcuts, in Spotlight or as the action **Start a Session**:
+
+```text
+Start a Starship session with CmdBaby
+```
+
+Alfred, a Run Script action:
+
+```sh
+open "cmdbaby://session/start?mode=starship&minutes=10"
+```
+
+Raycast, a script command or the same URL:
+
+```sh
+open "cmdbaby://session/start?mode=starship&minutes=10"
+```
+
+Terminal:
+
+```sh
+open "cmdbaby://session/start"
+open "cmdbaby://session/start?mode=starship&minutes=10"
+```
+
 ## Questions and bug reports
 
 Write to [support@cmdbaby.app](mailto:support@cmdbaby.app). The repository does not take issues or pull requests: requests and fixes go through email.
@@ -90,14 +121,14 @@ Requirements: macOS 13 or later, Swift 6.1 or later (Xcode 26 to build the icon)
 swift test
 ```
 
-Build a signed app in `/Applications`. Use your Apple Development identity so the Accessibility permission survives rebuilds:
+Build a signed app in `/Applications`:
 
 ```sh
-CMDBABY_CODE_SIGN_IDENTITY="$(security find-identity -v -p codesigning | sed -n 's/.*"\(Apple Development:.*\)".*/\1/p' | head -1)" ./scripts/build-app.sh
+./scripts/build-app.sh
 open /Applications/CmdBaby.app
 ```
 
-Without an identity, the script signs ad hoc: macOS then sees a new app after every rebuild and asks for Accessibility again.
+The script signs with the first Apple Development identity in your keychain, or with the one in `CMDBABY_CODE_SIGN_IDENTITY`. Without one, it signs ad hoc (`CMDBABY_CODE_SIGN_IDENTITY=-` forces it). An ad hoc app has no Team ID: macOS sees a new app after every rebuild and asks for Accessibility again, and Shortcuts cannot run its actions.
 
 Once per clone, enable the pre-commit hook, which refuses keys, certificates and release files:
 

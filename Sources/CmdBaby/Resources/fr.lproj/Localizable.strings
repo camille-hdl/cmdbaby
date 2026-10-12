@@ -1,0 +1,15 @@
+/* Clé : littéral extrait par App Intents. Raccourcis lit ce catalogue. */
+"Start a Session" = "Lancer une session";
+"Starts a session with your saved settings." = "Lance une session avec les réglages enregistrés.";
+"Mode" = "Mode";
+"Duration" = "Durée";
+"Minutes, from 1 to 120" = "Minutes, de 1 à 120";
+/* Noms des cas de l’action. */
+"Ocean" = "Océan";
+"Terminal" = "Terminal";
+"Starship" = "Vaisseau";
+/* Résumés de paramètres. */
+"Start a ${mode} session for ${minutes} minutes" = "Lancer une session ${mode} de ${minutes} minutes";
+"Start a ${mode} session" = "Lancer une session ${mode}";
+"Start a session for ${minutes} minutes" = "Lancer une session de ${minutes} minutes";
+"Start a session" = "Lancer une session";

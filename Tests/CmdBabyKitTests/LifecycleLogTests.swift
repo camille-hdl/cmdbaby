@@ -16,8 +16,17 @@ func mandatoryEventsFormatToStableLines() {
     LifecycleLogEvent.activationPolicy(before: "accessory", after: "regular").category == .lifecycle
   )
 
-  #expect(LifecycleLogEvent.sessionStart.message == "session.start")
-  #expect(LifecycleLogEvent.sessionStart.category == .session)
+  #expect(LifecycleLogEvent.sessionStart(origin: .menu).message == "session.start origin=menu")
+  #expect(LifecycleLogEvent.sessionStart(origin: .settings).message == "session.start origin=settings")
+  #expect(LifecycleLogEvent.sessionStart(origin: .shortcuts).message == "session.start origin=shortcuts")
+  #expect(LifecycleLogEvent.sessionStart(origin: .link).message == "session.start origin=link")
+  #expect(LifecycleLogEvent.sessionStart(origin: .menu).category == .session)
+  let passphrase = "parent"
+  for origin in [SessionLaunchRequest.Origin.menu, .settings, .shortcuts, .link] {
+    let message = LifecycleLogEvent.sessionStart(origin: origin).message
+    #expect(!message.contains(passphrase))
+    #expect(!message.contains("é"))
+  }
   #expect(
     LifecycleLogEvent.sessionPhase(from: .configuration, to: .preparing).message
       == "session.phase from=configuration to=preparing"
@@ -107,8 +116,8 @@ func logSubsystemIsBundleIdentifier() {
 @Test("Les lignes fichier portent horodatage, catégorie et message")
 func fileLinesIncludeTimestampCategoryAndMessage() {
   let date = utcDate(year: 2026, month: 9, day: 29, hour: 8, minute: 14)
-  let line = LifecycleLog.fileLine(for: .sessionStart, at: date)
-  #expect(line == "2026-09-29T08:14:00Z [Session] session.start")
+  let line = LifecycleLog.fileLine(for: .sessionStart(origin: .menu), at: date)
+  #expect(line == "2026-09-29T08:14:00Z [Session] session.start origin=menu")
 }
 
 @Test("Le chemin par défaut est Application Support/CmdBaby/logs")
@@ -133,7 +142,7 @@ func datedLogFileUsesDayStamp() throws {
     now: { now }
   )
 
-  file.write(.sessionStart)
+  file.write(.sessionStart(origin: .menu))
   file.flush()
 
   let logURL = directory.url.appendingPathComponent("cmdbaby-20260929.log")
@@ -153,7 +162,7 @@ func newDayOpensANewFile() throws {
     now: { clock.now }
   )
 
-  file.write(.sessionStart)
+  file.write(.sessionStart(origin: .menu))
   clock.now = utcDate(year: 2026, month: 9, day: 30, hour: 0, minute: 1)
   file.write(.sessionStop(kind: .adultExit))
   file.flush()
@@ -183,7 +192,7 @@ func oversizedFileRotatesToNumberedSibling() throws {
     maxBytes: 80
   )
 
-  file.write(.sessionStart)
+  file.write(.sessionStart(origin: .menu))
   file.write(.sessionStop(kind: .adultExit))
   file.flush()
 
@@ -214,7 +223,7 @@ func idleStartAdultExitStartEmitsSessionSequence() async {
 
   #expect(
     sink.messages == [
-      "session.start",
+      "session.start origin=menu",
       "session.phase from=configuration to=preparing",
       "session.phase from=preparing to=activating",
       "session.phase from=activating to=active",
@@ -223,7 +232,7 @@ func idleStartAdultExitStartEmitsSessionSequence() async {
       "teardown.done should_quit=false cover_count=1 caller=swift",
       "session.stop kind=adultExit",
       "session.phase from=stopping to=configuration",
-      "session.start",
+      "session.start origin=menu",
       "session.phase from=configuration to=preparing",
       "session.phase from=preparing to=activating",
       "session.phase from=activating to=active",
@@ -327,7 +336,7 @@ func logFilesArePrivateAndNeverFollowSymlinks() throws {
   defer { directory.remove() }
   let now = utcDate(year: 2026, month: 9, day: 29, hour: 8, minute: 0)
   let file = LifecycleLogFile(directory: directory.url, calendar: utcCalendar, now: { now })
-  file.write(.sessionStart)
+  file.write(.sessionStart(origin: .menu))
   file.flush()
 
   let logURL = directory.url.appendingPathComponent("cmdbaby-20260929.log")
@@ -345,7 +354,7 @@ func logFilesArePrivateAndNeverFollowSymlinks() throws {
     calendar: utcCalendar,
     now: { utcDate(year: 2026, month: 9, day: 30, hour: 8, minute: 0) }
   )
-  nextDay.write(.sessionStart)
+  nextDay.write(.sessionStart(origin: .menu))
   nextDay.flush()
   #expect(try String(contentsOf: target, encoding: .utf8) == "cible\n")
 }

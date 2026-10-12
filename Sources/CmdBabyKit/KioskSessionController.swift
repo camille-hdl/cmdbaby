@@ -49,7 +49,7 @@ public final class KioskSessionController {
   /// Le filtre est armé **avant** les fenêtres, pour ne jamais recouvrir l’écran sans tap vivant.
   /// L’attente du filtre doit laisser tourner la boucle principale (async), jamais la bloquer.
   @discardableResult
-  public func activate() async -> KioskSessionState {
+  public func activate(origin: SessionLaunchRequest.Origin = .menu) async -> KioskSessionState {
     switch state.phase {
     case .configuration, .failed:
       break
@@ -64,7 +64,7 @@ public final class KioskSessionController {
     services.stopInputFilter()
 
     do {
-      log.emit(.sessionStart)
+      log.emit(.sessionStart(origin: origin))
       setPhase(.preparing)
 
       let captured = try services.capturePresentation()

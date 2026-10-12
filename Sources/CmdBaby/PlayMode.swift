@@ -17,7 +17,7 @@ protocol PlayMode: AnyObject {
 
 @MainActor
 enum PlayModeRegistry {
-  /// Instancie le mode. L’autre `switch` sur les modes est `preview`.
+  /// Instancie le mode. L’aperçu est `preview`. Raccourcis a ses propres `switch`, dans `StartSessionMode`.
   /// `timeLimitMinutes` cale l’aller unique du ciel Vaisseau ; les autres modes l’ignorent.
   static func make(
     _ id: KioskPlayModeID,
@@ -33,7 +33,7 @@ enum PlayModeRegistry {
     }
   }
 
-  /// Aperçu statique de la carte de Réglages. Seul autre `switch` sur les modes.
+  /// Aperçu statique de la carte de Réglages.
   @ViewBuilder
   static func preview(_ id: KioskPlayModeID) -> some View {
     switch id {

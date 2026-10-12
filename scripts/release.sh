@@ -73,12 +73,14 @@ src="$work/src"
 # ── Build universel ─────────────────────────────────────────────────────────
 
 step "Build universel (arm64 + x86_64)"
+source "$src/scripts/lib/assemble-app.zsh"
+prepare_app_intents_swift_flags "$src"
 build_flags=(-c release --arch arm64 --arch x86_64 --only-use-versions-from-resolved-file)
 resolved_before=$(shasum -a 256 "$src/Package.resolved" 2>/dev/null || echo "absent")
-(cd "$src" && swift build "${build_flags[@]}" --product CmdBaby)
+(cd "$src" && swift build "${build_flags[@]}" --product CmdBaby "${app_intents_swift_flags[@]}")
 resolved_after=$(shasum -a 256 "$src/Package.resolved" 2>/dev/null || echo "absent")
 [[ "$resolved_before" == "$resolved_after" ]] || fail "Package.resolved a changé pendant le build : figer les dépendances et committer."
-binary_dir=$(cd "$src" && swift build "${build_flags[@]}" --show-bin-path)
+binary_dir=$(cd "$src" && swift build "${build_flags[@]}" --show-bin-path --product CmdBaby)
 
 architectures=$(lipo -archs "$binary_dir/CmdBaby")
 [[ " $architectures " == *" arm64 "* && " $architectures " == *" x86_64 "* ]] \
@@ -87,13 +89,13 @@ architectures=$(lipo -archs "$binary_dir/CmdBaby")
 # ── Assemblage ──────────────────────────────────────────────────────────────
 
 step "Assemblage d’un .app neuf"
-source "$src/scripts/lib/assemble-app.zsh"
 app="$work/CmdBaby.app"
 assemble_app "$binary_dir" "$src" "$app"
 compile_app_icon "$src" "$app" required
 /usr/bin/plutil -replace CFBundleShortVersionString -string "$version" "$app/Contents/Info.plist"
 /usr/bin/plutil -replace CFBundleVersion -string "$build_number" "$app/Contents/Info.plist"
 /usr/bin/plutil -lint "$app/Contents/Info.plist" >/dev/null
+install_app_intents_metadata "$binary_dir" "$src" "$app"
 
 # Rien de personnel dans le binaire : chemin du build, e-mail, identité de signature.
 leaks=$(strings -a "$app/Contents/MacOS/CmdBaby" | grep -E '/Users/|SigningIdentity|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}' || true)

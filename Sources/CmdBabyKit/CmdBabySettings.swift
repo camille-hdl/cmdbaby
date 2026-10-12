@@ -40,6 +40,7 @@ extension SettingsError: LocalizedError {
 public enum SettingsChange: Equatable, Sendable {
   case mode(KioskPlayModeID)
   case launchAtLogin(Bool)
+  case linkLaunchAllowed(Bool)
   case timeLimitMinutes(Int)
   case exitMethod(AdultExitMethod, enabled: Bool)
   case passphrase(String)
@@ -98,6 +99,8 @@ public struct CmdBabySettings: Sendable {
         try loginItem.unregister()
       }
       configuration.launchAtLogin = enabled
+    case .linkLaunchAllowed(let allowed):
+      configuration.linkLaunchAllowed = allowed
     case .timeLimitMinutes(let minutes):
       guard AdultExitSettings.timeLimitRange.contains(minutes) else {
         throw SettingsError.timeLimitOutOfRange

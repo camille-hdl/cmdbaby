@@ -1,0 +1,15 @@
+/* Clé : littéral extrait par App Intents. Raccourcis lit ce catalogue. */
+"Start a Session" = "Start a Session";
+"Starts a session with your saved settings." = "Starts a session with your saved settings.";
+"Mode" = "Mode";
+"Duration" = "Duration";
+"Minutes, from 1 to 120" = "Minutes, from 1 to 120";
+/* Noms des cas de l’action. */
+"Ocean" = "Ocean";
+"Terminal" = "Terminal";
+"Starship" = "Starship";
+/* Résumés de paramètres. */
+"Start a ${mode} session for ${minutes} minutes" = "Start a ${mode} session for ${minutes} minutes";
+"Start a ${mode} session" = "Start a ${mode} session";
+"Start a session for ${minutes} minutes" = "Start a session for ${minutes} minutes";
+"Start a session" = "Start a session";
