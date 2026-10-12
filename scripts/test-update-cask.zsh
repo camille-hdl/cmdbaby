@@ -35,7 +35,7 @@ fi
 fake_bin="$tmp/bin"
 mkdir -p "$fake_bin"
 git_marker="$tmp/git-was-called"
-print -r -- '#!/bin/sh' "touch \"$git_marker\"" 'exit 97' > "$fake_bin/git"
+print -rl -- '#!/bin/sh' "touch \"$git_marker\"" 'exit 97' > "$fake_bin/git"
 chmod +x "$fake_bin/git"
 output=$(PATH="$fake_bin:$PATH" "$project_dir/scripts/publish-cask.zsh" "$version" "$sha" --prerelease)
 [[ "$output" == *"Prépublication"* ]] || fail "la prépublication n’est pas signalée"
