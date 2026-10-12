@@ -4,39 +4,33 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>CmdBaby</title>
         <item>
-            <title>1.0.0</title>
-            <pubDate>Wed, 07 Oct 2026 17:51:40 +0200</pubDate>
-            <sparkle:version>148</sparkle:version>
-            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+            <title>1.1.0</title>
+            <pubDate>Mon, 12 Oct 2026 16:58:41 +0200</pubDate>
+            <sparkle:version>172</sparkle:version>
+            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[# CmdBaby 1.0
+            <description sparkle:format="markdown"><![CDATA[# CmdBaby 1.1
 
-First public release.
-
-- Three full-screen play modes: Ocean, Terminal and Starship.
-- A session covers every connected display, including displays plugged in or removed during the session.
-- During a session, Command and Control shortcuts, function keys, media keys and the Globe key are blocked. This requires the Accessibility permission. Keystrokes are not recorded.
-- Ways to end a session: the exit phrase followed by Return (`parent` by default), Shift-Escape held for 1.5 seconds, five clicks on the square in the bottom right corner, and a timer (3 minutes by default). Each can be turned on or off in Settings.
-- Menu bar app, with Settings in English and French and an optional launch at login.
-- Checks for updates automatically, never during a session. The check can be turned off in Settings.
-- Requires macOS 13 or later. Runs on Apple Silicon and Intel.
+- Start a session from Shortcuts or Spotlight, for example "Start a Starship session with CmdBaby". You can pick the mode and the duration (1 to 120 minutes) for that session only. Your saved settings do not change.
+- Start a session with the link `cmdbaby://session/start`, from Alfred, Raycast or Terminal. The link only works once you turn on "Allow launching from a link" in Settings, General. That setting is off by default, so a web page cannot start a session unless you allow it. The link cannot end a session, and does nothing while a session is running. Shortcuts does not need this setting.
+- Starship now flies upward: the ship sits at the bottom of the screen, enemies come from the top, and planets, asteroids and streaks scroll past behind them, the same on every display.
+- Starship: mashing the space bar no longer keeps the ship spinning long after the child stops. It queues three spins at most.
+- Fixed: an update found just as a session started could appear during the session. It now waits until the session ends.
+- The planets come from Kenney's Planets pack, credited in About.
 
 ## En français
 
-Première version publique.
-
-- Trois modes de jeu plein écran : Océan, Terminal et Vaisseau.
-- Une session couvre tous les écrans branchés, y compris ceux branchés ou débranchés pendant la session.
-- Pendant une session, les raccourcis avec Commande et Contrôle, les touches de fonction, les touches média et la touche Globe sont bloqués. Cela demande l’autorisation Accessibilité. Les frappes ne sont pas enregistrées.
-- Pour finir une session : la phrase de sortie suivie d’Entrée (`parent` par défaut), Maj-Échap maintenu 1,5 seconde, cinq clics sur le carré en bas à droite, et un minuteur (3 minutes par défaut). Chacune s’active ou se désactive dans les Réglages.
-- App de la barre des menus, avec des Réglages en anglais et en français et un lancement à la connexion facultatif.
-- Recherche les mises à jour automatiquement, jamais pendant une session. On peut désactiver cette recherche dans les Réglages.
-- Nécessite macOS 13 ou plus récent. Fonctionne sur Apple Silicon et Intel.
+- Lancez une session depuis Raccourcis ou Spotlight, par exemple « Lancer une session Vaisseau avec CmdBaby ». Vous pouvez choisir le mode et la durée (de 1 à 120 minutes) pour cette session seulement. Vos réglages enregistrés ne changent pas.
+- Lancez une session avec le lien `cmdbaby://session/start`, depuis Alfred, Raycast ou le Terminal. Le lien ne marche qu’une fois cochée la case « Autoriser le lancement par lien » dans Réglages › Général. Elle est décochée par défaut : une page web ne peut pas lancer de session sans votre accord. Le lien ne peut pas finir une session et ne fait rien pendant une session. Raccourcis n’a pas besoin de cette case.
+- Le Vaisseau vole maintenant vers le haut : il se tient en bas de l’écran, les ennemis arrivent par le haut, et des planètes, des astéroïdes et des traits défilent derrière, pareil sur tous les écrans.
+- Vaisseau : marteler la barre d’espace ne fait plus tourner le vaisseau longtemps après que l’enfant a arrêté. Trois tours au plus restent en attente.
+- Corrigé : une mise à jour trouvée au moment où une session commençait pouvait s’afficher pendant la session. Elle attend maintenant la fin de la session.
+- Les planètes viennent du pack Planets de Kenney, crédité dans À propos.
 ]]></description>
-            <enclosure url="https://github.com/camille-hdl/cmdbaby/releases/download/v1.0.0/CmdBaby-1.0.0.dmg" length="12394815" type="application/octet-stream" sparkle:edSignature="06DbQ8pG6U/4creMG1uALKklLkC7RU2aeoEd3CRLOGIf6PkYyQoVHn1EQl0IjXFfy4Lx5Y+ds2I1xOD6Ey5ZDA=="></enclosure>
+            <enclosure url="https://github.com/camille-hdl/cmdbaby/releases/download/v1.1.0/CmdBaby-1.1.0.dmg" length="16520430" type="application/octet-stream" sparkle:edSignature="VNwGbOjhKeXALwLHhtxaqU9aqVqVuhxWX2sdaUvHZtuiptfUR0J0OvPScTkrpGm/U5IxxFf3bABw9/1Xi3NnDw=="></enclosure>
         </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: ctfA/PWA8M8vJyQECdeZftOzLHNAYrVNBvSUdnpsCmYZQW27JXrhtia6g22kEYb+3XcFWdsrW/zlkHxmzFYXBw==
-length: 3049
+edSignature: i6KSNAMLa4wyjKIfgLjstAITd4dVamr6fBO8gA7EmjtijxqlOMI6eMb43bm7EjnbWIjGTekVpeWSm31VYxC2Cw==
+length: 3549
 -->
