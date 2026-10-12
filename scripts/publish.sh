@@ -1,7 +1,6 @@
 #!/bin/zsh
 # Met en ligne une version produite par scripts/release.sh : Release GitHub immuable avec le DMG,
-# puis appcast et lien /download sur https://cmdbaby.app. Dans cet ordre, pour que Sparkle
-# ne pointe jamais vers un fichier absent.
+# puis appcast et lien /download sur https://cmdbaby.app, et le cask Homebrew pour les versions stables.
 #
 # Usage : scripts/publish.sh X.Y.Z [--prerelease]
 # Relancer la même commande après un échec reprend là où elle s’était arrêtée.
@@ -144,37 +143,13 @@ if ! git diff --cached --quiet; then
     git push --quiet origin main
 fi
 
-# ── Cask Homebrew ────────────────────────────────────────────────────────────
-
-step "Cask Homebrew"
-tap_dir=$(mktemp -d /tmp/cmdbaby-tap.XXXXXX)
-trap 'rm -rf "$tap_dir"' EXIT
-git clone --quiet --depth 1 --branch main https://github.com/camille-hdl/homebrew-tap.git "$tap_dir" \
-    || fail "Impossible de cloner camille-hdl/homebrew-tap dans une copie temporaire."
-cask="$tap_dir/Casks/cmdbaby.rb"
-[[ -f "$cask" ]] || fail "Casks/cmdbaby.rb absent du dépôt homebrew-tap."
-
-update_result=$(scripts/update-cask.zsh "$cask" "$version" "$remote_sha") \
-    || fail "Impossible de mettre à jour Casks/cmdbaby.rb."
-if [[ "$update_result" == "Cask déjà à jour." ]]; then
-    print "Le cask est déjà à $version avec ce SHA-256 : aucune action nécessaire."
+if (( ${#prerelease[@]} )); then
+    scripts/publish-cask.zsh "$version" "$remote_sha" --prerelease
 else
-    if command -v brew >/dev/null 2>&1; then
-        brew style "$cask" || fail "brew style refuse Casks/cmdbaby.rb."
-    fi
-    git -C "$tap_dir" remote set-url origin git@github.com:camille-hdl/homebrew-tap.git
-    git -C "$tap_dir" add Casks/cmdbaby.rb
-    git -C "$tap_dir" -c commit.gpgsign=true commit --quiet -m "cmdbaby $version" \
-        || fail "Impossible de créer le commit signé cmdbaby $version dans le tap."
-    [[ "$(git -C "$tap_dir" log -1 --format=%G?)" == G ]] \
-        || fail "La signature du commit cmdbaby $version ne se vérifie pas."
-    git -C "$tap_dir" push --quiet origin main \
-        || fail "Impossible de pousser le cask sur main de camille-hdl/homebrew-tap."
-    print "Cask Homebrew mis à jour et poussé sur main."
+    scripts/publish-cask.zsh "$version" "$remote_sha"
 fi
 
 print "\n✓ CmdBaby $version en ligne"
 print "Release : https://github.com/$repo/releases/tag/$tag"
 print "DMG : $dmg_url"
 print "SHA-256 : $local_sha"
-print "Cask Homebrew : version $version et SHA-256 $remote_sha."

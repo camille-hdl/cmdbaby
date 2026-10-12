@@ -3,7 +3,7 @@
 set -euo pipefail
 
 script_dir=${0:A:h}
-project_dir=${script_dir:h:h}
+project_dir=${script_dir:h}
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
@@ -31,5 +31,14 @@ after=$(shasum -a 256 "$cask" | cut -d' ' -f1)
 if "$project_dir/scripts/update-cask.zsh" "$cask" "$version" invalid >/dev/null 2>&1; then
     fail "un SHA-256 invalide a été accepté"
 fi
+
+fake_bin="$tmp/bin"
+mkdir -p "$fake_bin"
+git_marker="$tmp/git-was-called"
+print -r -- '#!/bin/sh' "touch \"$git_marker\"" 'exit 97' > "$fake_bin/git"
+chmod +x "$fake_bin/git"
+output=$(PATH="$fake_bin:$PATH" "$project_dir/scripts/publish-cask.zsh" "$version" "$sha" --prerelease)
+[[ "$output" == *"Prépublication"* ]] || fail "la prépublication n’est pas signalée"
+[[ ! -e "$git_marker" ]] || fail "la prépublication a lancé git et touché au tap"
 
 print "Tests du cask réussis."
