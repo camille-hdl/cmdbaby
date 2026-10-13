@@ -69,6 +69,9 @@ jobs:
       - name: Identité de signature par défaut
         run: zsh scripts/test-development-signing-identity.zsh
 
+      - name: Mise à jour du cask Homebrew
+        run: zsh scripts/test-update-cask.zsh
+
       - name: Package .app (ad hoc)
         run: CMDBABY_CODE_SIGN_IDENTITY=- CMDBABY_APP_OUTPUT_DIR="$RUNNER_TEMP" ./scripts/build-app.sh
 

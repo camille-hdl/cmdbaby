@@ -138,7 +138,7 @@ git config core.hooksPath scripts/git-hooks
 
 ### Release
 
-Set up the signing and notarization credentials once with `scripts/setup-release.sh`. Then `scripts/release.sh X.Y.Z` builds `dist/CmdBaby-X.Y.Z.dmg`, signed with Developer ID, notarized and stapled, and a signed `dist/appcast.xml`. `scripts/publish.sh X.Y.Z` puts them online: GitHub Release, appcast and download link on cmdbaby.app. Release notes go in `release-notes/X.Y.Z.md`. Test versions are `0.0.x`, published with `--prerelease`. A published version number is never reused, because releases are immutable.
+Set up the signing and notarization credentials once with `scripts/setup-release.sh`. Then `scripts/release.sh X.Y.Z` builds `dist/CmdBaby-X.Y.Z.dmg`, signed with Developer ID, notarized and stapled, and a signed `dist/appcast.xml`. `scripts/publish.sh X.Y.Z` puts them online: GitHub Release, appcast and download link on cmdbaby.app, then the Homebrew cask. Release notes go in `release-notes/X.Y.Z.md`. Test versions are `0.0.x`, published with `--prerelease`. A published version number is never reused, because releases are immutable.
 
 ### Website
 

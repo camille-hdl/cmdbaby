@@ -89,6 +89,7 @@ commit signé sur main (#109, #123)
   → sign_update : signature EdDSA de la mise à jour (#102)
   → scripts/publish.sh : tag signé, Release GitHub immuable, retéléchargement et SHA-256 comparé (#113)
   → appcast signé sur Cloudflare Workers, /download vers le DMG (#111, #113)
+  → Casks/cmdbaby.rb dans homebrew-tap : version et SHA-256 du DMG téléchargé
   → chez l’utilisateur, Sparkle vérifie la signature EdDSA, l’intégrité de la signature Apple (sans contrôle d’équipe) et l’appcast signé (#102)
 ```
 

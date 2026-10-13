@@ -1,7 +1,6 @@
 #!/bin/zsh
 # Met en ligne une version produite par scripts/release.sh : Release GitHub immuable avec le DMG,
-# puis appcast et lien /download sur https://cmdbaby.app. Dans cet ordre, pour que Sparkle
-# ne pointe jamais vers un fichier absent.
+# puis appcast et lien /download sur https://cmdbaby.app, et le cask Homebrew pour les versions stables.
 #
 # Usage : scripts/publish.sh X.Y.Z [--prerelease]
 # Relancer la même commande après un échec reprend là où elle s’était arrêtée.
@@ -144,8 +143,13 @@ if ! git diff --cached --quiet; then
     git push --quiet origin main
 fi
 
+if (( ${#prerelease[@]} )); then
+    scripts/publish-cask.zsh "$version" "$remote_sha" --prerelease
+else
+    scripts/publish-cask.zsh "$version" "$remote_sha"
+fi
+
 print "\n✓ CmdBaby $version en ligne"
 print "Release : https://github.com/$repo/releases/tag/$tag"
 print "DMG : $dmg_url"
 print "SHA-256 : $local_sha"
-print "Cask Homebrew (#103) : mettre à jour version et sha256 avec ces valeurs."
