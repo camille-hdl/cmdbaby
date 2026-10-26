@@ -10,6 +10,7 @@ Conserver dans leur langue d’origine les identifiants de code, commandes, chem
 - **Modification de code ponctuelle** : suivre `/tactical-programming`.
 - **Travail découpé en tickets** : implémenter chaque ticket avec `/implement` (qui passe par `/tdd`), en suivant aussi `/tactical-programming`.
 - **Description de pull request** : la rédiger avec `/pull-request-description`.
+- **Prose livrée en français** : appliquer `/redaction-francais`, puis passer par le relais `/unslop-agent`.
 
 ## Commits
 
