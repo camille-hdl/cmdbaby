@@ -85,6 +85,12 @@
       "skillPath": "skills/pull-request-description/SKILL.md",
       "computedHash": "a3eac24be231e66f21da911609ab252dfa014bc13e717dcbadf66cfea7e57577"
     },
+    "redaction-francais": {
+      "source": "camille-hdl/skills",
+      "sourceType": "github",
+      "skillPath": "skills/redaction-francais/SKILL.md",
+      "computedHash": "fa5a20192e5d2726c6aa3c60d5a45b7e675a32af8784f2cf3276039cc0c15c46"
+    },
     "research": {
       "source": "mattpocock/skills",
       "sourceType": "github",
