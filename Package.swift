@@ -20,7 +20,7 @@ let package = Package(
   ],
   dependencies: [
     // Mises à jour (#102). Version exacte : Package.resolved est commité, release.sh le fige.
-    .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.10.0"),
+    .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.10.1"),
   ],
   targets: [
     .target(
