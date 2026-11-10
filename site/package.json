@@ -3,7 +3,7 @@
   "private": true,
   "description": "Site statique de cmdbaby.app, servi par Cloudflare Workers.",
   "devDependencies": {
-    "@tailwindcss/cli": "4.3.3",
+    "@tailwindcss/cli": "4.3.5",
     "tailwindcss": "4.3.3",
     "wrangler": "4.156.0"
   },
